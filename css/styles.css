@@ -490,3 +490,10 @@ textarea.input { min-height: 84px; resize: vertical; }
 .invite.is-tight { gap: 2cqw; }
 .invite.is-tight .invite-body { gap: .7cqw; }
 .invite.is-tight .invite-message { -webkit-line-clamp: 1; }
+
+/* Privacy page */
+
+.prose { max-width: 68ch; margin: 0 auto; padding: 24px var(--gutter) 56px; }
+.prose h1 { font-size: clamp(36px, 6vw, 56px); margin-bottom: 16px; }
+.prose h2 { font-size: 24px; margin: 36px 0 8px; }
+.prose p { margin: 0 0 12px; line-height: 1.6; }
