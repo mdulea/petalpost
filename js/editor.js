@@ -229,7 +229,7 @@ const slug = (text) => (text || 'invite').toLowerCase().replace(/[^a-z0-9]+/g, '
 
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = e.currentTarget;
-  if (typeof html2canvas !== 'function') {
+  if (typeof htmlToImage !== 'object') {
     setStatus('The image tool is still loading. Try again in a moment.');
     return;
   }
@@ -237,10 +237,9 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
   try {
     await document.fonts.ready;
     const card = previewCard.querySelector('.invite');
-    const canvas = await html2canvas(card, { scale: 1500 / card.offsetWidth, backgroundColor: null, logging: false });
     const link = document.createElement('a');
     link.download = `${slug(state.d.title)}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.href = await htmlToImage.toPng(card, { pixelRatio: 1500 / card.offsetWidth });
     link.click();
     setStatus('Invite downloaded.');
   } catch {

@@ -13,7 +13,8 @@ Run the template contrast check with Node.js:
 node scripts/check-contrast.js
 ```
 
-Google Fonts and the editor's html2canvas library load from external services.
+Fonts live in `fonts/` and the editor's html-to-image library lives in `vendor/`.
+No page loads code or fonts from an external service.
 No environment variables are required.
 
 Both pages load Vercel Web Analytics through its static-site script.
