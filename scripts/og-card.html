@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Petalpost | Social preview card</title>
+  <link rel="stylesheet" href="../css/fonts.css">
+  <link rel="stylesheet" href="../css/styles.css">
+  <script src="../vendor/html-to-image.js" defer></script>
+  <style>
+    body { margin: 0; }
+    #card {
+      width: 1200px; height: 630px; box-sizing: border-box;
+      display: grid; grid-template-columns: 1fr 560px; align-items: center; gap: 24px;
+      padding: 0 64px 0 80px; background: var(--bg); overflow: hidden;
+    }
+    #card .brand { font-size: 30px; }
+    #card .brand-mark { width: 52px; height: 52px; }
+    #card h1 { font-size: 104px; margin: 28px 0 24px; line-height: .98; }
+    #card h1 em { font-style: normal; color: var(--sage-deep); }
+    #card .lead { font-size: 26px; color: var(--muted); margin: 0; max-width: 480px; }
+    #card .stage { height: 520px; }
+    #card .fan .invite-wrap { transition: none; }
+    #save { margin: 24px; }
+  </style>
+</head>
+<body>
+  <!-- Open this page from a local static server, then click the button to save og-image.png at the repository root. -->
+  <div id="card">
+    <div>
+      <span class="brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2"/>
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74"/>
+        </svg>
+        Petalpost
+      </span>
+      <h1>Your day,<br><em>your</em> invite.</h1>
+      <p class="lead">Hand-drawn invitations you make in a minute and share with a link.</p>
+    </div>
+    <div class="stage"><div class="fan" id="fan"></div></div>
+  </div>
+  <button class="btn btn-primary" id="save" type="button">Save og-image.png</button>
+
+  <script src="../js/icons.js"></script>
+  <script src="../js/templates.js"></script>
+  <script>
+    document.getElementById('fan').innerHTML = ['birthday', 'wedding', 'baby']
+      .map((id) => `<div class="invite-wrap">${renderInvite(getTemplate(id))}</div>`)
+      .join('');
+
+    document.getElementById('save').addEventListener('click', async () => {
+      const link = document.createElement('a');
+      link.download = 'og-image.png';
+      link.href = await htmlToImage.toPng(document.getElementById('card'), { pixelRatio: 1 });
+      link.click();
+    });
+  </script>
+</body>
+</html>

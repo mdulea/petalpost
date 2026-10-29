@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /scripts/
+
+Sitemap: https://petalpost.vercel.app/sitemap.xml
