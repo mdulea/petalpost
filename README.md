@@ -15,3 +15,6 @@ node scripts/check-contrast.js
 
 Google Fonts and the editor's html2canvas library load from external services.
 No environment variables are required.
+
+Both pages load Vercel Web Analytics through its static-site script.
+Enable Web Analytics in the Vercel project dashboard before deploying.
