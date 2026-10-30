@@ -2,33 +2,19 @@ import './icons.js';
 import { ACCENTS, CATEGORIES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import {
-  EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, draftOf, makeInviteData, openInvite, resetInvite, setPhoto, shareLink, slug, switchTemplate, updateInvite,
+  EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, makeInviteData, openInvite, resetInvite, saveDraft, savePhoto, setPhoto, shareLink, slug,
+  storedInvite, switchTemplate, updateInvite,
 } from './invite.js';
-
-const DRAFT_KEY = 'petalpost:draft';
-const PHOTO_KEY = 'petalpost:photo';
 
 const form = document.getElementById('form');
 const previewCard = document.getElementById('previewCard');
 const statusEl = document.getElementById('status');
 
-function readStorage(key) {
-  try { return localStorage.getItem(key); } catch { return null; }
-}
+// Reading localStorage throws when the browser blocks storage; null storage then keeps nothing.
+let storage = null;
+try { storage = localStorage; } catch { storage = null; }
 
-function writeStorage(key, value) {
-  try {
-    if (value == null) localStorage.removeItem(key);
-    else localStorage.setItem(key, value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const state = openInvite({
-  search: location.search, hash: location.hash, draft: readStorage(DRAFT_KEY), photo: readStorage(PHOTO_KEY),
-});
+const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage) });
 
 const shareUrl = () => shareLink(location.href.split(/[?#]/)[0], state);
 
@@ -40,18 +26,8 @@ function setStatus(text) {
 
 let saveTimer;
 function save() {
-  if (state.guest) return;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    writeStorage(DRAFT_KEY, draftOf(state));
-  }, 250);
-}
-
-// The photo is stored only when it changes; a photo that does not fit removes the stored one.
-function savePhoto() {
-  if (state.guest || writeStorage(PHOTO_KEY, state.photo)) return true;
-  writeStorage(PHOTO_KEY, null);
-  return false;
+  saveTimer = setTimeout(() => saveDraft(state, storage), 250);
 }
 
 function render() {
@@ -137,7 +113,7 @@ async function loadPhoto(file) {
       return;
     }
     commit();
-    setStatus(savePhoto() ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
+    setStatus(savePhoto(state, storage) ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
   } catch {
     setStatus('That image could not be read. Try a JPG or PNG.');
   } finally {
@@ -158,7 +134,7 @@ dropzone.addEventListener('drop', (e) => {
 
 document.getElementById('removePhoto').addEventListener('click', () => {
   setPhoto(state, null);
-  savePhoto();
+  savePhoto(state, storage);
   commit();
 });
 

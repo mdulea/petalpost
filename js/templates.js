@@ -692,6 +692,7 @@ export const ACCENTS = [
 ];
 
 // The landing hero and the social preview card fan out these three contrasting occasions.
+// css/styles.css positions exactly three .fan children with :nth-child; check-invite.js asserts the count.
 export const HERO_TEMPLATES = ['birthday', 'wedding', 'baby'];
 
 // The landing banner beside the call to action shows this template.
