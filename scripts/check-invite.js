@@ -2,12 +2,13 @@
 // Run: node scripts/check-invite.js
 const fs = require('fs');
 const vm = require('vm');
-const ctx = { TextEncoder, TextDecoder, atob, btoa };
+const ctx = { TextEncoder, TextDecoder, URLSearchParams, atob, btoa };
 const read = (file) => fs.readFileSync(`${__dirname}/../js/${file}`, 'utf8');
 vm.runInNewContext(`${read('templates.js')}\n${read('invite.js')}
 this.TEMPLATES = TEMPLATES; this.getTemplate = getTemplate; this.shareLink = shareLink; this.openInvite = openInvite; this.renderInvite = renderInvite;
 this.makeInviteData = makeInviteData; this.switchTemplate = switchTemplate; this.buildIcs = buildIcs;
-this.updateInvite = updateInvite; this.draftOf = draftOf;`, ctx);
+this.updateInvite = updateInvite; this.draftOf = draftOf; this.resetInvite = resetInvite; this.editorUrl = editorUrl;
+this.FIELD_LIMITS = FIELD_LIMITS; this.EDITABLE = EDITABLE;`, ctx);
 
 let failures = 0;
 const check = (name, actual, expected) => {
@@ -18,29 +19,37 @@ const check = (name, actual, expected) => {
 // Share links and the load order: a link wins, then the stored draft, then ?t= switches the template.
 const BASE = 'https://petalpost.example/editor.html';
 const hashOf = (link) => link.slice(link.indexOf('#'));
+const searchOf = (link) => link.slice(link.indexOf('?')).split('#')[0];
 const fresh = (id) => ({ t: id, d: ctx.makeInviteData(ctx.getTemplate(id)) });
 for (const t of ctx.TEMPLATES) {
-  check(`${t.id} defaults survive a share link`, ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, fresh(t.id))) }), { ...fresh(t.id), photo: null });
+  check(`${t.id} defaults survive a share link`, ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, fresh(t.id))) }), { ...fresh(t.id), photo: null, guest: false });
 }
 const zoe = { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { message: 'Café, a piñata and 🎂', photoY: 20 }) };
 const zoeLink = ctx.shareLink(BASE, zoe);
 check('a share link opens the guest view of the page', zoeLink.startsWith(`${BASE}?view=1#d=`), true);
 check('non-ASCII text survives a share link', ctx.openInvite({ hash: hashOf(zoeLink) }).d.message, 'Café, a piñata and 🎂');
+const opened = ctx.openInvite({ search: searchOf(zoeLink), hash: hashOf(zoeLink) });
+check('a share link opens as a guest', [opened.guest, opened.d.message], [true, 'Café, a piñata and 🎂']);
+check('an editor link opens its template for the owner', [ctx.openInvite({ search: searchOf(ctx.editorUrl('wedding')) })].map((s) => [s.t, s.guest])[0], ['wedding', false]);
 check('a share link leaves out the photo position', ctx.openInvite({ hash: hashOf(zoeLink) }).d.photoY, 50);
 check('a link made before this change still opens',
   ctx.openInvite({ hash: '#d=eyJ0IjoiYmlydGhkYXkiLCJkIjp7InRpdGxlIjoiQ2Fmw6kgcGnDsWF0YSIsImFjY2VudCI6IiM1MjcwNEMifX0' }),
-  { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Café piñata', accent: '#52704C' }), photo: null });
+  { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Café piñata', accent: '#52704C' }), photo: null, guest: false });
 for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) {
-  check(`malformed hash "${bad}" opens a new invite`, ctx.openInvite({ hash: `#d=${bad}`, requested: 'wedding' }), { ...fresh('wedding'), photo: null });
+  check(`malformed hash "${bad}" opens a new invite`, ctx.openInvite({ hash: `#d=${bad}`, search: '?t=wedding' }), { ...fresh('wedding'), photo: null, guest: false });
 }
 const draft = JSON.stringify({ t: 'birthday', d: { title: 'Zoe turns 30' } });
 check('a share link wins over the stored draft and photo',
   ctx.openInvite({ hash: hashOf(zoeLink), draft, photo: 'data:image/jpeg;base64,x' }), { ...ctx.openInvite({ hash: hashOf(zoeLink) }) });
-const switched = ctx.openInvite({ hash: '', draft, photo: 'data:image/jpeg;base64,x', requested: 'graduation' });
+const switched = ctx.openInvite({ hash: '', draft, photo: 'data:image/jpeg;base64,x', search: '?t=graduation' });
 check('?t= switches the stored draft and keeps its edits', [switched.t, switched.d.title, switched.d.venue, switched.photo],
   ['graduation', 'Zoe turns 30', 'The Okafor home', 'data:image/jpeg;base64,x']);
-check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.draftOf(zoe) }), { ...zoe, photo: null });
-check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '', draft: '{', requested: 'baby' }), { ...fresh('baby'), photo: null });
+check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.draftOf(zoe) }), { ...zoe, photo: null, guest: false });
+for (const bad of ['javascript:x', "data:image/jpeg;base64,x');background:url('https://evil.test/", 'data:image/svg+xml;base64,PHN2Zz4', 'https://evil.test/a.jpg']) {
+  check(`a stored photo "${bad.slice(0, 24)}" that is not a JPEG or PNG data URL is dropped`, ctx.openInvite({ photo: bad }).photo, null);
+}
+check('a stored PNG data URL is kept', ctx.openInvite({ photo: 'data:image/png;base64,iVBORw0KGgo=' }).photo, 'data:image/png;base64,iVBORw0KGgo=');
+check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '', draft: '{', search: '?t=baby' }), { ...fresh('baby'), photo: null, guest: false });
 
 // Invite records.
 const birthday = ctx.getTemplate('birthday');
@@ -52,6 +61,13 @@ check('a record keeps string fields, photoY and a known accent',
 check('a record drops non-string fields, bad photoY and unknown accents',
   ctx.makeInviteData(birthday, { title: 7, photoY: 'top', accent: '#000000', extra: 'x' }),
   { ...birthday.defaults, photoY: 50, accent: null });
+
+const long = 'x'.repeat(500);
+check('an over-long title in a share link is cut to its limit',
+  ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, { t: 'birthday', d: { ...birthday.defaults, title: long } })) }).d.title, long.slice(0, ctx.FIELD_LIMITS.title));
+check('every template sample fits its limits', ctx.TEMPLATES.flatMap((t) => Object.entries(ctx.FIELD_LIMITS)
+  .filter(([f, max]) => max && (t.defaults[f] || '').length > max).map(([f]) => `${t.id}.${f}`)), []);
+check('a record holds exactly the editable names', Object.keys(ctx.makeInviteData(birthday)).sort(), [...ctx.EDITABLE].sort());
 
 // Template switching keeps edits and replaces untouched sample text.
 const state = { t: 'birthday', d: ctx.makeInviteData(birthday, { title: 'Zoe turns 30' }) };
@@ -69,6 +85,11 @@ check('a known accent is kept and the default accent is null',
   [ctx.updateInvite(typed, 'accent', '#52704C'), typed.d.accent, ctx.updateInvite(typed, 'accent', ''), typed.d.accent], [true, '#52704C', true, null]);
 check('an unknown accent falls back to the template accent', [ctx.updateInvite(typed, 'accent', '#000000'), typed.d.accent], [true, null]);
 check('an unknown field changes nothing', [ctx.updateInvite(typed, 'photo', 'x'), typed.d.photo, typed.d.title], [false, undefined, 'Zoe turns 30']);
+
+const edited = { t: 'birthday', d: ctx.makeInviteData(birthday, { title: 'Zoe turns 30', photoY: 20, accent: '#52704C' }), photo: 'data:image/jpeg;base64,x' };
+ctx.resetInvite(edited);
+check('reset restores the sample text, keeps the photo position and photo, and clears the accent', edited,
+  { t: 'birthday', d: { ...ctx.makeInviteData(birthday), photoY: 20 }, photo: 'data:image/jpeg;base64,x' });
 
 // Rendered invites carry their sizing container, which may be a link.
 check('an invite renders inside its sizing container', /^<div class="invite-wrap">\s*<article class="invite /.test(ctx.renderInvite(birthday)), true);

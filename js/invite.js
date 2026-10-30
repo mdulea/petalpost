@@ -1,12 +1,16 @@
 // Invite records, share links and the calendar file. No DOM access, so scripts/check-invite.js runs it in Node.
 
-const FIELDS = ['eyebrow', 'title', 'hosts', 'date', 'time', 'venue', 'address', 'message', 'rsvp'];
+// Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
+const FIELD_LIMITS = { eyebrow: 60, title: 48, hosts: 60, date: null, time: null, venue: 60, address: 90, message: 110, rsvp: 40 };
+const FIELDS = Object.keys(FIELD_LIMITS);
+// Every name the editor form writes, and every key of a record.
+const EDITABLE = [...FIELDS, 'photoY', 'accent'];
 
-// The only constructor for invite data: template sample text, then valid fields from source.
+// The only constructor for invite data: template sample text, then valid fields from source, cut to their limits.
 function makeInviteData(template, source) {
   const s = { ...source };
   const d = { ...template.defaults };
-  FIELDS.forEach((f) => { if (typeof s[f] === 'string') d[f] = s[f]; });
+  FIELDS.forEach((f) => { if (typeof s[f] === 'string') d[f] = FIELD_LIMITS[f] ? s[f].slice(0, FIELD_LIMITS[f]) : s[f]; });
   d.photoY = s.photoY != null && Number.isFinite(Number(s.photoY)) ? Number(s.photoY) : 50;
   d.accent = ACCENTS.some((a) => a.hex === s.accent) ? s.accent : null;
   return d;
@@ -14,9 +18,14 @@ function makeInviteData(template, source) {
 
 // Editor input for one field, through the same rules as makeInviteData. Returns false for an unknown name.
 function updateInvite(state, name, value) {
-  if (!FIELDS.includes(name) && name !== 'photoY' && name !== 'accent') return false;
+  if (!EDITABLE.includes(name)) return false;
   state.d = makeInviteData(getTemplate(state.t), { ...state.d, [name]: value });
   return true;
+}
+
+// Text goes back to the template sample, the accent to the template default; the photo position stays.
+function resetInvite(state) {
+  state.d = makeInviteData(getTemplate(state.t), { photoY: state.d.photoY });
 }
 
 // Fields still holding the old template's sample text take the new template's text; user edits stay.
@@ -36,6 +45,9 @@ function restoreInvite(value) {
   return { t: template.id, d: makeInviteData(template, value.d) };
 }
 
+// Editor URLs: ?t= opens a template for the owner, ?view=1 opens the guest view. openInvite parses both.
+const editorUrl = (id) => `editor.html?t=${encodeURIComponent(id)}`;
+
 // Share links open the guest view; the photo position stays with the owner's draft.
 function shareLink(base, record) {
   const { photoY, ...fields } = record.d;
@@ -47,14 +59,20 @@ function draftOf(record) {
   return JSON.stringify({ t: record.t, d: record.d });
 }
 
+// Photos are JPEG data URLs from the editor, or PNG where the browser cannot encode JPEG.
+const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
+
 // Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
-// switched to the requested template. Inputs are the raw hash, storage and ?t= strings.
-function openInvite({ hash = '', draft = null, photo = null, requested = null }) {
+// switched to the ?t= template. Inputs are the raw search, hash and storage strings; guest is true for ?view=1.
+function openInvite({ search = '', hash = '', draft = null, photo = null }) {
+  const params = new URLSearchParams(search);
+  const guest = params.get('view') === '1';
+  const requested = params.get('t');
   const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
-  if (shared) return { ...shared, photo: null };
+  if (shared) return { ...shared, photo: null, guest };
   let saved = null;
   try { saved = JSON.parse(draft); } catch { saved = null; }
-  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo };
+  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: PHOTO_URL.test(photo) ? photo : null, guest };
   if (requested && requested !== state.t) switchTemplate(state, requested);
   return state;
 }
