@@ -12,6 +12,13 @@ function makeInviteData(template, source) {
   return d;
 }
 
+// Editor input for one field, through the same rules as makeInviteData. Returns false for an unknown name.
+function updateInvite(state, name, value) {
+  if (!FIELDS.includes(name) && name !== 'photoY' && name !== 'accent') return false;
+  state.d = makeInviteData(getTemplate(state.t), { ...state.d, [name]: value });
+  return true;
+}
+
 // Fields still holding the old template's sample text take the new template's text; user edits stay.
 function switchTemplate(state, id) {
   const from = getTemplate(state.t);
@@ -33,6 +40,11 @@ function restoreInvite(value) {
 function shareLink(base, record) {
   const { photoY, ...fields } = record.d;
   return `${base}?view=1#d=${encodeState({ t: record.t, d: fields })}`;
+}
+
+// The stored draft keeps the whole record, photo position included; openInvite reads it back.
+function draftOf(record) {
+  return JSON.stringify({ t: record.t, d: record.d });
 }
 
 // Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
@@ -70,11 +82,13 @@ function icsEscape(text) {
   return String(text || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
 }
 
-// Events last three hours in floating local time; data.date is required. now sets DTSTAMP.
+// Events last three hours in floating local time. now sets DTSTAMP.
+// Returns null when the date is missing or the date or time does not parse.
 function buildIcs(data, now) {
-  const [y, mo, day] = data.date.split('-').map(Number);
+  const [y, mo, day] = String(data.date || '').split('-').map(Number);
   const [h, m] = (data.time || '12:00').split(':').map(Number);
   const start = new Date(Date.UTC(y, mo - 1, day, h, m));
+  if (Number.isNaN(start.getTime())) return null;
   const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
   const local = (date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, '');
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');

@@ -715,15 +715,20 @@ function formatTime(hhmm) {
   return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// The card colors as rendered: a known accent swatch replaces the template accent.
+function inviteColors(template, accentHex) {
+  const c = template.colors;
+  const swatch = ACCENTS.find((a) => a.hex === accentHex);
+  return { bg: c.bg, ink: c.ink, accent: swatch ? swatch[template.dark ? 'light' : 'hex'] : c.accent, soft: c.soft };
+}
+
 // data: template defaults merged with user fields, plus optional photo, photoY (0-100) and accent.
 // The card sizes in container units, so it renders inside its .invite-wrap container: a <tag> with extra attrs.
 // Pages insert the result with mountInvites (js/mount.js), which also fits the text.
 function renderInvite(template, data = {}, tag = 'div', attrs = '') {
   const d = { ...template.defaults, ...data };
-  const c = template.colors;
-  const swatch = ACCENTS.find((a) => a.hex === d.accent);
-  const accent = swatch ? swatch[template.dark ? 'light' : 'hex'] : c.accent;
-  const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${accent};--i-soft:${c.soft}`;
+  const c = inviteColors(template, d.accent);
+  const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;
   const art = d.photo
     ? `<div class="invite-photo" role="img" aria-label="Event photo" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY ?? 50)}%"></div>`
     : template.art;

@@ -3,7 +3,7 @@
 const fs = require('fs');
 const vm = require('vm');
 const ctx = {};
-vm.runInNewContext(`${fs.readFileSync(`${__dirname}/../js/templates.js`, 'utf8')}\nthis.TEMPLATES = TEMPLATES; this.ACCENTS = ACCENTS; this.renderInvite = renderInvite;`, ctx);
+vm.runInNewContext(`${fs.readFileSync(`${__dirname}/../js/templates.js`, 'utf8')}\nthis.TEMPLATES = TEMPLATES; this.ACCENTS = ACCENTS; this.inviteColors = inviteColors;`, ctx);
 
 const lum = (hex) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -25,7 +25,7 @@ for (const t of ctx.TEMPLATES) {
     if (r < 4.5) { console.log(`${t.id}: ${key} ${t.colors[key]} on ${t.colors.bg} is ${r.toFixed(2)}:1`); failures++; }
   }
   for (const a of ctx.ACCENTS) {
-    const shown = ctx.renderInvite(t, { accent: a.hex }).match(/--i-accent:(#[0-9A-Fa-f]{6})/)[1];
+    const shown = ctx.inviteColors(t, a.hex).accent;
     const r = ratio(shown, t.colors.bg);
     if (r < 4.5) { console.log(`${t.id}: ${a.name} accent renders ${shown} on ${t.colors.bg} at ${r.toFixed(2)}:1`); failures++; }
   }
