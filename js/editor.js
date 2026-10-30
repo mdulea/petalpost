@@ -2,7 +2,7 @@ import './icons.js';
 import { ACCENTS, CATEGORIES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import {
-  EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, makeInviteData, openInvite, resetInvite, saveDraft, savePhoto, setPhoto, shareLink, slug,
+  EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, changePhoto, makeInviteData, mapLink, openInvite, resetInvite, saveDraft, shareLink, slug,
   storedInvite, switchTemplate, updateInvite,
 } from './invite.js';
 
@@ -35,8 +35,9 @@ function render() {
   form.classList.toggle('has-photo', Boolean(state.photo));
   document.getElementById('previewGuest').href = shareUrl();
   const map = document.getElementById('openMap');
-  map.hidden = !state.d.address;
-  map.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(state.d.address || '')}`;
+  const mapUrl = mapLink(state.d);
+  map.hidden = !mapUrl;
+  if (mapUrl) map.href = mapUrl;
 }
 
 function commit() {
@@ -108,12 +109,13 @@ async function loadPhoto(file) {
     canvas.width = Math.round(img.naturalWidth * scale);
     canvas.height = Math.round(img.naturalHeight * scale);
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    if (!setPhoto(state, canvas.toDataURL('image/jpeg', 0.85))) {
+    const result = changePhoto(state, canvas.toDataURL('image/jpeg', 0.85), storage);
+    if (result === 'refused') {
       setStatus('That image could not be read. Try a JPG or PNG.');
       return;
     }
     commit();
-    setStatus(savePhoto(state, storage) ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
+    setStatus(result === 'saved' ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
   } catch {
     setStatus('That image could not be read. Try a JPG or PNG.');
   } finally {
@@ -133,8 +135,7 @@ dropzone.addEventListener('drop', (e) => {
 });
 
 document.getElementById('removePhoto').addEventListener('click', () => {
-  setPhoto(state, null);
-  savePhoto(state, storage);
+  changePhoto(state, null, storage);
   commit();
 });
 

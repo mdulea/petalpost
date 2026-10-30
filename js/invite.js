@@ -57,13 +57,8 @@ function restoreInvite(value) {
   return { t: template.id, d: makeInviteData(template, value.d) };
 }
 
-// The only writer of the photo: a JPEG or PNG data URL, or null to remove it.
-// Returns false and keeps the current photo for anything else, such as the "data:," export of an empty canvas.
-export function setPhoto(state, url) {
-  if (url !== null && !PHOTO_URL.test(url)) return false;
-  state.photo = url;
-  return true;
-}
+// A photo is a JPEG or PNG data URL, or null for none.
+const isPhoto = (url) => url === null || PHOTO_URL.test(url);
 
 // Editor URLs: ?t= opens a template for the owner, ?view=1 opens the guest view. openInvite parses both.
 export const editorUrl = (id) => `editor.html?t=${encodeURIComponent(id)}`;
@@ -89,8 +84,7 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null 
   if (shared) return { ...shared, photo: null, guest };
   let saved = null;
   try { saved = JSON.parse(draft); } catch { saved = null; }
-  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: null, guest };
-  setPhoto(state, photo);
+  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: isPhoto(photo) ? photo : null, guest };
   if (requested && requested !== state.t) switchTemplate(state, requested);
   return state;
 }
@@ -122,11 +116,15 @@ export function saveDraft(state, storage) {
   if (!state.guest) writeStorage(storage, DRAFT_KEY, draftOf(state));
 }
 
-// Call only when the photo changes. A photo that does not fit removes the stored one and returns false.
-export function savePhoto(state, storage) {
-  if (state.guest || writeStorage(storage, PHOTO_KEY, state.photo)) return true;
+// The only writer of the photo: a JPEG or PNG data URL, or null to remove it.
+// Returns 'refused' and keeps the current photo for anything else, such as the "data:," export of an empty canvas.
+// Returns 'unsaved' when the photo does not fit in storage: it shows now and the stored one is removed. Otherwise 'saved'.
+export function changePhoto(state, url, storage) {
+  if (!isPhoto(url)) return 'refused';
+  state.photo = url;
+  if (state.guest || writeStorage(storage, PHOTO_KEY, url)) return 'saved';
   writeStorage(storage, PHOTO_KEY, null);
-  return false;
+  return 'unsaved';
 }
 
 // Share links store {t, d} as URL-safe base64 JSON in the hash.
@@ -145,6 +143,9 @@ function decodeState(text) {
     return null;
   }
 }
+
+// Guest view: the address as a Google Maps search, or null without an address.
+export const mapLink = (data) => (data.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address)}` : null);
 
 export const slug = (text) => (text || 'invite').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'invite';
 
