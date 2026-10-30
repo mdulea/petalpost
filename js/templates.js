@@ -697,8 +697,14 @@ export const HERO_TEMPLATES = ['birthday', 'wedding', 'baby'];
 // The landing banner beside the call to action shows this template.
 export const BANNER_TEMPLATE = 'housewarming';
 
+// The editor opens this template when a link or draft names none or an unknown one.
+export const DEFAULT_TEMPLATE = 'birthday';
+
+// The landing gallery badges these templates as popular.
+export const POPULAR_TEMPLATES = ['birthday', 'wedding'];
+
 export function getTemplate(id) {
-  return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
+  return TEMPLATES.find((t) => t.id === id) || TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE);
 }
 
 function escapeHtml(value) {
@@ -745,7 +751,7 @@ export function renderInvite(template, d, { href, label, inline } = {}) {
   const attrs = (href ? ` href="${escapeHtml(href)}"` : '') + (label ? ` aria-label="${escapeHtml(label)}"` : '');
 
   return `<${tag} class="invite-wrap"${attrs}>
-    <article class="invite invite--${template.id} font-${template.titleFont}" style="${style}">
+    <article class="invite font-${template.titleFont}" style="${style}">
       <div class="invite-frame frame-${template.frame}">${art}</div>
       <div class="invite-body">
         ${d.eyebrow ? `<p class="invite-eyebrow">${escapeHtml(d.eyebrow)}</p>` : ''}

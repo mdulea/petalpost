@@ -1,5 +1,5 @@
 import './icons.js';
-import { ACCENTS, BANNER_TEMPLATE, CATEGORIES, HERO_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { ACCENTS, BANNER_TEMPLATE, CATEGORIES, HERO_TEMPLATES, POPULAR_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { editorUrl, makeInviteData } from './invite.js';
 
@@ -31,9 +31,9 @@ document.getElementById('bannerArt').style.transform = 'rotate(4deg)';
 
 // Gallery with occasion filters.
 const gallery = document.getElementById('gallery');
-mountInvites(gallery, TEMPLATES.map((t, i) => `
+mountInvites(gallery, TEMPLATES.map((t) => `
   <article class="card" data-category="${t.category}">
-    ${i < 2 ? '<span class="badge">Popular</span>' : ''}
+    ${POPULAR_TEMPLATES.includes(t.id) ? '<span class="badge">Popular</span>' : ''}
     <div class="card-art">${renderInvite(t, makeInviteData(t))}</div>
     <div class="card-body">
       <div>

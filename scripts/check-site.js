@@ -1,7 +1,8 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, the contact address differs between pages, or editor.html lacks a control for an invite field.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, the contact address differs between pages, editor.html lacks a control for an invite field, or a template's frame or title font has no CSS rule.
 // Run: node scripts/check-site.js
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { EDITABLE } from '../js/invite.js';
+import { TEMPLATES } from '../js/templates.js';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const attr = (html, pattern) => (html.match(pattern) || [])[1];
@@ -51,6 +52,14 @@ const editor = read('editor.html');
 for (const f of EDITABLE) {
   const control = f === 'accent' ? /id="swatches"/ : new RegExp(`<(input|textarea|select)\\b[^>]*\\bname="${f}"`);
   if (!control.test(editor)) fail(`editor.html: no control for invite field ${f}`);
+}
+
+// renderInvite gives each card a frame-<frame> and a font-<titleFont> class, styled only in css/styles.css.
+const styles = read('css/styles.css');
+for (const t of TEMPLATES) {
+  for (const rule of [`.frame-${t.frame} `, `.font-${t.titleFont} `]) {
+    if (!styles.includes(rule)) fail(`css/styles.css: no ${rule.trim()} rule for template ${t.id}`);
+  }
 }
 
 console.log(failures ? `${failures} failed` : `site checks passed: ${pages.length} indexed pages under ${origins[0]}, contact ${addresses[0]}`);
