@@ -78,7 +78,7 @@ function renderPicker(category) {
   mountInvites(document.getElementById('picker'), TEMPLATES.filter((t) => t.category === category).map((t) => `
     <label class="picker-item">
       <input type="radio" name="template" value="${t.id}" ${t.id === state.t ? 'checked' : ''}>
-      ${renderInvite(t, {}, 'span')}
+      ${renderInvite(t, makeInviteData(t), { inline: true })}
       <span class="picker-name">${t.name}</span>
     </label>`).join(''));
 }

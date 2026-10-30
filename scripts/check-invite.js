@@ -5,10 +5,7 @@ const vm = require('vm');
 const ctx = { TextEncoder, TextDecoder, URLSearchParams, atob, btoa };
 const read = (file) => fs.readFileSync(`${__dirname}/../js/${file}`, 'utf8');
 vm.runInNewContext(`${read('templates.js')}\n${read('invite.js')}
-this.TEMPLATES = TEMPLATES; this.getTemplate = getTemplate; this.shareLink = shareLink; this.openInvite = openInvite; this.renderInvite = renderInvite;
-this.makeInviteData = makeInviteData; this.switchTemplate = switchTemplate; this.buildIcs = buildIcs;
-this.updateInvite = updateInvite; this.draftOf = draftOf; this.resetInvite = resetInvite; this.editorUrl = editorUrl;
-this.FIELD_LIMITS = FIELD_LIMITS; this.EDITABLE = EDITABLE;`, ctx);
+this.TEMPLATES = TEMPLATES; this.HERO_TEMPLATES = HERO_TEMPLATES; this.FIELD_LIMITS = FIELD_LIMITS; this.EDITABLE = EDITABLE; this.editorUrl = editorUrl;`, ctx);
 
 let failures = 0;
 const check = (name, actual, expected) => {
@@ -92,8 +89,17 @@ check('reset restores the sample text, keeps the photo position and photo, and c
   { t: 'birthday', d: { ...ctx.makeInviteData(birthday), photoY: 20 }, photo: 'data:image/jpeg;base64,x' });
 
 // Rendered invites carry their sizing container, which may be a link.
-check('an invite renders inside its sizing container', /^<div class="invite-wrap">\s*<article class="invite /.test(ctx.renderInvite(birthday)), true);
-check('the sizing container can be a link', /^<a class="invite-wrap" href="editor.html">/.test(ctx.renderInvite(birthday, {}, 'a', 'href="editor.html"')), true);
+const sample = ctx.makeInviteData(birthday);
+check('an invite renders inside its sizing container', /^<div class="invite-wrap">\s*<article class="invite /.test(ctx.renderInvite(birthday, sample)), true);
+check('the sizing container can be a labelled link with escaped attributes',
+  /^<a class="invite-wrap" href="editor.html\?t=a&amp;b" aria-label="Use the &quot;Bash&quot; template">/.test(ctx.renderInvite(birthday, sample, { href: 'editor.html?t=a&b', label: 'Use the "Bash" template' })), true);
+check('the sizing container can be a span inside a label', /^<span class="invite-wrap">/.test(ctx.renderInvite(birthday, sample, { inline: true })), true);
+check('a JPEG photo renders as the card art', ctx.renderInvite(birthday, { ...sample, photo: 'data:image/jpeg;base64,QUJD' }).includes("url('data:image/jpeg;base64,QUJD')"), true);
+for (const bad of ["data:image/jpeg;base64,x');background:url('https://evil.test/", 'https://evil.test/a.jpg']) {
+  const html = ctx.renderInvite(birthday, { ...sample, photo: bad });
+  check(`a photo "${bad.slice(0, 24)}" that is not a JPEG or PNG data URL renders the template art`, [html.includes('evil.test'), html.includes(birthday.art)], [false, true]);
+}
+check('the hero templates exist', ctx.HERO_TEMPLATES.map((id) => ctx.getTemplate(id).id), ctx.HERO_TEMPLATES);
 
 // Calendar file: events last three hours and may end the next day.
 const now = new Date('2026-10-30T09:15:00Z');

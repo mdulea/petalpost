@@ -47,9 +47,10 @@
   <script src="../js/icons.js"></script>
   <script src="../js/templates.js"></script>
   <script src="../js/mount.js"></script>
+  <script src="../js/invite.js"></script>
   <script>
-    mountInvites(document.getElementById('fan'), ['birthday', 'wedding', 'baby']
-      .map((id) => renderInvite(getTemplate(id)))
+    mountInvites(document.getElementById('fan'), HERO_TEMPLATES
+      .map((id) => renderInvite(getTemplate(id), makeInviteData(getTemplate(id))))
       .join(''));
 
     document.getElementById('save').addEventListener('click', async () => {
