@@ -38,13 +38,15 @@ export function resetInvite(state) {
   state.d = makeInviteData(getTemplate(state.t), { photoY: state.d.photoY });
 }
 
-// Fields still holding the old template's sample text take the new template's text; user edits stay.
+// Fields still holding the old template's sample text take the new template's text; edited and cleared fields stay.
 export function switchTemplate(state, id) {
   const from = getTemplate(state.t);
   const to = getTemplate(id);
+  const kept = { ...state.d };
   FIELDS.forEach((f) => {
-    if (!state.d[f] || state.d[f] === from.defaults[f]) state.d[f] = to.defaults[f];
+    if (kept[f] === from.defaults[f]) delete kept[f];
   });
+  state.d = makeInviteData(to, kept);
   state.t = to.id;
 }
 

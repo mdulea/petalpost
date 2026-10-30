@@ -85,6 +85,12 @@ ctx.switchTemplate(state, 'graduation');
 check('switching templates keeps an edited title', state.d.title, 'Zoe turns 30');
 check('switching templates replaces untouched sample text', state.d.venue, 'The Okafor home');
 check('switching templates updates the template id', state.t, 'graduation');
+const cleared = { t: 'birthday', d: ctx.makeInviteData(birthday, { venue: '', date: '' }) };
+ctx.switchTemplate(cleared, 'graduation');
+check('switching templates keeps a cleared field empty', [cleared.d.venue, cleared.d.date], ['', '']);
+check('switching templates keeps the record shape', Object.keys(cleared.d), Object.keys(ctx.makeInviteData(ctx.getTemplate('graduation'))));
+const clearedDraft = ctx.draftOf({ t: 'birthday', d: ctx.makeInviteData(birthday, { hosts: '' }) });
+check('a draft opened with ?t= keeps a cleared field empty', ctx.openInvite({ search: '?t=graduation', draft: clearedDraft }).d.hosts, '');
 
 // Editor input goes through the record rules; a cleared field stays cleared.
 const typed = { t: 'birthday', d: ctx.makeInviteData(birthday) };
