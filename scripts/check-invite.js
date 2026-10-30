@@ -73,12 +73,6 @@ for (const bad of ['abc', '2026-02-31', '2026-12-12T10:00']) {
 }
 check('a share link with a cleared date and time keeps them empty', [linked({ date: '', time: '' }).date, linked({ date: '', time: '' }).time], ['', '']);
 
-// The photo takes a JPEG or PNG data URL, or null to remove it; anything else leaves it as it was.
-const framed = { t: 'birthday', d: ctx.makeInviteData(birthday), photo: null };
-check('a JPEG data URL becomes the photo', [ctx.setPhoto(framed, 'data:image/jpeg;base64,QUJD'), framed.photo], [true, 'data:image/jpeg;base64,QUJD']);
-check('the export of an empty canvas is refused and the photo stays', [ctx.setPhoto(framed, 'data:,'), framed.photo], [false, 'data:image/jpeg;base64,QUJD']);
-check('null removes the photo', [ctx.setPhoto(framed, null), framed.photo], [true, null]);
-
 // Template switching keeps edits and replaces untouched sample text.
 const state = { t: 'birthday', d: ctx.makeInviteData(birthday, { title: 'Zoe turns 30' }) };
 ctx.switchTemplate(state, 'graduation');
@@ -118,18 +112,29 @@ const memory = (limit = Infinity) => {
     removeItem: (k) => { items.delete(k); },
   };
 };
-const owner = { ...ctx.openInvite({ hash: hashOf(zoeLink) }), guest: false, photo: 'data:image/jpeg;base64,x' };
+const owner = { ...ctx.openInvite({ hash: hashOf(zoeLink) }), guest: false, photo: null };
 const guestStore = memory();
-ctx.saveDraft({ ...owner, guest: true }, guestStore);
-check('the guest view writes nothing', [ctx.savePhoto({ ...owner, guest: true }, guestStore), guestStore.items.size], [true, 0]);
+const guest = { ...owner, guest: true };
+ctx.saveDraft(guest, guestStore);
+check('the guest view writes nothing', [ctx.changePhoto(guest, 'data:image/jpeg;base64,x', guestStore), guestStore.items.size], ['saved', 0]);
 const ownerStore = memory();
 ctx.saveDraft(owner, ownerStore);
-check('the owner draft and photo survive a reload', [ctx.savePhoto(owner, ownerStore), ctx.openInvite(ctx.storedInvite(ownerStore))], [true, owner]);
+check('a JPEG data URL becomes the photo and survives a reload',
+  [ctx.changePhoto(owner, 'data:image/jpeg;base64,x', ownerStore), owner.photo, ctx.openInvite(ctx.storedInvite(ownerStore))], ['saved', 'data:image/jpeg;base64,x', owner]);
+check('the export of an empty canvas is refused and the photo stays',
+  [ctx.changePhoto(owner, 'data:,', ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo], ['refused', 'data:image/jpeg;base64,x', 'data:image/jpeg;base64,x']);
 const fullStore = memory(40);
-ctx.savePhoto(owner, fullStore);
-check('a photo that does not fit removes the stored one',
-  [ctx.savePhoto({ ...owner, photo: `data:image/jpeg;base64,${'x'.repeat(40)}` }, fullStore), ctx.storedInvite(fullStore).photo], [false, null]);
-check('removing the photo removes the stored one', [ctx.savePhoto({ ...owner, photo: null }, ownerStore), ctx.storedInvite(ownerStore).photo], [true, null]);
+const full = { ...owner, photo: null };
+ctx.changePhoto(full, 'data:image/jpeg;base64,x', fullStore);
+const big = `data:image/jpeg;base64,${'x'.repeat(40)}`;
+check('a photo that does not fit is shown but removes the stored one',
+  [ctx.changePhoto(full, big, fullStore), full.photo, ctx.storedInvite(fullStore).photo], ['unsaved', big, null]);
+check('removing the photo removes the stored one', [ctx.changePhoto(owner, null, ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo], ['saved', null, null]);
+
+// Guest map link: the address as a Google Maps search, or null without an address.
+check('an address becomes an encoded map search', ctx.mapLink({ address: '1 Main St, Café & Co' }),
+  'https://www.google.com/maps/search/?api=1&query=1%20Main%20St%2C%20Caf%C3%A9%20%26%20Co');
+check('an empty address has no map link', [ctx.mapLink({ address: '' }), ctx.mapLink({})], [null, null]);
 
 // Rendered invites carry their sizing container, which may be a link.
 const sample = ctx.makeInviteData(birthday);

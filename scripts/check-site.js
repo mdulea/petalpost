@@ -1,8 +1,8 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, the contact address differs between pages, editor.html lacks a control for an invite field, or a template's frame or title font has no CSS rule.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, or the index.html template or accent count differs from the data.
 // Run: node scripts/check-site.js
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { EDITABLE } from '../js/invite.js';
-import { TEMPLATES } from '../js/templates.js';
+import { ACCENTS, TEMPLATES } from '../js/templates.js';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const attr = (html, pattern) => (html.match(pattern) || [])[1];
@@ -60,6 +60,13 @@ for (const t of TEMPLATES) {
   for (const rule of [`.frame-${t.frame} `, `.font-${t.titleFont} `]) {
     if (!styles.includes(rule)) fail(`css/styles.css: no ${rule.trim()} rule for template ${t.id}`);
   }
+}
+
+// landing.js writes the template and accent counts; the HTML text is what shows before it runs.
+const index = read('index.html');
+for (const [id, count] of [['templateCount', TEMPLATES.length], ['accentCount', ACCENTS.length]]) {
+  const shown = attr(index, new RegExp(`id="${id}">([^<]*)<`));
+  if (shown !== String(count)) fail(`index.html: #${id} shows ${shown}, landing.js writes ${count}`);
 }
 
 console.log(failures ? `${failures} failed` : `site checks passed: ${pages.length} indexed pages under ${origins[0]}, contact ${addresses[0]}`);
