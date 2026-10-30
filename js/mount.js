@@ -1,7 +1,7 @@
-// Browser-only: puts rendered invites into the page and fits their text. Pages load it after templates.js.
+// Browser-only: puts rendered invites into the page and fits their text.
 
 // The only way invites enter the page: html from renderInvite, then the fit step for that root.
-function mountInvites(root, html) {
+export function mountInvites(root, html) {
   root.innerHTML = html;
   fitInvites(root);
 }

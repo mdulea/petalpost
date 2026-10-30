@@ -1,9 +1,6 @@
 // Fails when a template's text colors, or any accent swatch as rendered on it, drop below WCAG AA (4.5:1) on its card background.
 // Run: node scripts/check-contrast.js
-const fs = require('fs');
-const vm = require('vm');
-const ctx = {};
-vm.runInNewContext(`${fs.readFileSync(`${__dirname}/../js/templates.js`, 'utf8')}\nthis.TEMPLATES = TEMPLATES; this.ACCENTS = ACCENTS; this.inviteColors = inviteColors;`, ctx);
+import * as ctx from '../js/templates.js';
 
 const lum = (hex) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
