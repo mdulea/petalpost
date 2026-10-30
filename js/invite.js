@@ -9,7 +9,7 @@ export const FIELDS = Object.keys(FIELD_LIMITS);
 export const EDITABLE = [...FIELDS, 'photoY', 'accent'];
 // Date and time take the editor input formats, YYYY-MM-DD for a real day and HH:MM, or empty for a cleared input.
 const FIELD_FORMATS = {
-  date: (v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00Z`).toISOString().startsWith(v)),
+  date: (v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00Z`).toJSON()?.startsWith(v)),
   time: (v) => /^(([01]\d|2[0-3]):[0-5]\d)?$/.test(v),
 };
 
@@ -116,10 +116,18 @@ export function saveDraft(state, storage) {
   if (!state.guest) writeStorage(storage, DRAFT_KEY, draftOf(state));
 }
 
-// The only writer of the photo: a JPEG or PNG data URL, or null to remove it.
+const photoChanges = new WeakMap();
+
+// The only writer of the photo: a JPEG or PNG data URL, a promise for one, or null to remove it.
+// The latest request wins, even when decoding completes out of order; older requests return 'superseded'.
 // Returns 'refused' and keeps the current photo for anything else, such as the "data:," export of an empty canvas.
 // Returns 'unsaved' when the photo does not fit in storage: it shows now and the stored one is removed. Otherwise 'saved'.
-export function changePhoto(state, url, storage) {
+export async function changePhoto(state, source, storage) {
+  const request = {};
+  photoChanges.set(state, request);
+  let url;
+  try { url = await source; } catch { url = undefined; }
+  if (photoChanges.get(state) !== request) return 'superseded';
   if (!isPhoto(url)) return 'refused';
   state.photo = url;
   if (state.guest || writeStorage(storage, PHOTO_KEY, url)) return 'saved';
