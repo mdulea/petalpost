@@ -14,6 +14,38 @@ const daisy = (x, y, petal, center) => {
   return `<g>${petals}<circle cx="${x}" cy="${y}" r="3.4" fill="${center}"/></g>`;
 };
 
+const rose = (x, y, r, fill, line) =>
+  `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>` +
+  `<path d="M${x - r * 0.55} ${y + r * 0.1}a${r * 0.55} ${r * 0.55} 0 1 1 ${r * 0.6} ${r * 0.5}" stroke="${line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
+  `<path d="M${x - r * 0.2} ${y}a${r * 0.25} ${r * 0.25} 0 1 0 ${r * 0.3} -${r * 0.15}" stroke="${line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+
+// A stem from (x1, y1) to the tip (x2, y2) with buds along its top third.
+const lavender = (x1, y1, x2, y2) => {
+  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI + 90;
+  let buds = '';
+  for (let i = 0; i < 6; i++) {
+    const t = 1 - i * 0.06;
+    const side = i % 2 ? 2.4 : -2.4;
+    buds += `<ellipse cx="${x1 + (x2 - x1) * t + side}" cy="${y1 + (y2 - y1) * t}" rx="2.6" ry="4.2" transform="rotate(${angle} ${x1 + (x2 - x1) * t + side} ${y1 + (y2 - y1) * t})" fill="${i % 2 ? '#9A86C4' : '#B3A2D6'}"/>`;
+  }
+  return `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#7F9A72" stroke-width="1.6"/>${buds}`;
+};
+
+const citrus = (x, y, r, rind, flesh) => {
+  let segments = '';
+  for (let a = 0; a < 180; a += 45) {
+    segments += `<path d="M${x} ${y - r + 5}V${y + r - 5}" stroke="#FFF8E0" stroke-width="1.4" transform="rotate(${a} ${x} ${y})"/>`;
+  }
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="${rind}"/><circle cx="${x}" cy="${y}" r="${r - 3}" fill="#FFF8E0"/><circle cx="${x}" cy="${y}" r="${r - 5}" fill="${flesh}"/>${segments}`;
+};
+
+const key = (rot, fill, hole) => `
+  <g transform="rotate(${rot} 100 60)">
+    <rect x="97" y="88" width="6" height="44" rx="2" fill="${fill}"/>
+    <rect x="103" y="116" width="9" height="4" rx="1" fill="${fill}"/><rect x="103" y="124" width="6" height="4" rx="1" fill="${fill}"/>
+    <circle cx="100" cy="80" r="11" fill="${fill}"/><circle cx="100" cy="80" r="4" fill="${hole}"/>
+  </g>`;
+
 const svg = (body) =>
   `<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
 
@@ -231,41 +263,6 @@ export const TEMPLATES = [
       ${daisy(36, 134, '#FFFFFF', '#F2C66D')}${sparkle(34, 40, 5, '#F2D58A')}${sparkle(172, 60, 4, '#FFFFFF')}
     `),
   },
-];
-
-const rose = (x, y, r, fill, line) =>
-  `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>` +
-  `<path d="M${x - r * 0.55} ${y + r * 0.1}a${r * 0.55} ${r * 0.55} 0 1 1 ${r * 0.6} ${r * 0.5}" stroke="${line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
-  `<path d="M${x - r * 0.2} ${y}a${r * 0.25} ${r * 0.25} 0 1 0 ${r * 0.3} -${r * 0.15}" stroke="${line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
-
-// A stem from (x1, y1) to the tip (x2, y2) with buds along its top third.
-const lavender = (x1, y1, x2, y2) => {
-  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI + 90;
-  let buds = '';
-  for (let i = 0; i < 6; i++) {
-    const t = 1 - i * 0.06;
-    const side = i % 2 ? 2.4 : -2.4;
-    buds += `<ellipse cx="${x1 + (x2 - x1) * t + side}" cy="${y1 + (y2 - y1) * t}" rx="2.6" ry="4.2" transform="rotate(${angle} ${x1 + (x2 - x1) * t + side} ${y1 + (y2 - y1) * t})" fill="${i % 2 ? '#9A86C4' : '#B3A2D6'}"/>`;
-  }
-  return `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#7F9A72" stroke-width="1.6"/>${buds}`;
-};
-
-const citrus = (x, y, r, rind, flesh) => {
-  let segments = '';
-  for (let a = 0; a < 180; a += 45) {
-    segments += `<path d="M${x} ${y - r + 5}V${y + r - 5}" stroke="#FFF8E0" stroke-width="1.4" transform="rotate(${a} ${x} ${y})"/>`;
-  }
-  return `<circle cx="${x}" cy="${y}" r="${r}" fill="${rind}"/><circle cx="${x}" cy="${y}" r="${r - 3}" fill="#FFF8E0"/><circle cx="${x}" cy="${y}" r="${r - 5}" fill="${flesh}"/>${segments}`;
-};
-
-const key = (rot, fill, hole) => `
-  <g transform="rotate(${rot} 100 60)">
-    <rect x="97" y="88" width="6" height="44" rx="2" fill="${fill}"/>
-    <rect x="103" y="116" width="9" height="4" rx="1" fill="${fill}"/><rect x="103" y="124" width="6" height="4" rx="1" fill="${fill}"/>
-    <circle cx="100" cy="80" r="11" fill="${fill}"/><circle cx="100" cy="80" r="4" fill="${hole}"/>
-  </g>`;
-
-TEMPLATES.push(
   {
     id: 'sprinkle-cake',
     name: 'Sprinkle Cake',
@@ -672,7 +669,7 @@ TEMPLATES.push(
       <path d="M104 118q-12 4-6 -8" stroke="#232835" stroke-width="4" fill="none" stroke-linecap="round"/>
     `),
   },
-);
+];
 
 // Later templates in a category inherit unset sample text from the category's first template.
 const categoryDefaults = {};
@@ -680,6 +677,9 @@ TEMPLATES.forEach((t) => {
   if (!categoryDefaults[t.category]) categoryDefaults[t.category] = t.defaults;
   else t.defaults = { ...categoryDefaults[t.category], ...t.defaults };
 });
+
+// Occasions in the order their first template appears; the landing filters and the editor picker tabs list them.
+export const CATEGORIES = Object.keys(categoryDefaults);
 
 // Accent swatches. Templates marked dark render each swatch's light variant so text stays readable.
 export const ACCENTS = [

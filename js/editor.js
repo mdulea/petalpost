@@ -1,5 +1,5 @@
 import './icons.js';
-import { ACCENTS, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { ACCENTS, CATEGORIES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import {
   EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, draftOf, makeInviteData, openInvite, resetInvite, setPhoto, shareLink, slug, switchTemplate, updateInvite,
@@ -76,7 +76,7 @@ FIELDS.forEach((f) => { if (FIELD_LIMITS[f]) form.elements[f].maxLength = FIELD_
 
 // The picker shows one occasion at a time; the tab follows the selected template.
 const pickerTabs = document.getElementById('pickerTabs');
-pickerTabs.innerHTML = [...new Set(TEMPLATES.map((t) => t.category))]
+pickerTabs.innerHTML = CATEGORIES
   .map((c) => `<button class="filter" type="button" data-category="${c}">${c}</button>`)
   .join('');
 
