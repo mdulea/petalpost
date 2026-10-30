@@ -7,11 +7,15 @@ A static invitation editor built with HTML, CSS, and JavaScript.
 Serve the repository root with any static HTTP server, then open `index.html`.
 The site has no build step or package dependencies.
 
-Run the template contrast check with Node.js:
+Run the checks with Node.js:
 
 ```sh
 node scripts/check-contrast.js
+node scripts/check-invite.js
 ```
+
+The contrast check covers each template's colors and every accent swatch as rendered on it.
+The invite check covers share links, invite records, template switching and the calendar file.
 
 Fonts live in `fonts/` and the editor's html-to-image library lives in `vendor/`.
 No page loads code or fonts from an external service.
