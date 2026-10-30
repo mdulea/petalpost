@@ -44,10 +44,14 @@ function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     writeStorage(DRAFT_KEY, draftOf(state));
-    if (!writeStorage(PHOTO_KEY, state.photo)) {
-      setStatus('The photo is too large to keep after a reload. Download the PNG before you leave.');
-    }
   }, 250);
+}
+
+// The photo is stored only when it changes; a photo that does not fit removes the stored one.
+function savePhoto() {
+  if (state.guest || writeStorage(PHOTO_KEY, state.photo)) return true;
+  writeStorage(PHOTO_KEY, null);
+  return false;
 }
 
 function render() {
@@ -64,12 +68,9 @@ function commit() {
   save();
 }
 
-// Text inputs and the photo slider take a value; the accent is a radio group.
+// The accent radio group takes its value too: a null accent checks the template default swatch.
 function fillForm() {
-  EDITABLE.forEach((f) => {
-    if (f === 'accent') form.querySelector(`input[name="accent"][value="${state.d.accent || ''}"]`).checked = true;
-    else form.elements[f].value = state.d[f] ?? '';
-  });
+  EDITABLE.forEach((f) => { form.elements[f].value = state.d[f] ?? ''; });
 }
 
 FIELDS.forEach((f) => { if (FIELD_LIMITS[f]) form.elements[f].maxLength = FIELD_LIMITS[f]; });
@@ -136,7 +137,7 @@ async function loadPhoto(file) {
       return;
     }
     commit();
-    setStatus('Photo added.');
+    setStatus(savePhoto() ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
   } catch {
     setStatus('That image could not be read. Try a JPG or PNG.');
   } finally {
@@ -157,6 +158,7 @@ dropzone.addEventListener('drop', (e) => {
 
 document.getElementById('removePhoto').addEventListener('click', () => {
   setPhoto(state, null);
+  savePhoto();
   commit();
 });
 

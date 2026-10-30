@@ -120,7 +120,11 @@ for (const bad of ["data:image/jpeg;base64,x');background:url('https://evil.test
 }
 check('the hero templates exist', ctx.HERO_TEMPLATES.map((id) => ctx.getTemplate(id).id), ctx.HERO_TEMPLATES);
 check('the banner template exists', ctx.getTemplate(ctx.BANNER_TEMPLATE).id, ctx.BANNER_TEMPLATE);
-check('template ids are unique', ctx.TEMPLATES.map((t) => t.id).filter((id, i, ids) => ids.indexOf(id) !== i), []);
+const ids = ctx.TEMPLATES.map((t) => t.id);
+check('the default template exists', ids.includes(ctx.DEFAULT_TEMPLATE), true);
+check('an unknown template id opens the default template', ctx.getTemplate('no-such-template').id, ctx.DEFAULT_TEMPLATE);
+check('the popular templates exist', (ctx.POPULAR_TEMPLATES || [null]).filter((id) => !ids.includes(id)), []);
+check('template ids are unique', ids.filter((id, i, ids) => ids.indexOf(id) !== i), []);
 
 // Calendar file: events last three hours and may end the next day.
 const now = new Date('2026-10-30T09:15:00Z');
