@@ -1,3 +1,10 @@
+import './icons.js';
+import { ACCENTS, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { mountInvites } from './mount.js';
+import {
+  EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, draftOf, makeInviteData, openInvite, resetInvite, setPhoto, shareLink, slug, switchTemplate, updateInvite,
+} from './invite.js';
+
 const DRAFT_KEY = 'petalpost:draft';
 const PHOTO_KEY = 'petalpost:photo';
 
@@ -124,7 +131,10 @@ async function loadPhoto(file) {
     canvas.width = Math.round(img.naturalWidth * scale);
     canvas.height = Math.round(img.naturalHeight * scale);
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    state.photo = canvas.toDataURL('image/jpeg', 0.85);
+    if (!setPhoto(state, canvas.toDataURL('image/jpeg', 0.85))) {
+      setStatus('That image could not be read. Try a JPG or PNG.');
+      return;
+    }
     commit();
     setStatus('Photo added.');
   } catch {
@@ -146,7 +156,7 @@ dropzone.addEventListener('drop', (e) => {
 });
 
 document.getElementById('removePhoto').addEventListener('click', () => {
-  state.photo = null;
+  setPhoto(state, null);
   commit();
 });
 

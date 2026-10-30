@@ -1,3 +1,8 @@
+import './icons.js';
+import { ACCENTS, HERO_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { mountInvites } from './mount.js';
+import { editorUrl, makeInviteData } from './invite.js';
+
 // Hero fan.
 mountInvites(document.getElementById('heroFan'), HERO_TEMPLATES
   .map((id) => {

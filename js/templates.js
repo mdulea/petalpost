@@ -17,7 +17,7 @@ const daisy = (x, y, petal, center) => {
 const svg = (body) =>
   `<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
 
-const TEMPLATES = [
+export const TEMPLATES = [
   {
     id: 'birthday',
     name: 'Balloon Bash',
@@ -682,7 +682,7 @@ TEMPLATES.forEach((t) => {
 });
 
 // Accent swatches. Templates marked dark render each swatch's light variant so text stays readable.
-const ACCENTS = [
+export const ACCENTS = [
   { hex: '#A44E47', name: 'Rose', light: '#EBA59E' },
   { hex: '#52704C', name: 'Sage', light: '#A9C99F' },
   { hex: '#4F6993', name: 'Dusk blue', light: '#A9BFE6' },
@@ -692,9 +692,9 @@ const ACCENTS = [
 ];
 
 // The landing hero and the social preview card fan out these three contrasting occasions.
-const HERO_TEMPLATES = ['birthday', 'wedding', 'baby'];
+export const HERO_TEMPLATES = ['birthday', 'wedding', 'baby'];
 
-function getTemplate(id) {
+export function getTemplate(id) {
   return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
 }
 
@@ -707,9 +707,7 @@ function escapeHtml(value) {
 function formatDate(iso) {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function formatTime(hhmm) {
@@ -719,7 +717,7 @@ function formatTime(hhmm) {
 }
 
 // The card colors as rendered: a known accent swatch replaces the template accent.
-function inviteColors(template, accentHex) {
+export function inviteColors(template, accentHex) {
   const c = template.colors;
   const swatch = ACCENTS.find((a) => a.hex === accentHex);
   return { bg: c.bg, ink: c.ink, accent: swatch ? swatch[template.dark ? 'light' : 'hex'] : c.accent, soft: c.soft };
@@ -727,13 +725,13 @@ function inviteColors(template, accentHex) {
 
 // Photos are JPEG data URLs from the editor, or PNG where the browser cannot encode JPEG.
 // Any other string could break out of the CSS url(), so renderInvite draws the template art instead.
-const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
+export const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 
 // d: a record from makeInviteData (js/invite.js), plus an optional photo.
 // The card sizes in container units, so it renders inside its .invite-wrap container:
 // a link when href is set, a <span> when inline is set for use inside a <label>, otherwise a <div>.
 // label becomes the container's aria-label. Pages insert the result with mountInvites (js/mount.js), which also fits the text.
-function renderInvite(template, d, { href, label, inline } = {}) {
+export function renderInvite(template, d, { href, label, inline } = {}) {
   const c = inviteColors(template, d.accent);
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;
   const art = PHOTO_URL.test(d.photo)

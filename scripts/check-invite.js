@@ -1,11 +1,9 @@
 // Fails when share links, invite records, template switching or the calendar file break.
 // Run: node scripts/check-invite.js
-const fs = require('fs');
-const vm = require('vm');
-const ctx = { TextEncoder, TextDecoder, URLSearchParams, atob, btoa };
-const read = (file) => fs.readFileSync(`${__dirname}/../js/${file}`, 'utf8');
-vm.runInNewContext(`${read('templates.js')}\n${read('invite.js')}
-this.TEMPLATES = TEMPLATES; this.HERO_TEMPLATES = HERO_TEMPLATES; this.FIELD_LIMITS = FIELD_LIMITS; this.EDITABLE = EDITABLE; this.editorUrl = editorUrl;`, ctx);
+import * as templates from '../js/templates.js';
+import * as invite from '../js/invite.js';
+
+const ctx = { ...templates, ...invite };
 
 let failures = 0;
 const check = (name, actual, expected) => {
@@ -66,6 +64,21 @@ check('every template sample fits its limits', ctx.TEMPLATES.flatMap((t) => Obje
   .filter(([f, max]) => max && (t.defaults[f] || '').length > max).map(([f]) => `${t.id}.${f}`)), []);
 check('a record holds exactly the editable names', Object.keys(ctx.makeInviteData(birthday)).sort(), [...ctx.EDITABLE].sort());
 
+// Date and time keep the editor input formats, YYYY-MM-DD and HH:MM. Anything else is the template sample; a cleared input stays empty.
+const linked = (d) => ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, { t: 'birthday', d: { ...birthday.defaults, ...d } })) }).d;
+check('a share link with an unreadable time shows the template time', linked({ time: 'abc' }).time, birthday.defaults.time);
+check('a share link with an unreadable time renders no invalid time', ctx.renderInvite(birthday, linked({ time: 'abc' })).includes('Invalid'), false);
+for (const bad of ['abc', '2026-02-31', '2026-12-12T10:00']) {
+  check(`a share link with the date "${bad}" shows the template date`, linked({ date: bad }).date, birthday.defaults.date);
+}
+check('a share link with a cleared date and time keeps them empty', [linked({ date: '', time: '' }).date, linked({ date: '', time: '' }).time], ['', '']);
+
+// The photo takes a JPEG or PNG data URL, or null to remove it; anything else leaves it as it was.
+const framed = { t: 'birthday', d: ctx.makeInviteData(birthday), photo: null };
+check('a JPEG data URL becomes the photo', [ctx.setPhoto(framed, 'data:image/jpeg;base64,QUJD'), framed.photo], [true, 'data:image/jpeg;base64,QUJD']);
+check('the export of an empty canvas is refused and the photo stays', [ctx.setPhoto(framed, 'data:,'), framed.photo], [false, 'data:image/jpeg;base64,QUJD']);
+check('null removes the photo', [ctx.setPhoto(framed, null), framed.photo], [true, null]);
+
 // Template switching keeps edits and replaces untouched sample text.
 const state = { t: 'birthday', d: ctx.makeInviteData(birthday, { title: 'Zoe turns 30' }) };
 ctx.switchTemplate(state, 'graduation');
@@ -114,8 +127,7 @@ check('an event without a time starts at noon', lines({ date: '2026-12-12' }).fi
 check('summary text is escaped',
   lines({ title: 'Tea; cake, games', date: '2026-12-12' }).find((l) => l.startsWith('SUMMARY')), 'SUMMARY:Tea\\; cake\\, games');
 check('an event without a date has no calendar file', ctx.buildIcs({ title: 'Tea' }, now), null);
-check('an event with an unreadable date has no calendar file', ctx.buildIcs({ date: 'abc', time: '14:00' }, now), null);
-check('an event with an unreadable time has no calendar file', ctx.buildIcs({ date: '2026-12-12', time: 'abc' }, now), null);
+check('every template sample has a calendar file', ctx.TEMPLATES.filter((t) => !ctx.buildIcs(ctx.makeInviteData(t), now)).map((t) => t.id), []);
 
 console.log(failures ? `${failures} failed` : 'invite checks passed');
 process.exit(failures ? 1 : 0);
