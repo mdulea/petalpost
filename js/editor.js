@@ -7,23 +7,6 @@ const statusEl = document.getElementById('status');
 const params = new URLSearchParams(location.search);
 const isGuestView = params.get('view') === '1';
 
-// Share links store {t, d} as URL-safe base64 JSON in the hash.
-function encodeState(value) {
-  const bytes = new TextEncoder().encode(JSON.stringify(value));
-  let binary = '';
-  bytes.forEach((b) => { binary += String.fromCharCode(b); });
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function decodeState(text) {
-  try {
-    const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))));
-  } catch {
-    return null;
-  }
-}
-
 function readStorage(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
@@ -38,36 +21,18 @@ function writeStorage(key, value) {
   }
 }
 
-function pickFields(source = {}) {
-  const out = {};
-  FIELDS.forEach((f) => { if (typeof source[f] === 'string') out[f] = source[f]; });
-  out.photoY = Number.isFinite(Number(source.photoY)) ? Number(source.photoY) : 50;
-  out.accent = ACCENTS.includes(source.accent) ? source.accent : null;
-  return out;
-}
-
 function loadState() {
   const shared = location.hash.startsWith('#d=') ? decodeState(location.hash.slice(3)) : null;
-  if (shared) return { t: getTemplate(shared.t).id, d: { ...getTemplate(shared.t).defaults, ...pickFields(shared.d) }, photo: null };
+  if (shared) return { t: getTemplate(shared.t).id, d: makeInviteData(getTemplate(shared.t), shared.d), photo: null };
 
   let draft = null;
   try { draft = JSON.parse(readStorage(DRAFT_KEY)); } catch { draft = null; }
   const requested = params.get('t');
-  const base = draft ? { t: getTemplate(draft.t).id, d: { ...getTemplate(draft.t).defaults, ...pickFields(draft.d) } }
-    : { t: getTemplate(requested).id, d: { ...getTemplate(requested).defaults, photoY: 50, accent: null } };
+  const base = draft ? { t: getTemplate(draft.t).id, d: makeInviteData(getTemplate(draft.t), draft.d) }
+    : { t: getTemplate(requested).id, d: makeInviteData(getTemplate(requested)) };
   const state = { ...base, photo: readStorage(PHOTO_KEY) };
   if (requested && requested !== state.t) switchTemplate(state, requested);
   return state;
-}
-
-// Fields still holding the old template's sample text take the new template's text; user edits stay.
-function switchTemplate(state, id) {
-  const from = getTemplate(state.t);
-  const to = getTemplate(id);
-  FIELDS.forEach((f) => {
-    if (!state.d[f] || state.d[f] === from.defaults[f]) state.d[f] = to.defaults[f];
-  });
-  state.t = to.id;
 }
 
 const state = loadState();
@@ -136,12 +101,11 @@ pickerTabs.addEventListener('click', (e) => {
 
 // Accent swatches.
 
-const swatchLabel = { '#A44E47': 'Rose', '#52704C': 'Sage', '#4F6993': 'Dusk blue', '#8A5F18': 'Honey', '#7A5A9A': 'Lilac', '#2F3D35': 'Evergreen' };
 document.getElementById('swatches').innerHTML =
   `<label class="swatch swatch-default" title="Template default"><input type="radio" name="accent" value="" aria-label="Template default"></label>` +
-  ACCENTS.map((hex) => `
-    <label class="swatch" style="background:${hex}" title="${swatchLabel[hex]}">
-      <input type="radio" name="accent" value="${hex}" aria-label="${swatchLabel[hex]}">
+  ACCENTS.map((a) => `
+    <label class="swatch" style="background:${a.hex}" title="${a.name}">
+      <input type="radio" name="accent" value="${a.hex}" aria-label="${a.name}">
     </label>`).join('');
 
 form.addEventListener('input', (e) => {
@@ -208,7 +172,7 @@ document.getElementById('removePhoto').addEventListener('click', () => {
 
 document.getElementById('reset').addEventListener('click', () => {
   const t = getTemplate(state.t);
-  state.d = { ...t.defaults, photoY: state.d.photoY, accent: null };
+  state.d = makeInviteData(t, { photoY: state.d.photoY });
   fillForm();
   render();
   save();
@@ -224,8 +188,6 @@ document.getElementById('copyLink').addEventListener('click', async () => {
     window.prompt('Copy this link:', url);
   }
 });
-
-const slug = (text) => (text || 'invite').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'invite';
 
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = e.currentTarget;
@@ -250,29 +212,11 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
 });
 
 // Guest view: calendar file built from the invite fields.
-function icsEscape(text) {
-  return String(text || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
-}
-
 document.getElementById('addCalendar').addEventListener('click', () => {
   const d = state.d;
   if (!d.date) { setStatus('This invite has no date yet.'); return; }
-  const day = d.date.replace(/-/g, '');
-  const [h, m] = (d.time || '12:00').split(':').map(Number);
-  const pad = (n) => String(n).padStart(2, '0');
-  const endH = Math.min(h + 3, 23);
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-  const ics = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Petalpost//Invite//EN', 'BEGIN:VEVENT',
-    `UID:${day}-${slug(d.title)}@petalpost`, `DTSTAMP:${stamp}`,
-    `DTSTART:${day}T${pad(h)}${pad(m)}00`, `DTEND:${day}T${pad(endH)}${pad(m)}00`,
-    `SUMMARY:${icsEscape(d.title)}`,
-    `LOCATION:${icsEscape([d.venue, d.address].filter(Boolean).join(', '))}`,
-    `DESCRIPTION:${icsEscape([d.hosts, d.message, d.rsvp].filter(Boolean).join('\n'))}`,
-    'END:VEVENT', 'END:VCALENDAR',
-  ].join('\r\n');
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+  link.href = URL.createObjectURL(new Blob([buildIcs(d, new Date())], { type: 'text/calendar' }));
   link.download = `${slug(d.title)}.ics`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);

@@ -169,6 +169,7 @@ const TEMPLATES = [
     tagline: 'Evergreen, cream and a touch of gold.',
     frame: 'rect',
     titleFont: 'display',
+    dark: true,
     colors: { bg: '#2F3D35', ink: '#F6EFE0', accent: '#E2C27A', soft: '#3B4B41' },
     defaults: {
       eyebrow: 'Celebrate the class of 2027',
@@ -371,6 +372,7 @@ TEMPLATES.push(
     tagline: 'Navy sky, gold moon, white blooms.',
     frame: 'circle',
     titleFont: 'serif',
+    dark: true,
     colors: { bg: '#26304A', ink: '#F3EEE2', accent: '#D9B96B', soft: '#323E5C' },
     defaults: { title: 'Amara & Kofi', hosts: 'invite you to dance under the stars', date: '2027-08-21', time: '19:00', venue: 'Starlight Conservatory', address: '400 Garden Way, Atlanta', message: 'An evening ceremony, dinner by candlelight and dancing until late.', rsvp: 'Kindly reply by July 10' },
     art: svg(`
@@ -652,6 +654,7 @@ TEMPLATES.push(
     tagline: 'A glowing window and a sleepy cat.',
     frame: 'rect',
     titleFont: 'display',
+    dark: true,
     colors: { bg: '#2E3442', ink: '#F4EADB', accent: '#E8B866', soft: '#3A4254' },
     defaults: { eyebrow: 'Lights on, door open', title: 'Come see our cozy nest', hosts: 'Mira, Tom and Biscuit the cat', date: '2026-12-05', time: '19:00', venue: 'Our place', address: '9 Lantern Lane, Burlington, VT', message: 'Mulled cider, board games and a very friendly cat.', rsvp: 'RSVP to Mira by November 28' },
     art: svg(`
@@ -678,9 +681,15 @@ TEMPLATES.forEach((t) => {
   else t.defaults = { ...categoryDefaults[t.category], ...t.defaults };
 });
 
-const ACCENTS =['#A44E47', '#52704C', '#4F6993', '#8A5F18', '#7A5A9A', '#2F3D35'];
-
-const FIELDS = ['eyebrow', 'title', 'hosts', 'date', 'time', 'venue', 'address', 'message', 'rsvp'];
+// Accent swatches. Templates marked dark render each swatch's light variant so text stays readable.
+const ACCENTS = [
+  { hex: '#A44E47', name: 'Rose', light: '#EBA59E' },
+  { hex: '#52704C', name: 'Sage', light: '#A9C99F' },
+  { hex: '#4F6993', name: 'Dusk blue', light: '#A9BFE6' },
+  { hex: '#8A5F18', name: 'Honey', light: '#E2BC72' },
+  { hex: '#7A5A9A', name: 'Lilac', light: '#CDB4EA' },
+  { hex: '#2F3D35', name: 'Evergreen', light: '#A8D1B8' },
+];
 
 function getTemplate(id) {
   return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
@@ -710,7 +719,8 @@ function formatTime(hhmm) {
 function renderInvite(template, data = {}) {
   const d = { ...template.defaults, ...data };
   const c = template.colors;
-  const accent = d.accent || c.accent;
+  const swatch = ACCENTS.find((a) => a.hex === d.accent);
+  const accent = swatch ? swatch[template.dark ? 'light' : 'hex'] : c.accent;
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${accent};--i-soft:${c.soft}`;
   const art = d.photo
     ? `<div class="invite-photo" role="img" aria-label="Event photo" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY ?? 50)}%"></div>`

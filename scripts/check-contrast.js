@@ -1,9 +1,9 @@
-// Fails when a template's text colors drop below WCAG AA (4.5:1) on its card background.
+// Fails when a template's text colors, or any accent swatch as rendered on it, drop below WCAG AA (4.5:1) on its card background.
 // Run: node scripts/check-contrast.js
 const fs = require('fs');
 const vm = require('vm');
 const ctx = { document: {} };
-vm.runInNewContext(`${fs.readFileSync(`${__dirname}/../js/templates.js`, 'utf8')}\nthis.TEMPLATES = TEMPLATES; this.ACCENTS = ACCENTS;`, ctx);
+vm.runInNewContext(`${fs.readFileSync(`${__dirname}/../js/templates.js`, 'utf8')}\nthis.TEMPLATES = TEMPLATES; this.ACCENTS = ACCENTS; this.renderInvite = renderInvite;`, ctx);
 
 const lum = (hex) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -23,6 +23,11 @@ for (const t of ctx.TEMPLATES) {
   for (const key of ['ink', 'accent']) {
     const r = ratio(t.colors[key], t.colors.bg);
     if (r < 4.5) { console.log(`${t.id}: ${key} ${t.colors[key]} on ${t.colors.bg} is ${r.toFixed(2)}:1`); failures++; }
+  }
+  for (const a of ctx.ACCENTS) {
+    const shown = ctx.renderInvite(t, { accent: a.hex }).match(/--i-accent:(#[0-9A-Fa-f]{6})/)[1];
+    const r = ratio(shown, t.colors.bg);
+    if (r < 4.5) { console.log(`${t.id}: ${a.name} accent renders ${shown} on ${t.colors.bg} at ${r.toFixed(2)}:1`); failures++; }
   }
 }
 const counts = {};
