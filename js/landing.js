@@ -1,5 +1,5 @@
 import './icons.js';
-import { ACCENTS, BANNER_TEMPLATE, HERO_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { ACCENTS, BANNER_TEMPLATE, CATEGORIES, HERO_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { editorUrl, makeInviteData } from './invite.js';
 
@@ -21,9 +21,7 @@ mountInvites(pickLink, `${renderInvite(pick, makeInviteData(pick))}<div><strong>
 document.getElementById('templateCount').textContent = TEMPLATES.length;
 document.getElementById('accentCount').textContent = ACCENTS.length;
 
-const categories = [...new Set(TEMPLATES.map((t) => t.category))];
-
-document.getElementById('categoryChips').innerHTML = categories
+document.getElementById('categoryChips').innerHTML = CATEGORIES
   .map((c) => `<a class="chip-link" href="#templates" data-jump="${c}">${c}</a>`)
   .join('');
 
@@ -47,7 +45,7 @@ mountInvites(gallery, TEMPLATES.map((t, i) => `
   </article>`).join(''));
 
 const filters = document.getElementById('filters');
-filters.innerHTML = ['All', ...categories]
+filters.innerHTML = ['All', ...CATEGORIES]
   .map((c, i) => `<button class="filter" type="button" aria-pressed="${i === 0}" data-filter="${c}">${c}</button>`)
   .join('');
 

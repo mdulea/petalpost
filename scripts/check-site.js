@@ -1,6 +1,7 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, or the contact address differs between pages.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, the contact address differs between pages, or editor.html lacks a control for an invite field.
 // Run: node scripts/check-site.js
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { EDITABLE } from '../js/invite.js';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const attr = (html, pattern) => (html.match(pattern) || [])[1];
@@ -44,6 +45,13 @@ const contacts = pages.map(({ file, html }) => [file, attr(html, /href="mailto:(
 contacts.filter(([, address]) => !address).forEach(([file]) => fail(`${file}: missing contact address`));
 const addresses = [...new Set(contacts.map(([, address]) => address).filter(Boolean))];
 if (addresses.length > 1) fail(`more than one contact address: ${addresses.join(', ')}`);
+
+// editor.js writes every invite field to the form control of the same name; it generates the accent swatches into #swatches.
+const editor = read('editor.html');
+for (const f of EDITABLE) {
+  const control = f === 'accent' ? /id="swatches"/ : new RegExp(`<(input|textarea|select)\\b[^>]*\\bname="${f}"`);
+  if (!control.test(editor)) fail(`editor.html: no control for invite field ${f}`);
+}
 
 console.log(failures ? `${failures} failed` : `site checks passed: ${pages.length} indexed pages under ${origins[0]}, contact ${addresses[0]}`);
 process.exit(failures ? 1 : 0);
