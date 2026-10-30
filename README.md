@@ -22,7 +22,7 @@ Enable Web Analytics in the Vercel project dashboard before deploying.
 
 ## Search and social previews
 
-Every page has a canonical link, a `robots` tag and Open Graph tags under `https://petalpost.vercel.app`.
+Every page has a canonical link, a `robots` tag and Open Graph tags under `https://petalpost-beryl.vercel.app`.
 Update those URLs, `robots.txt` and `sitemap.xml` if the production domain changes.
 
 `og-image.png` is the 1200 by 630 link preview.
