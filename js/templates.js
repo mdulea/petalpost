@@ -694,6 +694,9 @@ export const ACCENTS = [
 // The landing hero and the social preview card fan out these three contrasting occasions.
 export const HERO_TEMPLATES = ['birthday', 'wedding', 'baby'];
 
+// The landing banner beside the call to action shows this template.
+export const BANNER_TEMPLATE = 'housewarming';
+
 export function getTemplate(id) {
   return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
 }
