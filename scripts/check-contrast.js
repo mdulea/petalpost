@@ -13,10 +13,7 @@ const ratio = (a, b) => {
 };
 
 let failures = 0;
-const ids = new Set();
 for (const t of ctx.TEMPLATES) {
-  if (ids.has(t.id)) { console.log(`duplicate id ${t.id}`); failures++; }
-  ids.add(t.id);
   for (const key of ['ink', 'accent']) {
     const r = ratio(t.colors[key], t.colors.bg);
     if (r < 4.5) { console.log(`${t.id}: ${key} ${t.colors[key]} on ${t.colors.bg} is ${r.toFixed(2)}:1`); failures++; }

@@ -1,5 +1,5 @@
 import './icons.js';
-import { ACCENTS, HERO_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { ACCENTS, BANNER_TEMPLATE, HERO_TEMPLATES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { editorUrl, makeInviteData } from './invite.js';
 
@@ -27,7 +27,8 @@ document.getElementById('categoryChips').innerHTML = categories
   .map((c) => `<a class="chip-link" href="#templates" data-jump="${c}">${c}</a>`)
   .join('');
 
-mountInvites(document.getElementById('bannerArt'), renderInvite(getTemplate('housewarming'), makeInviteData(getTemplate('housewarming'))));
+const banner = getTemplate(BANNER_TEMPLATE);
+mountInvites(document.getElementById('bannerArt'), renderInvite(banner, makeInviteData(banner)));
 document.getElementById('bannerArt').style.transform = 'rotate(4deg)';
 
 // Gallery with occasion filters.

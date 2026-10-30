@@ -44,6 +44,8 @@ body {
 
 img, svg { display: block; max-width: 100%; }
 
+[hidden] { display: none !important; }
+
 a { color: inherit; }
 
 h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: 1.08; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
@@ -292,7 +294,6 @@ p { margin: 0; }
   position: absolute; top: 14px; left: 14px; z-index: 1; padding: 3px 10px; border-radius: 8px;
   background: var(--rose-soft); border: 1px solid #F0CEC8; color: var(--rose-deep); font-weight: 800; font-size: 12px;
 }
-.card[hidden] { display: none; }
 
 /* How it works */
 

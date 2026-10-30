@@ -1,4 +1,4 @@
-// Fails when share links, invite records, template switching or the calendar file break.
+// Fails when share links, invite records, template switching, template ids or the calendar file break.
 // Run: node scripts/check-invite.js
 import * as templates from '../js/templates.js';
 import * as invite from '../js/invite.js';
@@ -113,6 +113,8 @@ for (const bad of ["data:image/jpeg;base64,x');background:url('https://evil.test
   check(`a photo "${bad.slice(0, 24)}" that is not a JPEG or PNG data URL renders the template art`, [html.includes('evil.test'), html.includes(birthday.art)], [false, true]);
 }
 check('the hero templates exist', ctx.HERO_TEMPLATES.map((id) => ctx.getTemplate(id).id), ctx.HERO_TEMPLATES);
+check('the banner template exists', ctx.getTemplate(ctx.BANNER_TEMPLATE).id, ctx.BANNER_TEMPLATE);
+check('template ids are unique', ctx.TEMPLATES.map((t) => t.id).filter((id, i, ids) => ids.indexOf(id) !== i), []);
 
 // Calendar file: events last three hours and may end the next day.
 const now = new Date('2026-10-30T09:15:00Z');
