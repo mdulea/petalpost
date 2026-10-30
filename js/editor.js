@@ -38,7 +38,7 @@ function save() {
   if (isGuestView) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    writeStorage(DRAFT_KEY, JSON.stringify({ t: state.t, d: state.d }));
+    writeStorage(DRAFT_KEY, draftOf(state));
     if (!writeStorage(PHOTO_KEY, state.photo)) {
       setStatus('The photo is too large to keep after a reload. Download the PNG before you leave.');
     }
@@ -52,6 +52,11 @@ function render() {
   const map = document.getElementById('openMap');
   map.hidden = !state.d.address;
   map.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(state.d.address || '')}`;
+}
+
+function commit() {
+  render();
+  save();
 }
 
 function fillForm() {
@@ -95,17 +100,10 @@ form.addEventListener('input', (e) => {
   if (name === 'template') {
     switchTemplate(state, value);
     fillForm();
-  } else if (name === 'accent') {
-    state.d.accent = value || null;
-  } else if (name === 'photoY') {
-    state.d.photoY = Number(value);
-  } else if (FIELDS.includes(name)) {
-    state.d[name] = value;
-  } else {
+  } else if (!updateInvite(state, name, value)) {
     return;
   }
-  render();
-  save();
+  commit();
 });
 
 // Photos are downscaled to 1200px JPEG so drafts fit in browser storage.
@@ -125,8 +123,7 @@ async function loadPhoto(file) {
     canvas.height = Math.round(img.naturalHeight * scale);
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
     state.photo = canvas.toDataURL('image/jpeg', 0.85);
-    render();
-    save();
+    commit();
     setStatus('Photo added.');
   } catch {
     setStatus('That image could not be read. Try a JPG or PNG.');
@@ -148,16 +145,14 @@ dropzone.addEventListener('drop', (e) => {
 
 document.getElementById('removePhoto').addEventListener('click', () => {
   state.photo = null;
-  render();
-  save();
+  commit();
 });
 
 document.getElementById('reset').addEventListener('click', () => {
   const t = getTemplate(state.t);
   state.d = makeInviteData(t, { photoY: state.d.photoY });
   fillForm();
-  render();
-  save();
+  commit();
   setStatus('Text reset to the template sample.');
 });
 
@@ -195,11 +190,11 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
 
 // Guest view: calendar file built from the invite fields.
 document.getElementById('addCalendar').addEventListener('click', () => {
-  const d = state.d;
-  if (!d.date) { setStatus('This invite has no date yet.'); return; }
+  const ics = buildIcs(state.d, new Date());
+  if (!ics) { setStatus('This invite has no valid date yet.'); return; }
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob([buildIcs(d, new Date())], { type: 'text/calendar' }));
-  link.download = `${slug(d.title)}.ics`;
+  link.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+  link.download = `${slug(state.d.title)}.ics`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });

@@ -6,7 +6,8 @@ const ctx = { TextEncoder, TextDecoder, atob, btoa };
 const read = (file) => fs.readFileSync(`${__dirname}/../js/${file}`, 'utf8');
 vm.runInNewContext(`${read('templates.js')}\n${read('invite.js')}
 this.TEMPLATES = TEMPLATES; this.getTemplate = getTemplate; this.shareLink = shareLink; this.openInvite = openInvite; this.renderInvite = renderInvite;
-this.makeInviteData = makeInviteData; this.switchTemplate = switchTemplate; this.buildIcs = buildIcs;`, ctx);
+this.makeInviteData = makeInviteData; this.switchTemplate = switchTemplate; this.buildIcs = buildIcs;
+this.updateInvite = updateInvite; this.draftOf = draftOf;`, ctx);
 
 let failures = 0;
 const check = (name, actual, expected) => {
@@ -38,6 +39,7 @@ check('a share link wins over the stored draft and photo',
 const switched = ctx.openInvite({ hash: '', draft, photo: 'data:image/jpeg;base64,x', requested: 'graduation' });
 check('?t= switches the stored draft and keeps its edits', [switched.t, switched.d.title, switched.d.venue, switched.photo],
   ['graduation', 'Zoe turns 30', 'The Okafor home', 'data:image/jpeg;base64,x']);
+check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.draftOf(zoe) }), { ...zoe, photo: null });
 check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '', draft: '{', requested: 'baby' }), { ...fresh('baby'), photo: null });
 
 // Invite records.
@@ -58,6 +60,16 @@ check('switching templates keeps an edited title', state.d.title, 'Zoe turns 30'
 check('switching templates replaces untouched sample text', state.d.venue, 'The Okafor home');
 check('switching templates updates the template id', state.t, 'graduation');
 
+// Editor input goes through the record rules; a cleared field stays cleared.
+const typed = { t: 'birthday', d: ctx.makeInviteData(birthday) };
+check('typing into a field updates it', [ctx.updateInvite(typed, 'title', 'Zoe turns 30'), typed.d.title], [true, 'Zoe turns 30']);
+check('clearing a field keeps it empty', [ctx.updateInvite(typed, 'venue', ''), typed.d.venue], [true, '']);
+check('the photo slider stores a number', [ctx.updateInvite(typed, 'photoY', '20'), typed.d.photoY], [true, 20]);
+check('a known accent is kept and the default accent is null',
+  [ctx.updateInvite(typed, 'accent', '#52704C'), typed.d.accent, ctx.updateInvite(typed, 'accent', ''), typed.d.accent], [true, '#52704C', true, null]);
+check('an unknown accent falls back to the template accent', [ctx.updateInvite(typed, 'accent', '#000000'), typed.d.accent], [true, null]);
+check('an unknown field changes nothing', [ctx.updateInvite(typed, 'photo', 'x'), typed.d.photo, typed.d.title], [false, undefined, 'Zoe turns 30']);
+
 // Rendered invites carry their sizing container, which may be a link.
 check('an invite renders inside its sizing container', /^<div class="invite-wrap">\s*<article class="invite /.test(ctx.renderInvite(birthday)), true);
 check('the sizing container can be a link', /^<a class="invite-wrap" href="editor.html">/.test(ctx.renderInvite(birthday, {}, 'a', 'href="editor.html"')), true);
@@ -74,6 +86,9 @@ check('a 23:30 event ends at 02:30 the next day', late.find((l) => l.startsWith(
 check('an event without a time starts at noon', lines({ date: '2026-12-12' }).find((l) => l.startsWith('DTSTART')), 'DTSTART:20261212T120000');
 check('summary text is escaped',
   lines({ title: 'Tea; cake, games', date: '2026-12-12' }).find((l) => l.startsWith('SUMMARY')), 'SUMMARY:Tea\\; cake\\, games');
+check('an event without a date has no calendar file', ctx.buildIcs({ title: 'Tea' }, now), null);
+check('an event with an unreadable date has no calendar file', ctx.buildIcs({ date: 'abc', time: '14:00' }, now), null);
+check('an event with an unreadable time has no calendar file', ctx.buildIcs({ date: '2026-12-12', time: 'abc' }, now), null);
 
 console.log(failures ? `${failures} failed` : 'invite checks passed');
 process.exit(failures ? 1 : 0);
