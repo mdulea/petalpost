@@ -46,10 +46,11 @@
 
   <script src="../js/icons.js"></script>
   <script src="../js/templates.js"></script>
+  <script src="../js/mount.js"></script>
   <script>
-    document.getElementById('fan').innerHTML = ['birthday', 'wedding', 'baby']
-      .map((id) => `<div class="invite-wrap">${renderInvite(getTemplate(id))}</div>`)
-      .join('');
+    mountInvites(document.getElementById('fan'), ['birthday', 'wedding', 'baby']
+      .map((id) => renderInvite(getTemplate(id)))
+      .join(''));
 
     document.getElementById('save').addEventListener('click', async () => {
       const link = document.createElement('a');

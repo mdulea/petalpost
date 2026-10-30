@@ -21,27 +21,11 @@ function writeStorage(key, value) {
   }
 }
 
-function loadState() {
-  const shared = location.hash.startsWith('#d=') ? decodeState(location.hash.slice(3)) : null;
-  if (shared) return { t: getTemplate(shared.t).id, d: makeInviteData(getTemplate(shared.t), shared.d), photo: null };
+const state = openInvite({
+  hash: location.hash, draft: readStorage(DRAFT_KEY), photo: readStorage(PHOTO_KEY), requested: params.get('t'),
+});
 
-  let draft = null;
-  try { draft = JSON.parse(readStorage(DRAFT_KEY)); } catch { draft = null; }
-  const requested = params.get('t');
-  const base = draft ? { t: getTemplate(draft.t).id, d: makeInviteData(getTemplate(draft.t), draft.d) }
-    : { t: getTemplate(requested).id, d: makeInviteData(getTemplate(requested)) };
-  const state = { ...base, photo: readStorage(PHOTO_KEY) };
-  if (requested && requested !== state.t) switchTemplate(state, requested);
-  return state;
-}
-
-const state = loadState();
-
-function shareUrl() {
-  const base = location.href.split(/[?#]/)[0];
-  const { photoY, ...fields } = state.d;
-  return `${base}?view=1#d=${encodeState({ t: state.t, d: fields })}`;
-}
+const shareUrl = () => shareLink(location.href.split(/[?#]/)[0], state);
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -62,8 +46,7 @@ function save() {
 }
 
 function render() {
-  previewCard.innerHTML = renderInvite(getTemplate(state.t), { ...state.d, photo: state.photo });
-  fitInvites(previewCard);
+  mountInvites(previewCard, renderInvite(getTemplate(state.t), { ...state.d, photo: state.photo }));
   form.classList.toggle('has-photo', Boolean(state.photo));
   document.getElementById('previewGuest').href = shareUrl();
   const map = document.getElementById('openMap');
@@ -85,13 +68,12 @@ pickerTabs.innerHTML = [...new Set(TEMPLATES.map((t) => t.category))]
 
 function renderPicker(category) {
   pickerTabs.querySelectorAll('.filter').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.category === category)));
-  document.getElementById('picker').innerHTML = TEMPLATES.filter((t) => t.category === category).map((t) => `
+  mountInvites(document.getElementById('picker'), TEMPLATES.filter((t) => t.category === category).map((t) => `
     <label class="picker-item">
       <input type="radio" name="template" value="${t.id}" ${t.id === state.t ? 'checked' : ''}>
-      <span class="invite-wrap">${renderInvite(t)}</span>
+      ${renderInvite(t, {}, 'span')}
       <span class="picker-name">${t.name}</span>
-    </label>`).join('');
-  fitInvites(document.getElementById('picker'));
+    </label>`).join(''));
 }
 
 pickerTabs.addEventListener('click', (e) => {

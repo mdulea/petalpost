@@ -22,6 +22,31 @@ function switchTemplate(state, id) {
   state.t = to.id;
 }
 
+// Untrusted {t, d} from a share link or the stored draft becomes a record, or null.
+function restoreInvite(value) {
+  if (!value || typeof value !== 'object') return null;
+  const template = getTemplate(value.t);
+  return { t: template.id, d: makeInviteData(template, value.d) };
+}
+
+// Share links open the guest view; the photo position stays with the owner's draft.
+function shareLink(base, record) {
+  const { photoY, ...fields } = record.d;
+  return `${base}?view=1#d=${encodeState({ t: record.t, d: fields })}`;
+}
+
+// Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
+// switched to the requested template. Inputs are the raw hash, storage and ?t= strings.
+function openInvite({ hash = '', draft = null, photo = null, requested = null }) {
+  const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
+  if (shared) return { ...shared, photo: null };
+  let saved = null;
+  try { saved = JSON.parse(draft); } catch { saved = null; }
+  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo };
+  if (requested && requested !== state.t) switchTemplate(state, requested);
+  return state;
+}
+
 // Share links store {t, d} as URL-safe base64 JSON in the hash.
 function encodeState(value) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
