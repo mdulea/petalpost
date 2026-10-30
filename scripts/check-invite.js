@@ -48,6 +48,9 @@ check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '
 
 // Invite records.
 const birthday = ctx.getTemplate('birthday');
+check('a draft with an impossible month retains the template date',
+  ctx.openInvite({ draft: '{"t":"birthday","d":{"date":"2026-99-99","title":"Zoe turns 30"}}' }).d,
+  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 50, accent: null });
 check('a new record is the template sample with centered photo and default accent',
   ctx.makeInviteData(birthday), { ...birthday.defaults, photoY: 50, accent: null });
 check('a record keeps string fields, photoY and a known accent',
@@ -71,6 +74,9 @@ check('a share link with an unreadable time renders no invalid time', ctx.render
 for (const bad of ['abc', '2026-02-31', '2026-12-12T10:00']) {
   check(`a share link with the date "${bad}" shows the template date`, linked({ date: bad }).date, birthday.defaults.date);
 }
+check('a share link with month zero retains the template date',
+  ctx.openInvite({ hash: '#d=eyJ0IjoiYmlydGhkYXkiLCJkIjp7ImRhdGUiOiIyMDI2LTAwLTAxIiwidGl0bGUiOiJab2UgdHVybnMgMzAifX0' }).d,
+  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 50, accent: null });
 check('a share link with a cleared date and time keeps them empty', [linked({ date: '', time: '' }).date, linked({ date: '', time: '' }).time], ['', '']);
 
 // Template switching keeps edits and replaces untouched sample text.
@@ -116,20 +122,45 @@ const owner = { ...ctx.openInvite({ hash: hashOf(zoeLink) }), guest: false, phot
 const guestStore = memory();
 const guest = { ...owner, guest: true };
 ctx.saveDraft(guest, guestStore);
-check('the guest view writes nothing', [ctx.changePhoto(guest, 'data:image/jpeg;base64,x', guestStore), guestStore.items.size], ['saved', 0]);
+check('the guest view writes nothing', [await ctx.changePhoto(guest, 'data:image/jpeg;base64,x', guestStore), guestStore.items.size], ['saved', 0]);
 const ownerStore = memory();
 ctx.saveDraft(owner, ownerStore);
 check('a JPEG data URL becomes the photo and survives a reload',
-  [ctx.changePhoto(owner, 'data:image/jpeg;base64,x', ownerStore), owner.photo, ctx.openInvite(ctx.storedInvite(ownerStore))], ['saved', 'data:image/jpeg;base64,x', owner]);
+  [await ctx.changePhoto(owner, 'data:image/jpeg;base64,x', ownerStore), owner.photo, ctx.openInvite(ctx.storedInvite(ownerStore))], ['saved', 'data:image/jpeg;base64,x', owner]);
 check('the export of an empty canvas is refused and the photo stays',
-  [ctx.changePhoto(owner, 'data:,', ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo], ['refused', 'data:image/jpeg;base64,x', 'data:image/jpeg;base64,x']);
+  [await ctx.changePhoto(owner, 'data:,', ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo], ['refused', 'data:image/jpeg;base64,x', 'data:image/jpeg;base64,x']);
 const fullStore = memory(40);
 const full = { ...owner, photo: null };
-ctx.changePhoto(full, 'data:image/jpeg;base64,x', fullStore);
+await ctx.changePhoto(full, 'data:image/jpeg;base64,x', fullStore);
 const big = `data:image/jpeg;base64,${'x'.repeat(40)}`;
 check('a photo that does not fit is shown but removes the stored one',
-  [ctx.changePhoto(full, big, fullStore), full.photo, ctx.storedInvite(fullStore).photo], ['unsaved', big, null]);
-check('removing the photo removes the stored one', [ctx.changePhoto(owner, null, ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo], ['saved', null, null]);
+  [await ctx.changePhoto(full, big, fullStore), full.photo, ctx.storedInvite(fullStore).photo], ['unsaved', big, null]);
+check('removing the photo removes the stored one', [await ctx.changePhoto(owner, null, ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo], ['saved', null, null]);
+
+// Decoding can finish out of order after another upload or removal.
+const pendingPhoto = () => {
+  let finish;
+  const decoded = new Promise((resolve) => { finish = resolve; });
+  return { decoded, finish };
+};
+const overlapping = ctx.openInvite({});
+const overlappingStore = memory();
+const firstPhoto = pendingPhoto();
+const firstChange = ctx.changePhoto(overlapping, firstPhoto.decoded, overlappingStore);
+await ctx.changePhoto(overlapping, Promise.resolve('data:image/jpeg;base64,TkVX'), overlappingStore);
+firstPhoto.finish('data:image/jpeg;base64,T0xE');
+await firstChange;
+check('the latest uploaded photo stays in the preview and survives a reload',
+  [ctx.renderInvite(birthday, { ...overlapping.d, photo: overlapping.photo }).includes("url('data:image/jpeg;base64,TkVX')"), ctx.openInvite(ctx.storedInvite(overlappingStore)).photo],
+  [true, 'data:image/jpeg;base64,TkVX']);
+const removedPhoto = pendingPhoto();
+const removedChange = ctx.changePhoto(overlapping, removedPhoto.decoded, overlappingStore);
+await ctx.changePhoto(overlapping, null, overlappingStore);
+removedPhoto.finish('data:image/jpeg;base64,T0xE');
+await removedChange;
+check('removing a photo during decoding keeps template art and no stored photo',
+  [ctx.renderInvite(birthday, { ...overlapping.d, photo: overlapping.photo }).includes(birthday.art), ctx.openInvite(ctx.storedInvite(overlappingStore)).photo],
+  [true, null]);
 
 // Guest map link: the address as a Google Maps search, or null without an address.
 check('an address becomes an encoded map search', ctx.mapLink({ address: '1 Main St, Café & Co' }),

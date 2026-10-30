@@ -94,11 +94,7 @@ form.addEventListener('input', (e) => {
 });
 
 // Photos are downscaled to 1200px JPEG so drafts fit in browser storage.
-async function loadPhoto(file) {
-  if (!file || !file.type.startsWith('image/')) {
-    setStatus('Choose an image file, such as JPG, PNG or HEIC exported to JPG.');
-    return;
-  }
+async function decodePhoto(file) {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -109,18 +105,25 @@ async function loadPhoto(file) {
     canvas.width = Math.round(img.naturalWidth * scale);
     canvas.height = Math.round(img.naturalHeight * scale);
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    const result = changePhoto(state, canvas.toDataURL('image/jpeg', 0.85), storage);
-    if (result === 'refused') {
-      setStatus('That image could not be read. Try a JPG or PNG.');
-      return;
-    }
-    commit();
-    setStatus(result === 'saved' ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
-  } catch {
-    setStatus('That image could not be read. Try a JPG or PNG.');
+    return canvas.toDataURL('image/jpeg', 0.85);
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+async function loadPhoto(file) {
+  if (file !== null && (!file || !file.type.startsWith('image/'))) {
+    setStatus('Choose an image file, such as JPG, PNG or HEIC exported to JPG.');
+    return;
+  }
+  const result = await changePhoto(state, file === null ? null : decodePhoto(file), storage);
+  if (result === 'superseded') return;
+  if (result === 'refused') {
+    setStatus('That image could not be read. Try a JPG or PNG.');
+    return;
+  }
+  commit();
+  setStatus(file === null ? '' : result === 'saved' ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
 }
 
 const dropzone = document.getElementById('dropzone');
@@ -134,10 +137,7 @@ dropzone.addEventListener('drop', (e) => {
   loadPhoto(e.dataTransfer.files[0]);
 });
 
-document.getElementById('removePhoto').addEventListener('click', () => {
-  changePhoto(state, null, storage);
-  commit();
-});
+document.getElementById('removePhoto').addEventListener('click', () => loadPhoto(null));
 
 document.getElementById('reset').addEventListener('click', () => {
   resetInvite(state);
