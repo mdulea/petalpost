@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /scripts/
 
-Sitemap: https://petalpost.vercel.app/sitemap.xml
+Sitemap: https://petalpost-beryl.vercel.app/sitemap.xml
