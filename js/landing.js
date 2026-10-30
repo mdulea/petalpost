@@ -1,5 +1,3 @@
-const editorUrl = (id) => `editor.html?t=${encodeURIComponent(id)}`;
-
 // Hero fan: three contrasting occasions.
 mountInvites(document.getElementById('heroFan'), ['birthday', 'wedding', 'baby']
   .map((id) => {

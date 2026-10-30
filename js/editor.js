@@ -4,8 +4,6 @@ const PHOTO_KEY = 'petalpost:photo';
 const form = document.getElementById('form');
 const previewCard = document.getElementById('previewCard');
 const statusEl = document.getElementById('status');
-const params = new URLSearchParams(location.search);
-const isGuestView = params.get('view') === '1';
 
 function readStorage(key) {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -22,7 +20,7 @@ function writeStorage(key, value) {
 }
 
 const state = openInvite({
-  hash: location.hash, draft: readStorage(DRAFT_KEY), photo: readStorage(PHOTO_KEY), requested: params.get('t'),
+  search: location.search, hash: location.hash, draft: readStorage(DRAFT_KEY), photo: readStorage(PHOTO_KEY),
 });
 
 const shareUrl = () => shareLink(location.href.split(/[?#]/)[0], state);
@@ -35,7 +33,7 @@ function setStatus(text) {
 
 let saveTimer;
 function save() {
-  if (isGuestView) return;
+  if (state.guest) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     writeStorage(DRAFT_KEY, draftOf(state));
@@ -59,11 +57,15 @@ function commit() {
   save();
 }
 
+// Text inputs and the photo slider take a value; the accent is a radio group.
 function fillForm() {
-  FIELDS.forEach((f) => { form.elements[f].value = state.d[f] ?? ''; });
-  form.elements.photoY.value = state.d.photoY;
-  form.querySelector(`input[name="accent"][value="${state.d.accent || ''}"]`).checked = true;
+  EDITABLE.forEach((f) => {
+    if (f === 'accent') form.querySelector(`input[name="accent"][value="${state.d.accent || ''}"]`).checked = true;
+    else form.elements[f].value = state.d[f] ?? '';
+  });
 }
+
+FIELDS.forEach((f) => { if (FIELD_LIMITS[f]) form.elements[f].maxLength = FIELD_LIMITS[f]; });
 
 // The picker shows one occasion at a time; the tab follows the selected template.
 const pickerTabs = document.getElementById('pickerTabs');
@@ -149,8 +151,7 @@ document.getElementById('removePhoto').addEventListener('click', () => {
 });
 
 document.getElementById('reset').addEventListener('click', () => {
-  const t = getTemplate(state.t);
-  state.d = makeInviteData(t, { photoY: state.d.photoY });
+  resetInvite(state);
   fillForm();
   commit();
   setStatus('Text reset to the template sample.');
@@ -199,7 +200,7 @@ document.getElementById('addCalendar').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
-if (isGuestView) {
+if (state.guest) {
   document.body.classList.add('view-mode');
   document.title = `${state.d.title} | Petalpost`;
 }
