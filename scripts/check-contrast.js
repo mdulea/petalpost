@@ -2,7 +2,7 @@
 // Run: node scripts/check-contrast.js
 const fs = require('fs');
 const vm = require('vm');
-const ctx = { document: {} };
+const ctx = {};
 vm.runInNewContext(`${fs.readFileSync(`${__dirname}/../js/templates.js`, 'utf8')}\nthis.TEMPLATES = TEMPLATES; this.ACCENTS = ACCENTS; this.renderInvite = renderInvite;`, ctx);
 
 const lum = (hex) => {

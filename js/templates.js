@@ -716,7 +716,9 @@ function formatTime(hhmm) {
 }
 
 // data: template defaults merged with user fields, plus optional photo, photoY (0-100) and accent.
-function renderInvite(template, data = {}) {
+// The card sizes in container units, so it renders inside its .invite-wrap container: a <tag> with extra attrs.
+// Pages insert the result with mountInvites (js/mount.js), which also fits the text.
+function renderInvite(template, data = {}, tag = 'div', attrs = '') {
   const d = { ...template.defaults, ...data };
   const c = template.colors;
   const swatch = ACCENTS.find((a) => a.hex === d.accent);
@@ -727,7 +729,7 @@ function renderInvite(template, data = {}) {
     : template.art;
   const when = [formatDate(d.date), formatTime(d.time)].filter(Boolean).join(' at ');
 
-  return `
+  return `<${tag} class="invite-wrap"${attrs ? ` ${attrs}` : ''}>
     <article class="invite invite--${template.id} font-${template.titleFont}" style="${style}">
       <div class="invite-frame frame-${template.frame}">${art}</div>
       <div class="invite-body">
@@ -741,15 +743,5 @@ function renderInvite(template, data = {}) {
         ${d.message ? `<p class="invite-message">${escapeHtml(d.message)}</p>` : ''}
         ${d.rsvp ? `<p class="invite-rsvp">${escapeHtml(d.rsvp)}</p>` : ''}
       </div>
-    </article>`;
+    </article></${tag}>`;
 }
-
-// Cards whose text overflows get the compact layout: one-line note and tighter spacing.
-function fitInvites(root = document) {
-  root.querySelectorAll('.invite').forEach((card) => {
-    card.classList.remove('is-tight');
-    if (card.clientHeight && card.scrollHeight > card.clientHeight + 1) card.classList.add('is-tight');
-  });
-}
-
-if (document.fonts) document.fonts.ready.then(() => fitInvites());

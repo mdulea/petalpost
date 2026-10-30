@@ -2,10 +2,10 @@
 // Run: node scripts/check-invite.js
 const fs = require('fs');
 const vm = require('vm');
-const ctx = { document: {}, TextEncoder, TextDecoder, atob, btoa };
+const ctx = { TextEncoder, TextDecoder, atob, btoa };
 const read = (file) => fs.readFileSync(`${__dirname}/../js/${file}`, 'utf8');
 vm.runInNewContext(`${read('templates.js')}\n${read('invite.js')}
-this.TEMPLATES = TEMPLATES; this.getTemplate = getTemplate; this.encodeState = encodeState; this.decodeState = decodeState;
+this.TEMPLATES = TEMPLATES; this.getTemplate = getTemplate; this.shareLink = shareLink; this.openInvite = openInvite; this.renderInvite = renderInvite;
 this.makeInviteData = makeInviteData; this.switchTemplate = switchTemplate; this.buildIcs = buildIcs;`, ctx);
 
 let failures = 0;
@@ -14,18 +14,31 @@ const check = (name, actual, expected) => {
   if (a !== e) { console.log(`${name}\n  expected ${e}\n  got      ${a}`); failures++; }
 };
 
-// Share links.
+// Share links and the load order: a link wins, then the stored draft, then ?t= switches the template.
+const BASE = 'https://petalpost.example/editor.html';
+const hashOf = (link) => link.slice(link.indexOf('#'));
+const fresh = (id) => ({ t: id, d: ctx.makeInviteData(ctx.getTemplate(id)) });
 for (const t of ctx.TEMPLATES) {
-  const value = { t: t.id, d: t.defaults };
-  check(`${t.id} defaults survive a share link`, ctx.decodeState(ctx.encodeState(value)), value);
+  check(`${t.id} defaults survive a share link`, ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, fresh(t.id))) }), { ...fresh(t.id), photo: null });
 }
-check('non-ASCII text survives a share link',
-  ctx.decodeState(ctx.encodeState({ t: 'birthday', d: { message: 'Café, a piñata and 🎂' } })),
-  { t: 'birthday', d: { message: 'Café, a piñata and 🎂' } });
-check('a link made before this change still decodes',
-  ctx.decodeState('eyJ0IjoiYmlydGhkYXkiLCJkIjp7InRpdGxlIjoiQ2Fmw6kgcGnDsWF0YSIsImFjY2VudCI6IiM1MjcwNEMifX0'),
-  { t: 'birthday', d: { title: 'Café piñata', accent: '#52704C' } });
-for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) check(`malformed hash "${bad}" decodes to null`, ctx.decodeState(bad), null);
+const zoe = { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { message: 'Café, a piñata and 🎂', photoY: 20 }) };
+const zoeLink = ctx.shareLink(BASE, zoe);
+check('a share link opens the guest view of the page', zoeLink.startsWith(`${BASE}?view=1#d=`), true);
+check('non-ASCII text survives a share link', ctx.openInvite({ hash: hashOf(zoeLink) }).d.message, 'Café, a piñata and 🎂');
+check('a share link leaves out the photo position', ctx.openInvite({ hash: hashOf(zoeLink) }).d.photoY, 50);
+check('a link made before this change still opens',
+  ctx.openInvite({ hash: '#d=eyJ0IjoiYmlydGhkYXkiLCJkIjp7InRpdGxlIjoiQ2Fmw6kgcGnDsWF0YSIsImFjY2VudCI6IiM1MjcwNEMifX0' }),
+  { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Café piñata', accent: '#52704C' }), photo: null });
+for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) {
+  check(`malformed hash "${bad}" opens a new invite`, ctx.openInvite({ hash: `#d=${bad}`, requested: 'wedding' }), { ...fresh('wedding'), photo: null });
+}
+const draft = JSON.stringify({ t: 'birthday', d: { title: 'Zoe turns 30' } });
+check('a share link wins over the stored draft and photo',
+  ctx.openInvite({ hash: hashOf(zoeLink), draft, photo: 'data:image/jpeg;base64,x' }), { ...ctx.openInvite({ hash: hashOf(zoeLink) }) });
+const switched = ctx.openInvite({ hash: '', draft, photo: 'data:image/jpeg;base64,x', requested: 'graduation' });
+check('?t= switches the stored draft and keeps its edits', [switched.t, switched.d.title, switched.d.venue, switched.photo],
+  ['graduation', 'Zoe turns 30', 'The Okafor home', 'data:image/jpeg;base64,x']);
+check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '', draft: '{', requested: 'baby' }), { ...fresh('baby'), photo: null });
 
 // Invite records.
 const birthday = ctx.getTemplate('birthday');
@@ -44,6 +57,10 @@ ctx.switchTemplate(state, 'graduation');
 check('switching templates keeps an edited title', state.d.title, 'Zoe turns 30');
 check('switching templates replaces untouched sample text', state.d.venue, 'The Okafor home');
 check('switching templates updates the template id', state.t, 'graduation');
+
+// Rendered invites carry their sizing container, which may be a link.
+check('an invite renders inside its sizing container', /^<div class="invite-wrap">\s*<article class="invite /.test(ctx.renderInvite(birthday)), true);
+check('the sizing container can be a link', /^<a class="invite-wrap" href="editor.html">/.test(ctx.renderInvite(birthday, {}, 'a', 'href="editor.html"')), true);
 
 // Calendar file: events last three hours and may end the next day.
 const now = new Date('2026-10-30T09:15:00Z');

@@ -452,7 +452,7 @@ textarea.input { min-height: 84px; resize: vertical; }
   border-radius: 32px; border: 1.5px solid var(--line);
   background: linear-gradient(160deg, var(--sage-soft), #F2E7D6 75%);
 }
-.preview-stage .invite-wrap { width: min(100%, 440px); filter: drop-shadow(0 22px 30px rgba(92, 64, 44, .25)); }
+.preview-card { width: min(100%, 440px); filter: drop-shadow(0 22px 30px rgba(92, 64, 44, .25)); }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .status { min-height: 22px; font-size: 14px; font-weight: 700; color: var(--sage-deep); text-align: center; }
 
@@ -462,7 +462,7 @@ textarea.input { min-height: 84px; resize: vertical; }
   .editor { grid-template-columns: 1fr; }
   .preview-col { position: static; order: -1; }
   .editor-head { order: -2; }
-  .preview-stage .invite-wrap { width: min(100%, 360px); }
+  .preview-card { width: min(100%, 360px); }
   .jump-preview {
     display: inline-flex; position: fixed; right: 16px; bottom: 16px; z-index: 10;
     box-shadow: var(--shadow-lift);
