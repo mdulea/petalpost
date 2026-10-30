@@ -320,6 +320,8 @@ p { margin: 0; }
 .banner > div > p { color: var(--muted); max-width: 36ch; margin-bottom: 22px; }
 .banner-rose { background: var(--rose-soft); border-color: #F0CEC8; }
 .banner-art { width: clamp(110px, 14vw, 180px); }
+/* The invite card tilts; the envelope drawing in the second banner does not. */
+div.banner-art { transform: rotate(4deg); }
 @media (max-width: 900px) { .banners { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .banner { grid-template-columns: 1fr; } .banner-art { justify-self: end; margin-top: -10px; } }
 

@@ -95,6 +95,40 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null 
   return state;
 }
 
+// Storage keeps the owner's draft and photo for a reload. storage has the localStorage shape;
+// a blocked or full storage throws, and the reads and writes below treat that as no value or a refused write.
+const DRAFT_KEY = 'petalpost:draft';
+const PHOTO_KEY = 'petalpost:photo';
+
+function readStorage(storage, key) {
+  try { return storage.getItem(key); } catch { return null; }
+}
+
+function writeStorage(storage, key, value) {
+  try {
+    if (value == null) storage.removeItem(key);
+    else storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// The stored draft and photo strings, as openInvite takes them.
+export const storedInvite = (storage) => ({ draft: readStorage(storage, DRAFT_KEY), photo: readStorage(storage, PHOTO_KEY) });
+
+// The guest view never writes: a share link opens on the owner's origin and would overwrite the owner's draft.
+export function saveDraft(state, storage) {
+  if (!state.guest) writeStorage(storage, DRAFT_KEY, draftOf(state));
+}
+
+// Call only when the photo changes. A photo that does not fit removes the stored one and returns false.
+export function savePhoto(state, storage) {
+  if (state.guest || writeStorage(storage, PHOTO_KEY, state.photo)) return true;
+  writeStorage(storage, PHOTO_KEY, null);
+  return false;
+}
+
 // Share links store {t, d} as URL-safe base64 JSON in the hash.
 function encodeState(value) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));

@@ -1,4 +1,4 @@
-// Fails when share links, invite records, template switching, template ids or the calendar file break.
+// Fails when share links, invite records, storage writes, template switching, template ids or the calendar file break.
 // Run: node scripts/check-invite.js
 import * as templates from '../js/templates.js';
 import * as invite from '../js/invite.js';
@@ -107,6 +107,30 @@ ctx.resetInvite(edited);
 check('reset restores the sample text, keeps the photo position and photo, and clears the accent', edited,
   { t: 'birthday', d: { ...ctx.makeInviteData(birthday), photoY: 20 }, photo: 'data:image/jpeg;base64,x' });
 
+// Storage: the owner's draft and photo survive a reload; the guest view never writes.
+// memory() has the localStorage shape and refuses values longer than limit, as a full localStorage does.
+const memory = (limit = Infinity) => {
+  const items = new Map();
+  return {
+    items,
+    getItem: (k) => items.get(k) ?? null,
+    setItem: (k, v) => { if (String(v).length > limit) throw new Error('QuotaExceededError'); items.set(k, String(v)); },
+    removeItem: (k) => { items.delete(k); },
+  };
+};
+const owner = { ...ctx.openInvite({ hash: hashOf(zoeLink) }), guest: false, photo: 'data:image/jpeg;base64,x' };
+const guestStore = memory();
+ctx.saveDraft({ ...owner, guest: true }, guestStore);
+check('the guest view writes nothing', [ctx.savePhoto({ ...owner, guest: true }, guestStore), guestStore.items.size], [true, 0]);
+const ownerStore = memory();
+ctx.saveDraft(owner, ownerStore);
+check('the owner draft and photo survive a reload', [ctx.savePhoto(owner, ownerStore), ctx.openInvite(ctx.storedInvite(ownerStore))], [true, owner]);
+const fullStore = memory(40);
+ctx.savePhoto(owner, fullStore);
+check('a photo that does not fit removes the stored one',
+  [ctx.savePhoto({ ...owner, photo: `data:image/jpeg;base64,${'x'.repeat(40)}` }, fullStore), ctx.storedInvite(fullStore).photo], [false, null]);
+check('removing the photo removes the stored one', [ctx.savePhoto({ ...owner, photo: null }, ownerStore), ctx.storedInvite(ownerStore).photo], [true, null]);
+
 // Rendered invites carry their sizing container, which may be a link.
 const sample = ctx.makeInviteData(birthday);
 check('an invite renders inside its sizing container', /^<div class="invite-wrap">\s*<article class="invite /.test(ctx.renderInvite(birthday, sample)), true);
@@ -119,6 +143,7 @@ for (const bad of ["data:image/jpeg;base64,x');background:url('https://evil.test
   check(`a photo "${bad.slice(0, 24)}" that is not a JPEG or PNG data URL renders the template art`, [html.includes('evil.test'), html.includes(birthday.art)], [false, true]);
 }
 check('the hero templates exist', ctx.HERO_TEMPLATES.map((id) => ctx.getTemplate(id).id), ctx.HERO_TEMPLATES);
+check('there are three hero templates, one per .fan > :nth-child rule in css/styles.css', ctx.HERO_TEMPLATES.length, 3);
 check('the banner template exists', ctx.getTemplate(ctx.BANNER_TEMPLATE).id, ctx.BANNER_TEMPLATE);
 const ids = ctx.TEMPLATES.map((t) => t.id);
 check('the default template exists', ids.includes(ctx.DEFAULT_TEMPLATE), true);

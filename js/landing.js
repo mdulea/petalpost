@@ -27,7 +27,6 @@ document.getElementById('categoryChips').innerHTML = CATEGORIES
 
 const banner = getTemplate(BANNER_TEMPLATE);
 mountInvites(document.getElementById('bannerArt'), renderInvite(banner, makeInviteData(banner)));
-document.getElementById('bannerArt').style.transform = 'rotate(4deg)';
 
 // Gallery with occasion filters.
 const gallery = document.getElementById('gallery');

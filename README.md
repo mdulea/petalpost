@@ -18,8 +18,8 @@ node scripts/check-site.js
 ```
 
 The contrast check covers each template's colors and every accent swatch as rendered on it.
-The invite check covers share links, invite records, template switching, template ids and the calendar file.
-The site check covers the production origin in the pages, `robots.txt` and `sitemap.xml`, the sitemap's list of indexed pages, the footer contact address and an editor control for every invite field.
+The invite check covers share links, invite records, storage writes, template switching, template ids and the calendar file.
+The site check covers the production origin in the pages, `robots.txt` and `sitemap.xml`, the sitemap's list of indexed pages, the footer contact address, an editor control for every invite field and a CSS rule for every template frame and title font.
 
 Fonts live in `fonts/` and the editor's html-to-image library lives in `vendor/`.
 No page loads code or fonts from an external service.
