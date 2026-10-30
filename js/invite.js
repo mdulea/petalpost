@@ -59,9 +59,6 @@ function draftOf(record) {
   return JSON.stringify({ t: record.t, d: record.d });
 }
 
-// Photos are JPEG data URLs from the editor, or PNG where the browser cannot encode JPEG.
-const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
-
 // Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
 // switched to the ?t= template. Inputs are the raw search, hash and storage strings; guest is true for ?view=1.
 function openInvite({ search = '', hash = '', draft = null, photo = null }) {

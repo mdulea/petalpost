@@ -1,8 +1,8 @@
-// Hero fan: three contrasting occasions.
-mountInvites(document.getElementById('heroFan'), ['birthday', 'wedding', 'baby']
+// Hero fan.
+mountInvites(document.getElementById('heroFan'), HERO_TEMPLATES
   .map((id) => {
     const t = getTemplate(id);
-    return renderInvite(t, {}, 'a', `href="${editorUrl(id)}" aria-label="Use the ${t.name} template"`);
+    return renderInvite(t, makeInviteData(t), { href: editorUrl(id), label: `Use the ${t.name} template` });
   })
   .join(''));
 
@@ -11,7 +11,7 @@ const dayIndex = Math.floor(Date.now() / 86400000) % TEMPLATES.length;
 const pick = TEMPLATES[dayIndex];
 const pickLink = document.getElementById('todaysPick');
 pickLink.href = editorUrl(pick.id);
-mountInvites(pickLink, `${renderInvite(pick)}<div><strong>${pick.name}</strong><span>${pick.tagline}</span></div>`);
+mountInvites(pickLink, `${renderInvite(pick, makeInviteData(pick))}<div><strong>${pick.name}</strong><span>${pick.tagline}</span></div>`);
 
 document.getElementById('templateCount').textContent = TEMPLATES.length;
 document.getElementById('accentCount').textContent = ACCENTS.length;
@@ -22,7 +22,7 @@ document.getElementById('categoryChips').innerHTML = categories
   .map((c) => `<a class="chip-link" href="#templates" data-jump="${c}">${c}</a>`)
   .join('');
 
-mountInvites(document.getElementById('bannerArt'), renderInvite(getTemplate('housewarming')));
+mountInvites(document.getElementById('bannerArt'), renderInvite(getTemplate('housewarming'), makeInviteData(getTemplate('housewarming'))));
 document.getElementById('bannerArt').style.transform = 'rotate(4deg)';
 
 // Gallery with occasion filters.
@@ -30,7 +30,7 @@ const gallery = document.getElementById('gallery');
 mountInvites(gallery, TEMPLATES.map((t, i) => `
   <article class="card" data-category="${t.category}">
     ${i < 2 ? '<span class="badge">Popular</span>' : ''}
-    <div class="card-art">${renderInvite(t)}</div>
+    <div class="card-art">${renderInvite(t, makeInviteData(t))}</div>
     <div class="card-body">
       <div>
         <h3><a class="card-link" href="${editorUrl(t.id)}" style="text-decoration:none">${t.name}</a></h3>
