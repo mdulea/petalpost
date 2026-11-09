@@ -1,4 +1,4 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, or the index.html template or accent count differs from the data.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, or the index.html template or accent count differs from the data.
 // Run: node scripts/check-site.js
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { EDITABLE } from '../js/invite.js';
@@ -62,6 +62,11 @@ for (const t of TEMPLATES) {
   for (const rule of [`.frame-${t.frame} `, `.font-${t.titleFont} `]) {
     if (!styles.includes(rule)) fail(`css/styles.css: no ${rule.trim()} rule for template ${t.id}`);
   }
+}
+
+// A custom property that refers to itself is invalid, and every rule using it falls back to transparent or inherited color.
+for (const [, name, value] of styles.matchAll(/(--[\w-]+):([^;]+);/g)) {
+  if (value.includes(`var(${name})`)) fail(`css/styles.css: ${name} refers to itself`);
 }
 
 // landing.js writes the template and accent counts; the HTML text is what shows before it runs.
