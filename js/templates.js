@@ -740,8 +740,9 @@ export const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 // d: a record from makeInviteData (js/invite.js), plus an optional photo.
 // The card sizes in container units, so it renders inside its .invite-wrap container:
 // a link when href is set, a <span> when inline is set for use inside a <label>, otherwise a <div>.
-// label becomes the container's aria-label. Pages insert the result with mountInvites (js/mount.js), which also fits the text.
-export function renderInvite(template, d, { href, label, inline } = {}) {
+// label becomes the container's aria-label. decorative hides a sample thumbnail from screen readers.
+// Pages insert the result with mountInvites (js/mount.js), which also fits the text.
+export function renderInvite(template, d, { href, label, inline, decorative } = {}) {
   const c = inviteColors(template, d.accent);
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;
   const art = PHOTO_URL.test(d.photo)
@@ -749,7 +750,7 @@ export function renderInvite(template, d, { href, label, inline } = {}) {
     : template.art;
   const when = [formatDate(d.date), formatTime(d.time)].filter(Boolean).join(' at ');
   const tag = href ? 'a' : inline ? 'span' : 'div';
-  const attrs = (href ? ` href="${escapeHtml(href)}"` : '') + (label ? ` aria-label="${escapeHtml(label)}"` : '');
+  const attrs = (href ? ` href="${escapeHtml(href)}"` : '') + (label ? ` aria-label="${escapeHtml(label)}"` : '') + (decorative ? ' aria-hidden="true"' : '');
 
   return `<${tag} class="invite-wrap"${attrs}>
     <article class="invite font-${template.titleFont}" style="${style}">

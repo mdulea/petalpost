@@ -173,6 +173,7 @@ check('an invite renders inside its sizing container', /^<div class="invite-wrap
 check('the sizing container can be a labelled link with escaped attributes',
   /^<a class="invite-wrap" href="editor.html\?t=a&amp;b" aria-label="Use the &quot;Bash&quot; template">/.test(ctx.renderInvite(birthday, sample, { href: 'editor.html?t=a&b', label: 'Use the "Bash" template' })), true);
 check('the sizing container can be a span inside a label', /^<span class="invite-wrap">/.test(ctx.renderInvite(birthday, sample, { inline: true })), true);
+check('a decorative invite is hidden from screen readers', /^<div class="invite-wrap" aria-hidden="true">/.test(ctx.renderInvite(birthday, sample, { decorative: true })), true);
 check('a JPEG photo renders as the card art', ctx.renderInvite(birthday, { ...sample, photo: 'data:image/jpeg;base64,QUJD' }).includes("url('data:image/jpeg;base64,QUJD')"), true);
 for (const bad of ["data:image/jpeg;base64,x');background:url('https://evil.test/", 'https://evil.test/a.jpg']) {
   const html = ctx.renderInvite(birthday, { ...sample, photo: bad });

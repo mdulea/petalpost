@@ -16,7 +16,7 @@ const dayIndex = Math.floor(Date.now() / 86400000) % TEMPLATES.length;
 const pick = TEMPLATES[dayIndex];
 const pickLink = document.getElementById('todaysPick');
 pickLink.href = editorUrl(pick.id);
-mountInvites(pickLink, `${renderInvite(pick, makeInviteData(pick))}<div><strong>${pick.name}</strong><span>${pick.tagline}</span></div>`);
+mountInvites(pickLink, `${renderInvite(pick, makeInviteData(pick), { decorative: true })}<div><strong>${pick.name}</strong><span>${pick.tagline}</span></div>`);
 
 document.getElementById('templateCount').textContent = TEMPLATES.length;
 document.getElementById('accentCount').textContent = ACCENTS.length;
@@ -33,10 +33,10 @@ const gallery = document.getElementById('gallery');
 mountInvites(gallery, TEMPLATES.map((t) => `
   <article class="card" data-category="${t.category}">
     ${POPULAR_TEMPLATES.includes(t.id) ? '<span class="badge">Popular</span>' : ''}
-    <div class="card-art">${renderInvite(t, makeInviteData(t))}</div>
+    <div class="card-art">${renderInvite(t, makeInviteData(t), { decorative: true })}</div>
     <div class="card-body">
       <div>
-        <h3><a class="card-link" href="${editorUrl(t.id)}" style="text-decoration:none">${t.name}</a></h3>
+        <h3><a class="card-link" href="${editorUrl(t.id)}">${t.name}</a></h3>
         <p>${t.category}. ${t.tagline}</p>
       </div>
       <span class="card-go" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>

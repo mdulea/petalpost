@@ -18,10 +18,11 @@ const state = openInvite({ search: location.search, hash: location.hash, ...stor
 
 const shareUrl = () => shareLink(location.href.split(/[?#]/)[0], state);
 
-function setStatus(text) {
+// A message that asks the owner to act, such as downloading before leaving, stays until the next message.
+function setStatus(text, { keep = false } = {}) {
   statusEl.textContent = text;
   clearTimeout(setStatus.timer);
-  setStatus.timer = setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  if (!keep) setStatus.timer = setTimeout(() => { statusEl.textContent = ''; }, 4000);
 }
 
 let saveTimer;
@@ -63,7 +64,7 @@ function renderPicker(category) {
   mountInvites(document.getElementById('picker'), TEMPLATES.filter((t) => t.category === category).map((t) => `
     <label class="picker-item">
       <input type="radio" name="template" value="${t.id}" ${t.id === state.t ? 'checked' : ''}>
-      ${renderInvite(t, makeInviteData(t), { inline: true })}
+      ${renderInvite(t, makeInviteData(t), { inline: true, decorative: true })}
       <span class="picker-name">${t.name}</span>
     </label>`).join(''));
 }
@@ -123,14 +124,23 @@ async function loadPhoto(file) {
     return;
   }
   commit();
-  setStatus(file === null ? '' : result === 'saved' ? 'Photo added.' : 'The photo is too large to keep after a reload. Download the PNG before you leave.');
+  if (file === null) setStatus('');
+  else if (result === 'saved') setStatus('Photo added.');
+  else setStatus('The photo is too large to keep after a reload. Download the PNG before you leave.', { keep: true });
 }
 
 const dropzone = document.getElementById('dropzone');
 const photoInput = document.getElementById('photoInput');
-photoInput.addEventListener('change', () => { loadPhoto(photoInput.files[0]); photoInput.value = ''; });
+// Some browsers fire change with no file when the owner cancels the file dialog.
+photoInput.addEventListener('change', () => {
+  if (photoInput.files[0]) loadPhoto(photoInput.files[0]);
+  photoInput.value = '';
+});
 dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('is-over'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-over'));
+// dragleave also fires when the pointer moves onto a child of the dropzone.
+dropzone.addEventListener('dragleave', (e) => {
+  if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('is-over');
+});
 dropzone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropzone.classList.remove('is-over');
@@ -140,6 +150,7 @@ dropzone.addEventListener('drop', (e) => {
 document.getElementById('removePhoto').addEventListener('click', () => loadPhoto(null));
 
 document.getElementById('reset').addEventListener('click', () => {
+  if (!window.confirm('Replace all your text with the template sample?')) return;
   resetInvite(state);
   fillForm();
   commit();
@@ -163,6 +174,7 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
     return;
   }
   button.disabled = true;
+  setStatus('Preparing the image.', { keep: true });
   try {
     await document.fonts.ready;
     const card = previewCard.querySelector('.invite');
@@ -189,9 +201,11 @@ document.getElementById('addCalendar').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
+// The guest view hides the editor heading visually; the invite title becomes the page heading.
 if (state.guest) {
   document.body.classList.add('view-mode');
   document.title = `${state.d.title} | Petalpost`;
+  document.querySelector('.editor-head h1').textContent = state.d.title;
 }
 
 fillForm();
