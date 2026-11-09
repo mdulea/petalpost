@@ -1,4 +1,4 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, or the index.html template or accent count differs from the data.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, or the index.html template or accent count differs from the data.
 // Run: node scripts/check-site.js
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { EDITABLE } from '../js/invite.js';
@@ -27,6 +27,8 @@ for (const { file, html } of pages) {
   if (ogUrl !== canonical) fail(`${file}: og:url ${ogUrl} differs from canonical ${canonical}`);
   if (!existsSync(new URL(`..${new URL(ogImage).pathname}`, import.meta.url))) fail(`${file}: og:image ${ogImage} has no file`);
   urls.push(canonical, ogImage);
+  const icon = attr(html, /<link rel="icon" href="([^"]+)"/);
+  if (!icon || !existsSync(new URL(`../${icon}`, import.meta.url))) fail(`${file}: missing favicon link or file`);
 }
 
 const sitemapLine = attr(read('robots.txt'), /^Sitemap: (\S+)$/m);

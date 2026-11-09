@@ -17,6 +17,7 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Petalpost: three hand-drawn invitation cards beside the words Your day, your invite.">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
   <script src="vendor/html-to-image.js" defer></script>
@@ -129,7 +130,7 @@
 
     <div class="preview-col" id="preview">
       <div class="preview-stage">
-        <div class="preview-card" id="previewCard" aria-live="polite"></div>
+        <div class="preview-card" id="previewCard"></div>
       </div>
       <div class="actions" id="share-panel">
         <button class="btn btn-primary owner-only" type="button" id="copyLink"><svg class="icon"><use href="#i-link"/></svg>Copy share link</button>
@@ -139,7 +140,7 @@
         <button class="btn btn-primary guest-only" type="button" id="addCalendar"><svg class="icon"><use href="#i-calendar"/></svg>Add to calendar</button>
         <a class="btn btn-ghost guest-only" id="openMap" target="_blank" rel="noopener"><svg class="icon"><use href="#i-pin"/></svg>Open map</a>
       </div>
-      <p class="hint owner-only" style="text-align:center;max-width:44ch">Share links carry the text, template and color. To send your photo too, download the PNG.</p>
+      <p class="hint share-note owner-only">Share links carry the text, template and color. To send your photo too, download the PNG.</p>
       <p class="status" id="status" role="status"></p>
     </div>
 
