@@ -6,15 +6,15 @@
   --ink: #3D2F27;
   --muted: #6B5A4E;
   --line: #E9DDCB;
-  --line-strong: var(--line-strong);
+  --line-strong: #DCCBB3;
   --sage: #7C9A74;
   --sage-deep: #56734E;
-  --sage-hover: var(--sage-hover);
+  --sage-hover: #4B6744;
   --sage-soft: #E5ECDD;
   --rose: #D98E88;
   --rose-deep: #A9524C;
   --rose-soft: #F9E6E2;
-  --rose-line: var(--rose-line);
+  --rose-line: #F0CEC8;
   --gold: #E0B45C;
   --radius-lg: 28px;
   --radius: 18px;
