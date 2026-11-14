@@ -20,6 +20,7 @@ README.md
 .worktrees/
 docs/
 AGENTS.md
+.github/
 playwright.config.js
 test-results/
 playwright-report/
