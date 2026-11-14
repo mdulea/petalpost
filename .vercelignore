@@ -6,6 +6,9 @@ package.json
 pnpm-lock.yaml
 pnpm-workspace.yaml
 serve.json
+.gitattributes
+.prettierrc.json
+.prettierignore
 eslint.config.js
 tsconfig.json
 js/globals.d.ts

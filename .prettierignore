@@ -1,0 +1,7 @@
+# Third-party library, kept byte-for-byte as published.
+vendor/
+pnpm-lock.yaml
+.pnpm-store/
+.npm-cache/
+.vercel/
+worktrees/
