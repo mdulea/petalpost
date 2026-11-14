@@ -3,8 +3,9 @@
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
 // reach only their own event or reply; reply totals; deletion with its replies; no secret, hash or reply id in any
 // response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
-// invitation and per-invitation reply quotas; a daily quota key that is not the IP hash and changes with the day;
-// unavailable storage; network failure; private link round trips.
+// invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
+// one reply; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
+// failure; private link round trips.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
 // checks, which read the stored keys in a database of their own.
 // Run: node scripts/check-rsvp.js
@@ -456,6 +457,32 @@ test('the 201st reply to an invitation gets 429, and existing replies stay edita
     { statuses: results.map((r) => r.status), totals: (await client().loadResponses(cred)).data.totals },
     { statuses: [429, 200], totals: { responses: 200, yes: 199, no: 1, attending: 199 } },
   );
+});
+
+// PGlite runs one transaction at a time, so these pass without the row locks too. They hold the result that the
+// locks in putReply give on Postgres, where transactions overlap.
+test('two simultaneous new replies at the 200-reply limit store one of them', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  for (let i = 0; i < 199; i += 1) await guests.saveReply(cred.id, guest(), lee);
+  const results = await Promise.all([guests.saveReply(cred.id, guest(), sam), guests.saveReply(cred.id, guest(), ana)]);
+  assert.deepEqual(
+    {
+      statuses: results.map((r) => r.status).sort(),
+      stored: (await client().loadResponses(cred)).data.totals.responses,
+    },
+    { statuses: [201, 429], stored: 200 },
+  );
+});
+
+test('two simultaneous edits of one reply with the same version give one success and one 409', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  const results = await Promise.all([
+    guests.saveReply(cred.id, { ...reply, version: 1 }, lee),
+    guests.saveReply(cred.id, { ...reply, version: 1 }, ana),
+  ]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
 });
 
 test('a closed database gives 503 with the fixed message, and the client reports the failure', async () => {
