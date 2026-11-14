@@ -1,5 +1,7 @@
 // Fails when a template's text colors, or any accent swatch as rendered on it, drop below WCAG AA (4.5:1) on its card background.
 // Run: node scripts/check-contrast.js
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import * as ctx from '../js/templates.js';
 
 const lum = (hex) => {
@@ -13,27 +15,17 @@ const ratio = (a, b) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-let failures = 0;
 for (const t of ctx.TEMPLATES) {
-  for (const key of ['ink', 'accent']) {
-    const r = ratio(t.colors[key], t.colors.bg);
-    if (r < 4.5) {
-      console.log(`${t.id}: ${key} ${t.colors[key]} on ${t.colors.bg} is ${r.toFixed(2)}:1`);
-      failures++;
-    }
-  }
-  for (const a of ctx.ACCENTS) {
-    const shown = ctx.inviteColors(t, a.hex).accent;
-    const r = ratio(shown, t.colors.bg);
-    if (r < 4.5) {
-      console.log(`${t.id}: ${a.name} accent renders ${shown} on ${t.colors.bg} at ${r.toFixed(2)}:1`);
-      failures++;
-    }
-  }
+  test(`${t.id}: ink, accent and every accent swatch reach 4.5:1 on ${t.colors.bg}`, () => {
+    const shown = [
+      ['ink', t.colors.ink],
+      ['accent', t.colors.accent],
+      ...ctx.ACCENTS.map((a) => [`${a.name} accent`, ctx.inviteColors(t, a.hex).accent]),
+    ];
+    const low = shown
+      .map(([name, hex]) => [name, hex, ratio(hex, t.colors.bg)])
+      .filter(([, , r]) => r < 4.5)
+      .map(([name, hex, r]) => `${name} ${hex} at ${r.toFixed(2)}:1`);
+    assert.deepEqual(low, []);
+  });
 }
-const counts = {};
-ctx.TEMPLATES.forEach((t) => {
-  counts[t.category] = (counts[t.category] || 0) + 1;
-});
-console.log(`${ctx.TEMPLATES.length} templates`, counts);
-process.exit(failures ? 1 : 0);
