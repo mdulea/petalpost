@@ -1,9 +1,12 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, a page or the Preview button ignores the safe-area insets of notched phones, or vercel.json and serve.json send different headers.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, a page or the Preview button ignores the safe-area insets of notched phones, vercel.json and serve.json send different headers, the buildSite output misses a root page or a file a built page, stylesheet or module loads or links to, or the output contains a package file, server code, a migration, tooling, documentation, a dotfile or a type declaration.
 // Run: node scripts/check-site.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { test } from 'node:test';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative, sep } from 'node:path';
+import { after, test } from 'node:test';
+import { buildSite } from './build.js';
 import { EDITABLE } from '../js/invite.js';
 import { ACCENTS, TEMPLATES } from '../js/templates.js';
 
@@ -126,4 +129,52 @@ test('vercel.json and serve.json send the same headers to every path', () => {
     'each file needs one rule for every path',
   );
   assert.deepEqual(vercel[0].headers, serve[0].headers);
+});
+
+// Vercel serves only the buildSite output, so the pages must find in it every file they load.
+const outDir = mkdtempSync(join(tmpdir(), 'petalpost-build-'));
+after(() => rmSync(outDir, { recursive: true, force: true }));
+buildSite(outDir);
+const built = readdirSync(outDir, { recursive: true, withFileTypes: true })
+  .filter((entry) => entry.isFile())
+  .map((entry) => relative(outDir, join(entry.parentPath, entry.name)).split(sep).join('/'));
+
+// The same-origin paths a built file loads or links to, resolved against the file's own path.
+const references = (file) => {
+  const text = readFileSync(join(outDir, file), 'utf8');
+  const urls = file.endsWith('.html')
+    ? [
+        ...[...text.matchAll(/\b(?:src|href)="([^"]+)"/g)].map(([, url]) => url),
+        ...[...text.matchAll(/<meta property="og:image" content="([^"]+)"/g)].map(([, url]) => new URL(url).pathname),
+      ]
+    : file.endsWith('.css')
+      ? [...text.matchAll(/url\(([^)'"]+)\)/g)].map(([, url]) => url)
+      : [...text.matchAll(/^import (?:[^'"]+ from )?'([^']+)'/gm)].map(([, url]) => url);
+  return urls
+    .filter((url) => !/^[a-z]+:/.test(url) && !url.startsWith('#') && !url.startsWith('/_vercel/'))
+    .map((url) => new URL(url, `http://site/${file}`).pathname.slice(1))
+    .map((path) => path || 'index.html');
+};
+
+test('the build contains every root page and every file the built pages load or link to', () => {
+  const roots = readdirSync(new URL('..', import.meta.url)).filter((file) => file.endsWith('.html'));
+  const seen = new Set();
+  const queue = [...roots];
+  while (queue.length) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    if (built.includes(file) && /\.(html|css|js)$/.test(file)) queue.push(...references(file));
+  }
+  assert.deepEqual([...seen].filter((file) => !built.includes(file)).sort(), []);
+});
+
+// Vercel uploads package files, server code, migrations and tooling for the API functions; none of them may be a URL.
+test('the build contains no package file, server code, migration, tooling, documentation, dotfile or type declaration', () => {
+  const nonSite =
+    /^(package\.json|pnpm-[\w-]+\.yaml|node_modules\/.*|(server|migrations|api|scripts|docs)\/.*|(.*\/)?\..*|.*\.d\.ts|.*\.md)$/;
+  assert.deepEqual(
+    built.filter((file) => nonSite.test(file)),
+    [],
+  );
 });
