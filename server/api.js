@@ -112,10 +112,11 @@ async function readBody(request) {
   return body;
 }
 
-// The event row, locked for the transaction, after checking the management secret.
-async function ownedEvent(tx, id, secret) {
-  const event = (await tx.query('select secret_hash, version, t, d from events where id = $1 for update', [id]))
-    .rows[0];
+// The event row after checking the management secret. With lock, the row stays locked until the transaction ends.
+async function ownedEvent(tx, id, secret, { lock = true } = {}) {
+  const event = (
+    await tx.query(`select secret_hash, version, t, d from events where id = $1${lock ? ' for update' : ''}`, [id])
+  ).rows[0];
   if (!event) throw new Refusal(404, MESSAGES.eventMissing);
   if (!matches(secret, event.secret_hash)) throw new Refusal(403, MESSAGES.eventForbidden);
   return event;
@@ -180,24 +181,23 @@ async function deleteEvent({ db, request, ids: [id] }) {
   });
 }
 
+// A read without a lock, so a host refreshing the list never makes guest replies wait.
 async function listResponses({ db, request, ids: [id] }) {
   const secret = bearer(request);
-  return db.transaction(async (tx) => {
-    const event = await ownedEvent(tx, id, secret);
-    const { rows } = await tx.query(
-      `select name, attending, party_size, created_at, updated_at from responses
-       where event_id = $1 order by created_at, updated_at`,
-      [id],
-    );
-    const responses = rows.map((r) => ({
-      name: r.name,
-      attending: r.attending,
-      partySize: r.party_size,
-      createdAt: new Date(r.created_at).toISOString(),
-      updatedAt: new Date(r.updated_at).toISOString(),
-    }));
-    return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses) });
-  });
+  const event = await ownedEvent(db, id, secret, { lock: false });
+  const { rows } = await db.query(
+    `select name, attending, party_size, created_at, updated_at from responses
+     where event_id = $1 order by created_at, updated_at`,
+    [id],
+  );
+  const responses = rows.map((r) => ({
+    name: r.name,
+    attending: r.attending,
+    partySize: r.party_size,
+    createdAt: new Date(r.created_at).toISOString(),
+    updatedAt: new Date(r.updated_at).toISOString(),
+  }));
+  return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses) });
 }
 
 // The response row, locked for the transaction, after checking that it belongs to the event and that the edit
