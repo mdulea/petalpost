@@ -1,6 +1,7 @@
 # Petalpost
 
 Petalpost is a website where anyone can design an invitation in the browser and share it.
+This README tells developers how to install, run, test, deploy and contribute to it.
 
 ## Overview
 
@@ -41,6 +42,8 @@ Opening the HTML files directly does not work, because browsers refuse ES module
 
 ## Usage
 
+With `pnpm dev` running:
+
 1. Open `http://localhost:3000` and choose a template.
 2. In the editor, add a photo, names, a date and an address, and pick an accent color.
 3. Click "Download PNG" to save the invitation as an image, or "Copy share link" to send it as a link.
@@ -70,23 +73,23 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 
 ## Development
 
-| Task            | Command                                  |
-| --------------- | ---------------------------------------- |
-| Test (all)      | `pnpm test`                              |
-| Test (one file) | `pnpm exec node scripts/check-invite.js` |
-| Lint            | `pnpm lint`                              |
-| Format          | `pnpm format`                            |
-| Format check    | `pnpm format:check`                      |
-| Type check      | `pnpm typecheck`                         |
-| Browser tests   | `pnpm test:browser`                      |
+| Task           | Command                                  |
+| -------------- | ---------------------------------------- |
+| Test suite     | `pnpm test`                              |
+| One check file | `pnpm exec node scripts/check-invite.js` |
+| Lint           | `pnpm lint`                              |
+| Format         | `pnpm format`                            |
+| Format check   | `pnpm format:check`                      |
+| Type check     | `pnpm typecheck`                         |
+| Browser tests  | `pnpm test:browser`                      |
 
-The one-file command works for each `scripts/check-*.js`.
+To run another check file, replace `check-invite.js` with any `scripts/check-*.js` file.
 
 `test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/` with the Node.js test runner.
 It does not run the type check or the browser tests.
 
 `test:browser` starts `pnpm dev` and runs the Playwright tests in Chromium.
-Install Chromium once with `pnpm exec playwright install chromium`.
+Before the first run, install Chromium with `pnpm exec playwright install chromium`.
 The tests fail when a page breaks the Content-Security-Policy.
 
 ### Tooling notes
@@ -98,8 +101,9 @@ The tests fail when a page breaks the Content-Security-Policy.
 ## Deployment
 
 Vercel's GitHub integration deploys every push to `main` to production.
-No check holds a deployment back, so run every check locally before pushing `main`.
-With the workflow enabled, a Vercel Deployment Check on the `checks` job can hold production until the GitHub checks pass.
+No check holds a deployment back.
+Run `pnpm test`, `pnpm typecheck` and `pnpm test:browser` locally before you push `main`.
+After you enable the workflow, you can add a Vercel Deployment Check on the `checks` job, which holds production until the GitHub checks pass.
 Pushes to other branches get preview deployments.
 Vercel serves the repository root as static files, with no install or build step.
 `.vercelignore` keeps package files, tooling, `scripts/` and documentation out of the deployment.
@@ -113,14 +117,18 @@ Enable Web Analytics in the Vercel project dashboard before deploying.
 
 The footer contact link uses the placeholder `hello@example.com`.
 Replace it in all four pages before launch, then run `pnpm exec node scripts/check-site.js`.
-The check compares the address on the three indexed pages only, so check `404.html` by hand.
+The check compares the address only on the three pages whose robots tag allows indexing, so check `404.html` by hand.
 
 If the production domain changes, update the canonical and Open Graph URLs in the pages, `robots.txt` and `sitemap.xml`.
 Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.
 
 `og-image.png` is the 1200 by 630 link preview.
-To regenerate it, run `pnpm dev`, open `http://localhost:3000/scripts/og-card.html` and click "Save og-image.png".
-Move the downloaded file to the repository root and commit it.
+To regenerate it:
+
+1. Run `pnpm dev`.
+2. Open `http://localhost:3000/scripts/og-card.html`.
+3. Click "Save og-image.png".
+4. Move the downloaded file to the repository root and commit it.
 
 ## Contributing
 
