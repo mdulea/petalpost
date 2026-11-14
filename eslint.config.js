@@ -13,7 +13,10 @@ export default [
     languageOptions: { globals: { ...globals.browser, htmlToImage: 'readonly' } },
   },
   { files: ['js/analytics.js'], languageOptions: { sourceType: 'script' } },
-  { files: ['scripts/**/*.js', '*.config.js'], languageOptions: { globals: globals.node } },
+  {
+    files: ['scripts/**/*.js', 'server/**/*.js', 'api/**/*.js', '*.config.js'],
+    languageOptions: { globals: globals.node },
+  },
   // og-card.js runs in the browser, and so do callbacks that the spec files pass to page.evaluate.
   {
     files: ['scripts/*.spec.js', 'scripts/og-card.js'],

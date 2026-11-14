@@ -15,13 +15,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
+    "migrate": "node server/migrate.js",
     "typecheck": "tsc -p .",
     "test": "pnpm format:check && pnpm lint && node --test scripts/check-*.js",
     "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.65.0",
+    "@types/emscripten": "1.41.6",
     "@types/node": "26.6.6",
     "eslint": "10.14.0",
     "globals": "17.14.0",
@@ -29,5 +32,8 @@
     "serve": "14.2.7",
     "typescript": "7.0.2",
     "vercel": "65.15.0"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
   }
 }
