@@ -12,7 +12,7 @@ README.md sections, by need:
 - project, setup, commands, layout -> Overview, Installation, Run, Development, Project structure
 - env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED`; database, migrations -> Deployment, Database
 - line endings, dependency upgrades, install errors -> Tooling notes
-- deployment, security headers, placeholder contact address, production-origin changes -> Deployment
+- deployment, security headers, contact address, production-origin changes -> Deployment
 
 ## Code
 
