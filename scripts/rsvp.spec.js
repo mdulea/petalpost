@@ -3,10 +3,10 @@
 // link and an edit that keeps one reply; the management totals and reply list; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
 // the failure and no confirmation, and its retry saves one reply; a reply changed elsewhere loads the latest answer;
-// publishing again updates the invitation, and a stale tab hears of the change; deletion shows guests a missing
-// message and lets the host publish anew; a lost publish confirmation keeps the event identity; secrets appear only
-// in the Authorization header; analytics gets page addresses without the fragment; no page breaks the
-// Content-Security-Policy or throws.
+// publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
+// publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
+// anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
+// analytics gets page addresses without the fragment; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
@@ -223,6 +223,23 @@ test('publishing again updates the invitation, and a stale tab is told before it
   await guest.page.goto(invitation);
   await expect(guest.page.locator('h1')).toHaveText('Zoe turns 31');
   expect([...host.problems, ...staleProblems, ...guest.problems]).toEqual([]);
+});
+
+test('a tab opened before the first publish publishes to the same invitation', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const earlyTab = await host.page.context().newPage();
+  const earlyProblems = watch(earlyTab);
+  await earlyTab.goto('editor.html?t=birthday');
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+
+  await earlyTab.click('#publish');
+  await expect(earlyTab.locator('#eventLink')).toHaveValue(/\?view=1&e=/);
+  await host.page.reload();
+  expect({
+    early: [await earlyTab.locator('#eventLink').inputValue(), await earlyTab.locator('#manageLink').inputValue()],
+    stored: [await host.page.locator('#eventLink').inputValue(), await host.page.locator('#manageLink').inputValue()],
+  }).toEqual({ early: [invitation, manage], stored: [invitation, manage] });
+  expect([...host.problems, ...earlyProblems]).toEqual([]);
 });
 
 test('deleting the invitation shows guests a missing message and lets the host publish a new one', async ({
