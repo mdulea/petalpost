@@ -1,17 +1,16 @@
 // Fails when share links, invite records, storage writes, template switching, template ids or the calendar file break.
 // Run: node scripts/check-invite.js
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import * as templates from '../js/templates.js';
 import * as invite from '../js/invite.js';
 
 const ctx = { ...templates, ...invite };
 
-let failures = 0;
+// Compares JSON at call time, because later steps change the records under test.
 const check = (name, actual, expected) => {
   const [a, e] = [JSON.stringify(actual), JSON.stringify(expected)];
-  if (a !== e) {
-    console.log(`${name}\n  expected ${e}\n  got      ${a}`);
-    failures++;
-  }
+  test(name, () => assert.equal(a, e));
 };
 
 // Share links and the load order: a link wins, then the stored draft, then ?t= switches the template.
@@ -462,6 +461,3 @@ check(
   ctx.TEMPLATES.filter((t) => !ctx.buildIcs(ctx.makeInviteData(t), now)).map((t) => t.id),
   [],
 );
-
-console.log(failures ? `${failures} failed` : 'invite checks passed');
-process.exit(failures ? 1 : 0);

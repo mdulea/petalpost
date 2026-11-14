@@ -16,7 +16,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "tsc -p .",
-    "test": "pnpm format:check && pnpm lint && node scripts/check-contrast.js && node scripts/check-invite.js && node scripts/check-site.js"
+    "test": "pnpm format:check && pnpm lint && node --test scripts/check-*.js"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
