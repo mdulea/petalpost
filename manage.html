@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Petalpost | Your invitation</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Petalpost home">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2" />
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round" />
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74" />
+        </svg>
+        Petalpost
+      </a>
+    </header>
+
+    <main class="manage">
+      <div class="manage-head">
+        <h1 id="manageHeading">Your invitation</h1>
+        <p class="status" id="manageStatus" role="status"></p>
+      </div>
+
+      <div class="manage-body" id="manageContent" hidden>
+        <div class="preview-stage">
+          <div class="preview-card" id="managePreview"></div>
+        </div>
+
+        <div>
+          <section class="panel" aria-labelledby="h-replies">
+            <h2 id="h-replies">
+              <svg class="icon"><use href="#i-send" /></svg>Replies
+            </h2>
+            <ul class="totals" id="totals"></ul>
+            <ul class="reply-list" id="responseList"></ul>
+            <p class="hint" id="noReplies" hidden>No replies yet.</p>
+            <button class="btn btn-ghost btn-small" type="button" id="refresh">
+              <svg class="icon"><use href="#i-reset" /></svg>Refresh
+            </button>
+          </section>
+
+          <section class="panel" aria-labelledby="h-share">
+            <h2 id="h-share">
+              <svg class="icon"><use href="#i-link" /></svg>Invitation link
+            </h2>
+            <div class="field">
+              <label for="eventLink">Send this link to your guests</label>
+              <div class="copy-row">
+                <input class="input" id="eventLink" readonly />
+                <button class="btn btn-ghost btn-small" type="button" id="copyEventLink">Copy</button>
+              </div>
+            </div>
+            <p class="warning">
+              Keep this page's link private. Anyone with it can see the replies and delete the invitation. Petalpost
+              cannot recover a lost management link.
+            </p>
+          </section>
+
+          <section class="panel" aria-labelledby="h-delete">
+            <h2 id="h-delete">
+              <svg class="icon"><use href="#i-trash" /></svg>Delete
+            </h2>
+            <p class="hint">
+              Deleting removes the invitation and every reply from Petalpost. Guests can no longer open it.
+            </p>
+            <button class="btn btn-rose btn-small" type="button" id="deleteEvent">
+              <svg class="icon"><use href="#i-trash" /></svg>Delete the invitation
+            </button>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <span>Petalpost. Made for the people you love to gather.</span>
+      <a href="index.html">Back to home</a>
+      <a href="mailto:hello@example.com">Contact</a>
+    </footer>
+
+    <script type="module" src="js/manage.js"></script>
+    <script src="js/analytics.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
+</html>

@@ -7,17 +7,20 @@ import {
   FIELD_LIMITS,
   buildIcs,
   changePhoto,
+  eventLink,
   makeInviteData,
   mapLink,
   openInvite,
   resetInvite,
   saveDraft,
+  savePublishedEvent,
   shareLink,
   slug,
   storedInvite,
   switchTemplate,
   updateInvite,
 } from './invite.js';
+import { createClient, makeReply, manageLink, newId, newSecret, readCredential, responseLink } from './rsvp.js';
 
 const form = /** @type {HTMLFormElement} */ (document.getElementById('form'));
 const previewCard = document.getElementById('previewCard');
@@ -33,7 +36,10 @@ try {
 
 const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage) });
 
-const shareUrl = () => shareLink(location.href.split(/[?#]/)[0], state);
+// The editor page URL without query or fragment, which every link to this page starts from.
+const pageBase = location.href.split(/[?#]/)[0];
+const shareUrl = () => shareLink(pageBase, state);
+const client = createClient();
 
 /** @type {ReturnType<typeof setTimeout>} */
 let statusTimer;
@@ -211,15 +217,21 @@ document.getElementById('reset').addEventListener('click', () => {
   setStatus('Text reset to the template sample.');
 });
 
-document.getElementById('copyLink').addEventListener('click', async () => {
-  const url = shareUrl();
+// Copies the link and then calls done, or shows the link in a prompt where the clipboard is blocked.
+async function copyLink(url, done) {
   try {
     await navigator.clipboard.writeText(url);
-    setStatus('Link copied. Paste it into a message to your guests.');
+    done();
   } catch {
     window.prompt('Copy this link:', url);
   }
-});
+}
+
+document
+  .getElementById('copyLink')
+  .addEventListener('click', () =>
+    copyLink(shareUrl(), () => setStatus('Link copied. Paste it into a message to your guests.')),
+  );
 
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
@@ -258,18 +270,193 @@ document.getElementById('addCalendar').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
-// The guest view hides the editor heading visually; the invite title becomes the page heading.
-// A broken link shows only the message and the link to make an invite; an invite without a title gets a generic one.
-if (state.guest) {
-  const heading = state.broken ? 'This invite link is incomplete' : state.d.title || 'You are invited';
-  document.body.classList.add('view-mode');
-  document.body.classList.toggle('link-broken', state.broken);
-  document.title = `${heading} | Petalpost`;
-  document.querySelector('.editor-head h1').textContent = heading;
-  if (state.broken)
-    setStatus('This invite link is incomplete. Ask the host to send the whole link again.', { keep: true });
+// Publishing: the first publish creates the event identity and stores it before the request, so a retry after a
+// lost confirmation reuses the id and secret. Later publishes send the version. Nothing reaches the server
+// without a click on Publish.
+const publishButton = /** @type {HTMLButtonElement} */ (document.getElementById('publish'));
+const publishStatus = document.getElementById('publishStatus');
+const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
+const manageLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('manageLink'));
+
+// The links show once the server has confirmed the event; until then the stored identity waits for a retry.
+function showPublished() {
+  const cred = state.publishedEvent;
+  const live = Boolean(cred && cred.version !== null);
+  document.getElementById('published').hidden = !live;
+  publishButton.lastChild.textContent = live ? 'Publish changes' : 'Publish';
+  eventLinkInput.value = live ? eventLink(pageBase, cred.id) : '';
+  manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret) : '';
 }
 
+// Stores the identity, or forgets it for null. Returns false when this browser cannot keep it.
+function rememberEvent(cred) {
+  state.publishedEvent = cred;
+  const kept = savePublishedEvent(state, storage);
+  showPublished();
+  return kept;
+}
+
+publishButton.addEventListener('click', async () => {
+  if (!state.publishedEvent) rememberEvent({ id: newId(), secret: newSecret(), version: null });
+  const cred = state.publishedEvent;
+  publishButton.disabled = true;
+  publishStatus.textContent = 'Publishing.';
+  const result = await client.publish(cred, state);
+  publishButton.disabled = false;
+  if (result.ok || result.status === 409) {
+    const kept = rememberEvent({ ...cred, version: result.data.version });
+    const done =
+      cred.version === null
+        ? 'Published. Send the invitation link to your guests.'
+        : 'Published. Guests see the changes when they open the invitation link.';
+    publishStatus.textContent = [
+      result.ok ? done : result.message,
+      kept ? '' : 'This browser cannot keep the invitation, so save the management link now.',
+    ].join(' ');
+  } else if (result.status === 404 && cred.version !== null) {
+    rememberEvent(null);
+    publishStatus.textContent =
+      'This invitation was deleted with its replies. Publish again to make a new invitation link.';
+  } else {
+    publishStatus.textContent = result.message;
+  }
+});
+
+document.getElementById('copyEventLink').addEventListener('click', () =>
+  copyLink(eventLinkInput.value, () => {
+    publishStatus.textContent = 'Invitation link copied. Paste it into a message to your guests.';
+  }),
+);
+document.getElementById('copyManageLink').addEventListener('click', () =>
+  copyLink(manageLinkInput.value, () => {
+    publishStatus.textContent = 'Management link copied. Keep it somewhere private.';
+  }),
+);
+
+// Guest replies to a published event. The reply id and secret are made once per page and kept only in memory,
+// because the guest view never writes storage; a retry reuses them, so it cannot create a second reply.
+// An edit link #r=<id>.<secret> loads that reply instead, and saving sends its version.
+const rsvpForm = /** @type {HTMLFormElement} */ (document.getElementById('rsvpForm'));
+const rsvpStatus = document.getElementById('rsvpStatus');
+const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('replyLink'));
+const sendReply = /** @type {HTMLButtonElement} */ (document.getElementById('sendReply'));
+const nameInput = /** @type {HTMLInputElement} */ (document.getElementById('guestName'));
+const partySizeInput = /** @type {HTMLInputElement} */ (document.getElementById('partySize'));
+const fromLink = readCredential(location.hash, 'r=');
+const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
+
+const attendingChecked = () =>
+  /** @type {HTMLInputElement} */ (rsvpForm.querySelector('input[name="attending"]:checked')).value === 'yes';
+
+// A declined reply has no party; the size input keeps its number for a change of mind.
+function syncPartySize() {
+  partySizeInput.disabled = !attendingChecked();
+}
+
+function fillReply(reply) {
+  nameInput.value = reply.name;
+  const answer = /** @type {HTMLInputElement} */ (
+    rsvpForm.querySelector(`input[name="attending"][value="${reply.attending ? 'yes' : 'no'}"]`)
+  );
+  answer.checked = true;
+  if (reply.attending) partySizeInput.value = String(reply.partySize);
+  syncPartySize();
+}
+
+// The edit link replaces the address, so a reload or bookmark opens the saved reply.
+function showReplyLink() {
+  const link = responseLink(pageBase, state.event, replyCred.id, replyCred.secret);
+  history.replaceState(null, '', link);
+  replyLinkInput.value = link;
+  document.getElementById('replySaved').hidden = false;
+}
+
+rsvpForm.addEventListener('change', syncPartySize);
+
+rsvpForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const attending = attendingChecked();
+  const reply = makeReply({
+    name: nameInput.value,
+    attending,
+    partySize: attending ? Number(partySizeInput.value) : 0,
+  });
+  if (!reply) {
+    rsvpStatus.textContent = 'Enter your name, and a party size from 1 to 10 when you come.';
+    return;
+  }
+  sendReply.disabled = true;
+  rsvpStatus.textContent = 'Sending your reply.';
+  const result = await client.saveReply(state.event, replyCred, reply);
+  sendReply.disabled = false;
+  if (result.ok) {
+    replyCred.version = result.data.version;
+    showReplyLink();
+    rsvpStatus.textContent = 'Your reply is saved. The host can see it now.';
+    return;
+  }
+  if (result.status === 409) {
+    replyCred.version = result.data.version;
+    fillReply(result.data);
+  }
+  rsvpStatus.textContent = result.message;
+});
+
+document.getElementById('copyReplyLink').addEventListener('click', () =>
+  copyLink(replyLinkInput.value, () => {
+    rsvpStatus.textContent = 'Edit link copied. Keep it to change your reply later.';
+  }),
+);
+
+// The guest view hides the editor heading visually; the invite title becomes the page heading.
+function setHeading(heading) {
+  document.title = `${heading} | Petalpost`;
+  document.querySelector('.editor-head h1').textContent = heading;
+}
+
+// An invitation link shows nothing of the invite until the event loads, and only a message when loading fails.
+async function openEvent() {
+  const result = await client.loadEvent(state.event);
+  if (!result.ok) {
+    setHeading(result.status === 404 ? 'This invitation does not exist' : 'The invitation could not be loaded');
+    setStatus(result.message, { keep: true });
+    return;
+  }
+  const template = getTemplate(result.data.t);
+  state.t = template.id;
+  state.d = makeInviteData(template, result.data.d);
+  setHeading(state.d.title || 'You are invited');
+  document.body.classList.remove('invite-hidden');
+  render();
+  rsvpForm.hidden = false;
+  if (!fromLink) return;
+  const saved = await client.loadReply(state.event, replyCred);
+  if (!saved.ok) {
+    rsvpStatus.textContent = saved.message;
+    return;
+  }
+  replyCred.version = saved.data.version;
+  fillReply(saved.data);
+  showReplyLink();
+  rsvpStatus.textContent = 'Your saved reply is shown. Change it and send it again.';
+}
+
+// A broken link shows only the message and the link to make an invite; an invite without a title gets a generic one.
+if (state.guest) {
+  document.body.classList.add('view-mode');
+  document.body.classList.toggle('invite-hidden', state.broken || Boolean(state.event));
+  if (state.broken) {
+    setHeading('This invite link is incomplete');
+    setStatus('This invite link is incomplete. Ask the host to send the whole link again.', { keep: true });
+  } else if (state.event) {
+    setHeading('Opening the invitation');
+    openEvent();
+  } else {
+    setHeading(state.d.title || 'You are invited');
+  }
+}
+
+showPublished();
 fillForm();
 renderPicker(getTemplate(state.t).category);
 render();

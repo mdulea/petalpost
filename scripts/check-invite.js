@@ -1,4 +1,5 @@
-// Fails when share links, invite records, storage writes, template switching, template ids or the calendar file break.
+// Fails when share links, invitation links of published events, invite records, storage writes, the stored
+// published event identity, template switching, template ids or the calendar file break.
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -24,6 +25,8 @@ for (const t of ctx.TEMPLATES) {
     photo: null,
     guest: false,
     broken: false,
+    event: null,
+    publishedEvent: null,
   });
 }
 const zoe = {
@@ -56,6 +59,8 @@ check(
     photo: null,
     guest: false,
     broken: false,
+    event: null,
+    publishedEvent: null,
   },
 );
 for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) {
@@ -64,6 +69,8 @@ for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) {
     photo: null,
     guest: false,
     broken: false,
+    event: null,
+    publishedEvent: null,
   });
 }
 const draft = JSON.stringify({ t: 'birthday', d: { title: 'Zoe turns 30' } });
@@ -83,6 +90,8 @@ check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.d
   photo: null,
   guest: false,
   broken: false,
+  event: null,
+  publishedEvent: null,
 });
 for (const bad of [
   'javascript:x',
@@ -107,7 +116,7 @@ for (const hash of [cut, '#d=%%%', '']) {
   check(
     `a guest link with hash "${hash.slice(0, 12)}" opens as broken, without the stored draft or photo`,
     ctx.openInvite({ search: '?view=1', hash, draft, photo: 'data:image/jpeg;base64,x' }),
-    { ...fresh('birthday'), photo: null, guest: true, broken: true },
+    { ...fresh('birthday'), photo: null, guest: true, broken: true, event: null, publishedEvent: null },
   );
 }
 check('a share link opens as not broken', opened.broken, false);
@@ -116,6 +125,8 @@ check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '
   photo: null,
   guest: false,
   broken: false,
+  event: null,
+  publishedEvent: null,
 });
 
 // Invite records.
@@ -313,6 +324,66 @@ check(
   [await ctx.changePhoto(owner, null, ownerStore), owner.photo, ctx.storedInvite(ownerStore).photo],
   ['saved', null, null],
 );
+
+// Published events: an invitation link opens the event as a guest; the owner's browser keeps the event identity
+// {id, secret, version} under its own key, and the guest view never reads or writes it.
+const EVENT_ID = 'AAAAAAAAAAAAAAAAAAAAAA';
+const identity = { id: EVENT_ID, secret: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234', version: 3 };
+const stored = JSON.stringify(identity);
+check(
+  'an invitation link opens its event as a guest, without the stored draft, photo or event identity',
+  ctx.openInvite({
+    search: ctx.eventLink('', EVENT_ID),
+    draft,
+    photo: 'data:image/jpeg;base64,x',
+    publishedEvent: stored,
+  }),
+  { ...fresh('birthday'), photo: null, guest: true, broken: false, event: EVENT_ID, publishedEvent: null },
+);
+for (const id of ['', 'short', `${EVENT_ID}A`, `${EVENT_ID.slice(1)}+`]) {
+  check(
+    `an invitation link with event id "${id}" opens as broken`,
+    [ctx.openInvite({ search: `?view=1&e=${encodeURIComponent(id)}` })].map((s) => [s.broken, s.event])[0],
+    [true, null],
+  );
+}
+check(
+  'the owner reopens the stored event identity',
+  ctx.openInvite({ draft, publishedEvent: stored }).publishedEvent,
+  identity,
+);
+check(
+  'a stored event identity that never got a version reopens',
+  ctx.openInvite({ publishedEvent: JSON.stringify({ ...identity, version: null }) }).publishedEvent,
+  { ...identity, version: null },
+);
+for (const [label, value] of Object.entries({
+  'unreadable JSON': '{',
+  'a short secret': JSON.stringify({ ...identity, secret: 'abc' }),
+  'a malformed id': JSON.stringify({ ...identity, id: 'x' }),
+  'a version of 0': JSON.stringify({ ...identity, version: 0 }),
+  'a version given as text': JSON.stringify({ ...identity, version: '3' }),
+  'no version': JSON.stringify({ id: identity.id, secret: identity.secret }),
+})) {
+  check(
+    `a stored event identity with ${label} is dropped`,
+    ctx.openInvite({ publishedEvent: value }).publishedEvent,
+    null,
+  );
+}
+const eventStore = memory();
+const publisher = { ...ctx.openInvite({}), publishedEvent: identity };
+ctx.savePublishedEvent(publisher, eventStore);
+check(
+  'a saved event identity survives a reload, next to the draft',
+  ctx.openInvite(ctx.storedInvite(eventStore)).publishedEvent,
+  identity,
+);
+ctx.savePublishedEvent({ ...publisher, publishedEvent: null }, eventStore);
+check('forgetting the event identity removes it', ctx.storedInvite(eventStore).publishedEvent, null);
+const guestEventStore = memory();
+ctx.savePublishedEvent({ ...publisher, guest: true }, guestEventStore);
+check('the guest view never writes an event identity', guestEventStore.items.size, 0);
 
 // Decoding can finish out of order after another upload or removal.
 const pendingPhoto = () => {
