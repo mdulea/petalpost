@@ -1,6 +1,11 @@
 .git/
 .npm-cache/
 node_modules/
+.pnpm-store/
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+serve.json
 .env
 .env.*
 scripts/

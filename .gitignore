@@ -1,6 +1,7 @@
 # Local dependencies and caches
 node_modules/
 .npm-cache/
+.pnpm-store/
 
 # Vercel project linking and generated output
 .vercel/
