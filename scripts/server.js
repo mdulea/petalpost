@@ -1,7 +1,7 @@
 // The local server for pnpm dev and the browser checks, in place of Vercel. It serves the site files that buildSite
 // copies, with the vercel.json headers on every path, / as index.html, no clean URLs, no directory listing
 // and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
-// /api paths go to createApi over PGlite after migrate: in memory with --memory, otherwise in .pglite/.
+// /api paths go to createApi over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
 // Run: node scripts/server.js --port <n> [--memory]
 import { readFile, stat } from 'node:fs/promises';

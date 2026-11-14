@@ -1,5 +1,5 @@
-// Guest replies, private links and the RSVP API client. No DOM access: the browser and server/api.js share it,
-// and scripts/check-rsvp.js runs it in Node.
+// Guest replies, private links and the RSVP API client. It has no DOM access, because the browser and
+// server/api.js share it and scripts/check-rsvp.js runs it in Node.
 
 export const REPLY_LIMITS = { name: 80, partySize: 10 };
 
@@ -94,7 +94,7 @@ export function createClient(fetchFn = fetch) {
     return { ok: false, status: response.status, data, message };
   }
 
-  // A create (cred.version null) that the server reports as already done, after a lost confirmation,
+  // A create, with cred.version null, that the server reports as already done after a lost confirmation
   // repeats at once as an update with the returned version, so the newer fields still apply.
   async function save(path, cred, body) {
     const put = (version) => call('PUT', path, cred.secret, { ...body, version });

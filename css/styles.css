@@ -1418,7 +1418,7 @@ textarea.input {
 .published {
   margin-top: 16px;
 }
-/* The instruction to keep a private link stands out: losing the link loses access. */
+/* The instruction to keep a private link stands out. Losing the link loses access. */
 .warning {
   margin-bottom: 14px;
   padding: 12px 14px;

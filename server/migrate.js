@@ -1,4 +1,4 @@
-// Schema migrations: migrations/*.sql files apply once each, in name order, and schema_migrations records them.
+// The schema migrations in migrations/*.sql apply once each, in name order, and schema_migrations records them.
 // A file holds statements that each end with a semicolon at the end of a line.
 // Run: DATABASE_URL_UNPOOLED=<url> pnpm migrate
 import { readdir, readFile } from 'node:fs/promises';
