@@ -202,10 +202,14 @@ document.getElementById('addCalendar').addEventListener('click', () => {
 });
 
 // The guest view hides the editor heading visually; the invite title becomes the page heading.
+// A broken link shows only the message and the link to make an invite; an invite without a title gets a generic one.
 if (state.guest) {
+  const heading = state.broken ? 'This invite link is incomplete' : state.d.title || 'You are invited';
   document.body.classList.add('view-mode');
-  document.title = `${state.d.title} | Petalpost`;
-  document.querySelector('.editor-head h1').textContent = state.d.title;
+  document.body.classList.toggle('link-broken', state.broken);
+  document.title = `${heading} | Petalpost`;
+  document.querySelector('.editor-head h1').textContent = heading;
+  if (state.broken) setStatus('This invite link is incomplete. Ask the host to send the whole link again.', { keep: true });
 }
 
 fillForm();

@@ -499,6 +499,7 @@ textarea.input { min-height: 84px; resize: vertical; }
 .view-mode .guest-only { display: inline-flex; }
 .view-mode .editor { grid-template-columns: 1fr; max-width: 760px; }
 .view-mode .preview-col { position: static; }
+.link-broken .preview-stage, .link-broken #share-panel { display: none; }
 
 /* Reduced motion keeps color and border feedback and removes movement: no deal-in, lifts, tilts or smooth scroll. */
 @media (prefers-reduced-motion: reduce) {

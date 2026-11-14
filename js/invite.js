@@ -76,15 +76,18 @@ export function draftOf(record) {
 
 // Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
 // switched to the ?t= template. Inputs are the raw search, hash and storage strings; guest is true for ?view=1.
+// broken is true for a guest view without a readable link, such as one a messaging app cut short. It opens a new
+// invite that the page must not show, and never the stored draft or photo, which belong to this browser's owner.
 export function openInvite({ search = '', hash = '', draft = null, photo = null }) {
   const params = new URLSearchParams(search);
   const guest = params.get('view') === '1';
   const requested = params.get('t');
   const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
-  if (shared) return { ...shared, photo: null, guest };
+  if (shared) return { ...shared, photo: null, guest, broken: false };
+  if (guest) return { ...restoreInvite({ t: requested }), photo: null, guest, broken: true };
   let saved = null;
   try { saved = JSON.parse(draft); } catch { saved = null; }
-  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: isPhoto(photo) ? photo : null, guest };
+  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: isPhoto(photo) ? photo : null, guest, broken: false };
   if (requested && requested !== state.t) switchTemplate(state, requested);
   return state;
 }
