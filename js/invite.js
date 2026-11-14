@@ -85,7 +85,7 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null 
   const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
   if (shared) return { ...shared, photo: null, guest, broken: false };
   if (guest) return { ...restoreInvite({ t: requested }), photo: null, guest, broken: true };
-  let saved = null;
+  let saved;
   try { saved = JSON.parse(draft); } catch { saved = null; }
   const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: isPhoto(photo) ? photo : null, guest, broken: false };
   if (requested && requested !== state.t) switchTemplate(state, requested);

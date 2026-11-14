@@ -6,7 +6,7 @@ import {
   storedInvite, switchTemplate, updateInvite,
 } from './invite.js';
 
-const form = document.getElementById('form');
+const form = /** @type {HTMLFormElement} */ (document.getElementById('form'));
 const previewCard = document.getElementById('previewCard');
 const statusEl = document.getElementById('status');
 
@@ -18,11 +18,13 @@ const state = openInvite({ search: location.search, hash: location.hash, ...stor
 
 const shareUrl = () => shareLink(location.href.split(/[?#]/)[0], state);
 
+/** @type {ReturnType<typeof setTimeout>} */
+let statusTimer;
 // A message that asks the owner to act, such as downloading before leaving, stays until the next message.
 function setStatus(text, { keep = false } = {}) {
   statusEl.textContent = text;
-  clearTimeout(setStatus.timer);
-  if (!keep) setStatus.timer = setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  clearTimeout(statusTimer);
+  if (!keep) statusTimer = setTimeout(() => { statusEl.textContent = ''; }, 4000);
 }
 
 let saveTimer;
@@ -34,8 +36,8 @@ function save() {
 function render() {
   mountInvites(previewCard, renderInvite(getTemplate(state.t), { ...state.d, photo: state.photo }));
   form.classList.toggle('has-photo', Boolean(state.photo));
-  document.getElementById('previewGuest').href = shareUrl();
-  const map = document.getElementById('openMap');
+  /** @type {HTMLAnchorElement} */ (document.getElementById('previewGuest')).href = shareUrl();
+  const map = /** @type {HTMLAnchorElement} */ (document.getElementById('openMap'));
   const mapUrl = mapLink(state.d);
   map.hidden = !mapUrl;
   if (mapUrl) map.href = mapUrl;
@@ -60,7 +62,7 @@ pickerTabs.innerHTML = CATEGORIES
   .join('');
 
 function renderPicker(category) {
-  pickerTabs.querySelectorAll('.filter').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.category === category)));
+  pickerTabs.querySelectorAll('.filter').forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.category === category)));
   mountInvites(document.getElementById('picker'), TEMPLATES.filter((t) => t.category === category).map((t) => `
     <label class="picker-item">
       <input type="radio" name="template" value="${t.id}" ${t.id === state.t ? 'checked' : ''}>
@@ -70,7 +72,7 @@ function renderPicker(category) {
 }
 
 pickerTabs.addEventListener('click', (e) => {
-  const tab = e.target.closest('.filter');
+  const tab = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('.filter'));
   if (tab) renderPicker(tab.dataset.category);
 });
 
@@ -84,7 +86,7 @@ document.getElementById('swatches').innerHTML =
     </label>`).join('');
 
 form.addEventListener('input', (e) => {
-  const { name, value } = e.target;
+  const { name, value } = /** @type {HTMLInputElement} */ (e.target);
   if (name === 'template') {
     switchTemplate(state, value);
     fillForm();
@@ -130,7 +132,7 @@ async function loadPhoto(file) {
 }
 
 const dropzone = document.getElementById('dropzone');
-const photoInput = document.getElementById('photoInput');
+const photoInput = /** @type {HTMLInputElement} */ (document.getElementById('photoInput'));
 // Some browsers fire change with no file when the owner cancels the file dialog.
 photoInput.addEventListener('change', () => {
   if (photoInput.files[0]) loadPhoto(photoInput.files[0]);
@@ -139,7 +141,7 @@ photoInput.addEventListener('change', () => {
 dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('is-over'); });
 // dragleave also fires when the pointer moves onto a child of the dropzone.
 dropzone.addEventListener('dragleave', (e) => {
-  if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('is-over');
+  if (!dropzone.contains(/** @type {Node} */ (e.relatedTarget))) dropzone.classList.remove('is-over');
 });
 dropzone.addEventListener('drop', (e) => {
   e.preventDefault();
@@ -168,7 +170,7 @@ document.getElementById('copyLink').addEventListener('click', async () => {
 });
 
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
-  const button = e.currentTarget;
+  const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
   if (typeof htmlToImage !== 'object') {
     setStatus('The image tool is still loading. Try again in a moment.');
     return;
@@ -177,7 +179,7 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
   setStatus('Preparing the image.', { keep: true });
   try {
     await document.fonts.ready;
-    const card = previewCard.querySelector('.invite');
+    const card = /** @type {HTMLElement} */ (previewCard.querySelector('.invite'));
     const link = document.createElement('a');
     link.download = `${slug(state.d.title)}.png`;
     link.href = await htmlToImage.toPng(card, { pixelRatio: 1500 / card.offsetWidth });

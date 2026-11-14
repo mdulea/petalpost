@@ -12,9 +12,16 @@
   },
   "scripts": {
     "dev": "serve --listen 3000 --no-clipboard",
+    "lint": "eslint .",
+    "typecheck": "tsc -p .",
     "test": "node scripts/check-contrast.js && node scripts/check-invite.js && node scripts/check-site.js"
   },
   "devDependencies": {
-    "serve": "14.2.7"
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "serve": "14.2.7",
+    "typescript": "7.0.2"
   }
 }
