@@ -15,7 +15,16 @@ import { after, test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 import { getTemplate } from '../js/templates.js';
 import { eventLink, makeInviteData } from '../js/invite.js';
-import { createClient, makeReply, manageLink, newId, newSecret, readCredential, responseLink } from '../js/rsvp.js';
+import {
+  createClient,
+  editorPage,
+  makeReply,
+  manageLink,
+  newId,
+  newSecret,
+  readCredential,
+  responseLink,
+} from '../js/rsvp.js';
 import { createApi } from '../server/api.js';
 import { migrate } from '../server/migrate.js';
 
@@ -511,7 +520,7 @@ test('a network failure resolves with status 0 and a message', async () => {
 
 test('private links read back to the credential they carry', () => {
   const [eventId, id, secret] = [newId(), newId(), newSecret()];
-  const page = 'https://petalpost.example/editor.html';
+  const page = editorPage('https://petalpost.example');
   const reply = responseLink(page, eventId, id, secret);
   const manage = manageLink('https://petalpost.example', eventId, secret);
   assert.deepEqual(
@@ -521,9 +530,9 @@ test('private links read back to the credential they carry', () => {
       event: eventLink(page, eventId),
     },
     {
-      reply: [`${page}?view=1&e=${eventId}`, { id, secret }],
+      reply: [`https://petalpost.example/editor.html?view=1&e=${eventId}`, { id, secret }],
       manage: ['https://petalpost.example/manage.html', { id: eventId, secret }],
-      event: `${page}?view=1&e=${eventId}`,
+      event: `https://petalpost.example/editor.html?view=1&e=${eventId}`,
     },
   );
 });
