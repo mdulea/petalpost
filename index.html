@@ -1,177 +1,276 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Petalpost | Event invitations you make in a minute</title>
-  <meta name="description" content="Pick a hand-drawn invitation template, add your photo, names, date and address, then share it with a link.">
-  <meta name="google-site-verification" content="fYphFxO1DYpAFK4Nf8pFbD9t9EhQWbyux912xz5urS0">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://petalpost-beryl.vercel.app/">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Petalpost">
-  <meta property="og:title" content="Petalpost | Event invitations you make in a minute">
-  <meta property="og:description" content="Pick a hand-drawn invitation template, add your photo, names, date and address, then share it with a link.">
-  <meta property="og:url" content="https://petalpost-beryl.vercel.app/">
-  <meta property="og:image" content="https://petalpost-beryl.vercel.app/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Petalpost: three hand-drawn invitation cards beside the words Your day, your invite.">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Petalpost home">
-      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-        <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2"/>
-        <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74"/>
-      </svg>
-      Petalpost
-    </a>
-    <nav class="nav" aria-label="Main">
-      <a class="pill" href="#templates"><svg class="icon"><use href="#i-layout"/></svg>Templates</a>
-      <a class="pill" href="#how"><svg class="icon"><use href="#i-sparkles"/></svg>How it works</a>
-      <a class="pill pill-cta" href="editor.html"><svg class="icon"><use href="#i-pen"/></svg>Create invite</a>
-    </nav>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Petalpost | Event invitations you make in a minute</title>
+    <meta
+      name="description"
+      content="Pick a hand-drawn invitation template, add your photo, names, date and address, then share it with a link."
+    />
+    <meta name="google-site-verification" content="fYphFxO1DYpAFK4Nf8pFbD9t9EhQWbyux912xz5urS0" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://petalpost-beryl.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Petalpost" />
+    <meta property="og:title" content="Petalpost | Event invitations you make in a minute" />
+    <meta
+      property="og:description"
+      content="Pick a hand-drawn invitation template, add your photo, names, date and address, then share it with a link."
+    />
+    <meta property="og:url" content="https://petalpost-beryl.vercel.app/" />
+    <meta property="og:image" content="https://petalpost-beryl.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Petalpost: three hand-drawn invitation cards beside the words Your day, your invite."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Petalpost home">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2" />
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round" />
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74" />
+        </svg>
+        Petalpost
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a class="pill" href="#templates"
+          ><svg class="icon"><use href="#i-layout" /></svg>Templates</a
+        >
+        <a class="pill" href="#how"
+          ><svg class="icon"><use href="#i-sparkles" /></svg>How it works</a
+        >
+        <a class="pill pill-cta" href="editor.html"
+          ><svg class="icon"><use href="#i-pen" /></svg>Create invite</a
+        >
+      </nav>
+    </header>
 
-  <main>
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <h1 id="hero-title">Your day,<br><em>your</em> invite.</h1>
-        <p class="lead">Hand-drawn invitations for birthdays, weddings, showers and every get-together in between. Add your photo, names, date and address, then send it with a link.</p>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="editor.html"><svg class="icon"><use href="#i-pen"/></svg>Start your invite</a>
-          <a class="btn btn-ghost" href="#templates"><svg class="icon"><use href="#i-layout"/></svg>Browse templates</a>
-        </div>
-        <ul class="features">
-          <li><span class="feature-icon"><svg class="icon"><use href="#i-layout"/></svg></span><div><strong>Pick</strong><span>Choose a template for your occasion.</span></div></li>
-          <li><span class="feature-icon"><svg class="icon"><use href="#i-image"/></svg></span><div><strong>Personalize</strong><span>Your photo, words and colors.</span></div></li>
-          <li><span class="feature-icon"><svg class="icon"><use href="#i-send"/></svg></span><div><strong>Send</strong><span>Share a link or download a PNG.</span></div></li>
-        </ul>
-      </div>
-
-      <div class="hero-stage">
-        <div class="stage">
-          <svg class="stage-deco" viewBox="0 0 400 368" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M14 340Q40 300 30 250" stroke="#8FA886" stroke-width="2" fill="none"/>
-            <ellipse cx="26" cy="300" rx="10" ry="4" transform="rotate(-50 26 300)" fill="#A9C29D"/>
-            <ellipse cx="38" cy="280" rx="10" ry="4" transform="rotate(30 38 280)" fill="#93AE87"/>
-            <ellipse cx="28" cy="262" rx="10" ry="4" transform="rotate(-60 28 262)" fill="#A9C29D"/>
-            <path d="M380 40l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#E0B45C"/>
-            <path d="M40 40l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#D98E88"/>
-            <path d="M360 320l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#7C9A74"/>
-          </svg>
-          <div class="fan fan-in" id="heroFan"></div>
-        </div>
-        <nav class="toolbar" aria-label="Editor shortcuts">
-          <a href="editor.html#templates-panel"><span class="tool-icon"><svg class="icon"><use href="#i-layout"/></svg></span>Template</a>
-          <a href="editor.html#photo-panel"><span class="tool-icon"><svg class="icon"><use href="#i-image"/></svg></span>Photo</a>
-          <a href="editor.html#details-panel"><span class="tool-icon"><svg class="icon"><use href="#i-pen"/></svg></span>Details</a>
-          <a href="editor.html#color-panel"><span class="tool-icon"><svg class="icon"><use href="#i-palette"/></svg></span>Colors</a>
-          <a href="editor.html#share-panel"><span class="tool-icon"><svg class="icon"><use href="#i-send"/></svg></span>Share</a>
-        </nav>
-      </div>
-
-      <aside class="hero-side" aria-label="Highlights">
-        <div class="widget">
-          <p class="widget-title"><svg class="icon"><use href="#i-heart"/></svg>Today's pick</p>
-          <a class="pick" id="todaysPick" href="editor.html"></a>
-        </div>
-        <div class="widget">
-          <p class="widget-title"><svg class="icon"><use href="#i-layout"/></svg>Templates</p>
-          <div class="stat">
-            <span class="stat-number" id="templateCount">24</span>
-            <p>designs, each with <span id="accentCount">6</span> accent colors to choose from</p>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <h1 id="hero-title">Your day,<br /><em>your</em> invite.</h1>
+          <p class="lead">
+            Hand-drawn invitations for birthdays, weddings, showers and every get-together in between. Add your photo,
+            names, date and address, then send it with a link.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="editor.html"
+              ><svg class="icon"><use href="#i-pen" /></svg>Start your invite</a
+            >
+            <a class="btn btn-ghost" href="#templates"
+              ><svg class="icon"><use href="#i-layout" /></svg>Browse templates</a
+            >
           </div>
+          <ul class="features">
+            <li>
+              <span class="feature-icon"
+                ><svg class="icon"><use href="#i-layout" /></svg
+              ></span>
+              <div><strong>Pick</strong><span>Choose a template for your occasion.</span></div>
+            </li>
+            <li>
+              <span class="feature-icon"
+                ><svg class="icon"><use href="#i-image" /></svg
+              ></span>
+              <div><strong>Personalize</strong><span>Your photo, words and colors.</span></div>
+            </li>
+            <li>
+              <span class="feature-icon"
+                ><svg class="icon"><use href="#i-send" /></svg
+              ></span>
+              <div><strong>Send</strong><span>Share a link or download a PNG.</span></div>
+            </li>
+          </ul>
         </div>
-        <div class="widget widget-rose">
-          <p class="widget-title"><svg class="icon"><use href="#i-sparkles"/></svg>Made for</p>
-          <div class="chips" id="categoryChips"></div>
-        </div>
-      </aside>
-    </section>
 
-    <section class="section" id="templates" aria-labelledby="templates-title">
-      <div class="section-head">
-        <div>
-          <h2 id="templates-title">Find your template</h2>
-          <p>Every design takes your own photo. Without one, it keeps its illustration.</p>
+        <div class="hero-stage">
+          <div class="stage">
+            <svg class="stage-deco" viewBox="0 0 400 368" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M14 340Q40 300 30 250" stroke="#8FA886" stroke-width="2" fill="none" />
+              <ellipse cx="26" cy="300" rx="10" ry="4" transform="rotate(-50 26 300)" fill="#A9C29D" />
+              <ellipse cx="38" cy="280" rx="10" ry="4" transform="rotate(30 38 280)" fill="#93AE87" />
+              <ellipse cx="28" cy="262" rx="10" ry="4" transform="rotate(-60 28 262)" fill="#A9C29D" />
+              <path d="M380 40l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#E0B45C" />
+              <path d="M40 40l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#D98E88" />
+              <path d="M360 320l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#7C9A74" />
+            </svg>
+            <div class="fan fan-in" id="heroFan"></div>
+          </div>
+          <nav class="toolbar" aria-label="Editor shortcuts">
+            <a href="editor.html#templates-panel"
+              ><span class="tool-icon"
+                ><svg class="icon"><use href="#i-layout" /></svg></span
+              >Template</a
+            >
+            <a href="editor.html#photo-panel"
+              ><span class="tool-icon"
+                ><svg class="icon"><use href="#i-image" /></svg></span
+              >Photo</a
+            >
+            <a href="editor.html#details-panel"
+              ><span class="tool-icon"
+                ><svg class="icon"><use href="#i-pen" /></svg></span
+              >Details</a
+            >
+            <a href="editor.html#color-panel"
+              ><span class="tool-icon"
+                ><svg class="icon"><use href="#i-palette" /></svg></span
+              >Colors</a
+            >
+            <a href="editor.html#share-panel"
+              ><span class="tool-icon"
+                ><svg class="icon"><use href="#i-send" /></svg></span
+              >Share</a
+            >
+          </nav>
         </div>
-        <div class="filters" id="filters" role="group" aria-label="Filter templates by occasion"></div>
-      </div>
-      <div class="gallery" id="gallery"></div>
-    </section>
 
-    <section class="section" id="how" aria-labelledby="how-title">
-      <div class="section-head">
-        <div>
-          <h2 id="how-title">Three steps to the mailbox</h2>
-          <p>No account needed. Your draft stays saved in this browser.</p>
-        </div>
-      </div>
-      <ol class="steps" role="list">
-        <li class="step">
-          <span class="feature-icon"><svg class="icon"><use href="#i-layout"/></svg></span>
-          <h3>Pick a template</h3>
-          <p>Start from a birthday, wedding, baby shower, brunch, graduation or housewarming design.</p>
-        </li>
-        <li class="step">
-          <span class="feature-icon"><svg class="icon"><use href="#i-image"/></svg></span>
-          <h3>Make it yours</h3>
-          <p>Upload a photo, then edit the names, date, time, venue, address and note. The preview updates as you type.</p>
-        </li>
-        <li class="step">
-          <span class="feature-icon"><svg class="icon"><use href="#i-send"/></svg></span>
-          <h3>Send it out</h3>
-          <p>Copy a link guests can open, with calendar and map buttons, or download the invite as an image.</p>
-        </li>
-      </ol>
-    </section>
+        <aside class="hero-side" aria-label="Highlights">
+          <div class="widget">
+            <p class="widget-title">
+              <svg class="icon"><use href="#i-heart" /></svg>Today's pick
+            </p>
+            <a class="pick" id="todaysPick" href="editor.html"></a>
+          </div>
+          <div class="widget">
+            <p class="widget-title">
+              <svg class="icon"><use href="#i-layout" /></svg>Templates
+            </p>
+            <div class="stat">
+              <span class="stat-number" id="templateCount">24</span>
+              <p>designs, each with <span id="accentCount">6</span> accent colors to choose from</p>
+            </div>
+          </div>
+          <div class="widget widget-rose">
+            <p class="widget-title">
+              <svg class="icon"><use href="#i-sparkles" /></svg>Made for
+            </p>
+            <div class="chips" id="categoryChips"></div>
+          </div>
+        </aside>
+      </section>
 
-    <section class="section" aria-label="Get started">
-      <div class="banners">
-        <div class="banner">
+      <section class="section" id="templates" aria-labelledby="templates-title">
+        <div class="section-head">
           <div>
-            <h2>Invites that look like you</h2>
-            <p>From a first birthday to a fiftieth anniversary, swap in your own photo and the card is yours.</p>
-            <a class="btn btn-primary" href="editor.html"><svg class="icon"><use href="#i-pen"/></svg>Start your invite</a>
+            <h2 id="templates-title">Find your template</h2>
+            <p>Every design takes your own photo. Without one, it keeps its illustration.</p>
           </div>
-          <div class="banner-art" id="bannerArt" aria-hidden="true"></div>
+          <div class="filters" id="filters" role="group" aria-label="Filter templates by occasion"></div>
         </div>
-        <div class="banner banner-rose">
+        <div class="gallery" id="gallery"></div>
+      </section>
+
+      <section class="section" id="how" aria-labelledby="how-title">
+        <div class="section-head">
           <div>
-            <h2>Send with a link</h2>
-            <p>Guests open the invite on any phone and add it to their calendar in one tap.</p>
-            <a class="btn btn-rose" href="editor.html#share-panel"><svg class="icon"><use href="#i-send"/></svg>Try it</a>
+            <h2 id="how-title">Three steps to the mailbox</h2>
+            <p>No account needed. Your draft stays saved in this browser.</p>
           </div>
-          <svg class="banner-art" viewBox="0 0 160 150" aria-hidden="true">
-            <rect x="34" y="20" width="92" height="74" rx="8" fill="#FFFDF8" stroke="#E0B45C" stroke-width="2" transform="rotate(-6 80 57)"/>
-            <path d="M58 46h44M58 58h30" stroke="#D98E88" stroke-width="4" stroke-linecap="round" transform="rotate(-6 80 57)"/>
-            <path d="M20 70h120v64a8 8 0 0 1-8 8H28a8 8 0 0 1-8-8Z" fill="#E5ECDD" stroke="#7C9A74" stroke-width="2"/>
-            <path d="M20 72l60 42 60-42" fill="none" stroke="#7C9A74" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M80 104c-3-4.5-10-2.6-10 2.4 0 4.6 10 10.2 10 10.2s10-5.6 10-10.2c0-5-7-6.9-10-2.4z" fill="#D98E88"/>
-            <path d="M146 26l2.5 6.5 6.5 2.5-6.5 2.5-2.5 6.5-2.5-6.5-6.5-2.5 6.5-2.5z" fill="#E0B45C"/>
-            <path d="M12 40l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#7C9A74"/>
-          </svg>
         </div>
-      </div>
-    </section>
-  </main>
+        <ol class="steps" role="list">
+          <li class="step">
+            <span class="feature-icon"
+              ><svg class="icon"><use href="#i-layout" /></svg
+            ></span>
+            <h3>Pick a template</h3>
+            <p>Start from a birthday, wedding, baby shower, brunch, graduation or housewarming design.</p>
+          </li>
+          <li class="step">
+            <span class="feature-icon"
+              ><svg class="icon"><use href="#i-image" /></svg
+            ></span>
+            <h3>Make it yours</h3>
+            <p>
+              Upload a photo, then edit the names, date, time, venue, address and note. The preview updates as you type.
+            </p>
+          </li>
+          <li class="step">
+            <span class="feature-icon"
+              ><svg class="icon"><use href="#i-send" /></svg
+            ></span>
+            <h3>Send it out</h3>
+            <p>Copy a link guests can open, with calendar and map buttons, or download the invite as an image.</p>
+          </li>
+        </ol>
+      </section>
 
-  <footer class="site-footer">
-    <span>Petalpost. Made for the people you love to gather.</span>
-    <a href="editor.html">Open the editor</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="mailto:hello@example.com">Contact</a>
-  </footer>
+      <section class="section" aria-label="Get started">
+        <div class="banners">
+          <div class="banner">
+            <div>
+              <h2>Invites that look like you</h2>
+              <p>From a first birthday to a fiftieth anniversary, swap in your own photo and the card is yours.</p>
+              <a class="btn btn-primary" href="editor.html"
+                ><svg class="icon"><use href="#i-pen" /></svg>Start your invite</a
+              >
+            </div>
+            <div class="banner-art" id="bannerArt" aria-hidden="true"></div>
+          </div>
+          <div class="banner banner-rose">
+            <div>
+              <h2>Send with a link</h2>
+              <p>Guests open the invite on any phone and add it to their calendar in one tap.</p>
+              <a class="btn btn-rose" href="editor.html#share-panel"
+                ><svg class="icon"><use href="#i-send" /></svg>Try it</a
+              >
+            </div>
+            <svg class="banner-art" viewBox="0 0 160 150" aria-hidden="true">
+              <rect
+                x="34"
+                y="20"
+                width="92"
+                height="74"
+                rx="8"
+                fill="#FFFDF8"
+                stroke="#E0B45C"
+                stroke-width="2"
+                transform="rotate(-6 80 57)"
+              />
+              <path
+                d="M58 46h44M58 58h30"
+                stroke="#D98E88"
+                stroke-width="4"
+                stroke-linecap="round"
+                transform="rotate(-6 80 57)"
+              />
+              <path
+                d="M20 70h120v64a8 8 0 0 1-8 8H28a8 8 0 0 1-8-8Z"
+                fill="#E5ECDD"
+                stroke="#7C9A74"
+                stroke-width="2"
+              />
+              <path d="M20 72l60 42 60-42" fill="none" stroke="#7C9A74" stroke-width="2" stroke-linejoin="round" />
+              <path
+                d="M80 104c-3-4.5-10-2.6-10 2.4 0 4.6 10 10.2 10 10.2s10-5.6 10-10.2c0-5-7-6.9-10-2.4z"
+                fill="#D98E88"
+              />
+              <path d="M146 26l2.5 6.5 6.5 2.5-6.5 2.5-2.5 6.5-2.5-6.5-6.5-2.5 6.5-2.5z" fill="#E0B45C" />
+              <path d="M12 40l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#7C9A74" />
+            </svg>
+          </div>
+        </div>
+      </section>
+    </main>
 
-  <script type="module" src="js/landing.js"></script>
-  <script src="js/analytics.js"></script>
-  <script defer src="/_vercel/insights/script.js"></script>
-</body>
+    <footer class="site-footer">
+      <span>Petalpost. Made for the people you love to gather.</span>
+      <a href="editor.html">Open the editor</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:hello@example.com">Contact</a>
+    </footer>
+
+    <script type="module" src="js/landing.js"></script>
+    <script src="js/analytics.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
 </html>
