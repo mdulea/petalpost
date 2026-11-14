@@ -158,6 +158,40 @@
           </h2>
           <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="h-color"></div>
         </section>
+
+        <section class="panel" id="publish-panel" aria-labelledby="h-publish">
+          <h2 id="h-publish">
+            <svg class="icon"><use href="#i-send" /></svg>Replies
+          </h2>
+          <p class="hint">
+            Publish to collect replies. Petalpost then stores the text, template and color, and guests reply from the
+            invitation link. Your photo stays in this browser. After you change the invite, publish again to update it.
+          </p>
+          <button class="btn btn-primary btn-small" type="button" id="publish">
+            <svg class="icon"><use href="#i-send" /></svg>Publish
+          </button>
+          <p class="status" id="publishStatus" role="status"></p>
+          <div class="published" id="published" hidden>
+            <p class="warning">
+              Save the management link somewhere private. Anyone with it can see the replies and delete the invitation.
+              Petalpost cannot recover a lost management link.
+            </p>
+            <div class="field">
+              <label for="eventLink">Invitation link for your guests</label>
+              <div class="copy-row">
+                <input class="input" id="eventLink" readonly />
+                <button class="btn btn-ghost btn-small" type="button" id="copyEventLink">Copy</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="manageLink">Management link, private</label>
+              <div class="copy-row">
+                <input class="input" id="manageLink" readonly />
+                <button class="btn btn-ghost btn-small" type="button" id="copyManageLink">Copy</button>
+              </div>
+            </div>
+          </div>
+        </section>
       </form>
 
       <div class="preview-col" id="preview">
@@ -184,6 +218,40 @@
             ><svg class="icon"><use href="#i-pin" /></svg>Open map</a
           >
         </div>
+        <form class="panel rsvp" id="rsvpForm" autocomplete="off" novalidate hidden>
+          <h2 id="h-rsvp">
+            <svg class="icon"><use href="#i-send" /></svg>Reply to the host
+          </h2>
+          <div class="field">
+            <label for="guestName">Your name</label>
+            <input class="input" id="guestName" name="name" maxlength="80" autocomplete="name" />
+          </div>
+          <div class="field" role="radiogroup" aria-labelledby="h-attending">
+            <span class="field-label" id="h-attending">Will you come?</span>
+            <div class="choices">
+              <label class="choice"><input type="radio" name="attending" value="yes" checked />Yes, I will come</label>
+              <label class="choice"><input type="radio" name="attending" value="no" />No, I cannot come</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="partySize">People in your party, you included</label>
+            <input class="input" type="number" id="partySize" name="partySize" min="1" max="10" value="1" />
+          </div>
+          <button class="btn btn-primary" type="submit" id="sendReply">
+            <svg class="icon"><use href="#i-send" /></svg>Send reply
+          </button>
+          <p class="status" id="rsvpStatus" role="status"></p>
+          <div class="published" id="replySaved" hidden>
+            <p class="warning">
+              Keep this private link to change your reply later. Anyone with it can change your reply.
+            </p>
+            <label class="field-label" for="replyLink">Your edit link</label>
+            <div class="copy-row">
+              <input class="input" id="replyLink" readonly />
+              <button class="btn btn-ghost btn-small" type="button" id="copyReplyLink">Copy</button>
+            </div>
+          </div>
+        </form>
         <p class="hint share-note owner-only">
           Share links carry the text, template and color. To send your photo too, download the PNG.
         </p>

@@ -1,5 +1,6 @@
 // Invite records, share links and the calendar file. No DOM access, so scripts/check-invite.js runs it in Node.
 
+import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
 import { ACCENTS, getTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
@@ -109,17 +110,40 @@ export function draftOf(record) {
   return JSON.stringify({ t: record.t, d: record.d });
 }
 
+// The owner's stored event identity {id, secret, version} from its JSON text, or null. version is null until
+// the first publish succeeds, so a retry after a lost confirmation reuses the id and secret.
+function readPublishedEvent(text) {
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== 'object') return null;
+  const { id, secret, version } = value;
+  const validVersion = version === null || (Number.isInteger(version) && version > 0);
+  if (!ID_PATTERN.test(id) || !SECRET_PATTERN.test(secret) || !validVersion) return null;
+  return { id, secret, version };
+}
+
 // Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
 // switched to the ?t= template. Inputs are the raw search, hash and storage strings; guest is true for ?view=1.
+// event is the public id of a published event for an invitation link ?view=1&e=<id>, which the page loads;
+// until then the state holds a new invite that the page must not show. publishedEvent is the owner's stored event
+// identity, or null; a guest view gets null and never writes it.
 // broken is true for a guest view without a readable link, such as one a messaging app cut short. It opens a new
 // invite that the page must not show, and never the stored draft or photo, which belong to this browser's owner.
-export function openInvite({ search = '', hash = '', draft = null, photo = null }) {
+export function openInvite({ search = '', hash = '', draft = null, photo = null, publishedEvent = null }) {
   const params = new URLSearchParams(search);
   const guest = params.get('view') === '1';
   const requested = params.get('t');
+  const owned = guest ? null : readPublishedEvent(publishedEvent);
   const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
-  if (shared) return { ...shared, photo: null, guest, broken: false };
-  if (guest) return { ...restoreInvite({ t: requested }), photo: null, guest, broken: true };
+  if (shared) return { ...shared, photo: null, guest, broken: false, event: null, publishedEvent: owned };
+  if (guest) {
+    const event = ID_PATTERN.test(params.get('e') ?? '') ? params.get('e') : null;
+    return { ...restoreInvite({ t: requested }), photo: null, guest, broken: !event, event, publishedEvent: null };
+  }
   let saved;
   try {
     saved = JSON.parse(draft);
@@ -131,15 +155,18 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null 
     photo: isPhoto(photo) ? photo : null,
     guest,
     broken: false,
+    event: null,
+    publishedEvent: owned,
   };
   if (requested && requested !== state.t) switchTemplate(state, requested);
   return state;
 }
 
-// Storage keeps the owner's draft and photo for a reload. storage has the localStorage shape;
-// a blocked or full storage throws, and the reads and writes below treat that as no value or a refused write.
+// Storage keeps the owner's draft, photo and published event identity for a reload. storage has the localStorage
+// shape; a blocked or full storage throws, and the reads and writes below treat that as no value or a refused write.
 const DRAFT_KEY = 'petalpost:draft';
 const PHOTO_KEY = 'petalpost:photo';
+const EVENT_KEY = 'petalpost:event';
 
 function readStorage(storage, key) {
   try {
@@ -159,15 +186,23 @@ function writeStorage(storage, key, value) {
   }
 }
 
-// The stored draft and photo strings, as openInvite takes them.
+// The stored draft, photo and event identity strings, as openInvite takes them.
 export const storedInvite = (storage) => ({
   draft: readStorage(storage, DRAFT_KEY),
   photo: readStorage(storage, PHOTO_KEY),
+  publishedEvent: readStorage(storage, EVENT_KEY),
 });
 
 // The guest view never writes: a share link opens on the owner's origin and would overwrite the owner's draft.
 export function saveDraft(state, storage) {
   if (!state.guest) writeStorage(storage, DRAFT_KEY, draftOf(state));
+}
+
+// Writes state.publishedEvent, or removes the stored identity when it is null. The guest view never writes.
+// Returns false when storage refused the write.
+export function savePublishedEvent(state, storage) {
+  if (state.guest) return false;
+  return writeStorage(storage, EVENT_KEY, state.publishedEvent && JSON.stringify(state.publishedEvent));
 }
 
 const photoChanges = new WeakMap();

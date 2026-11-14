@@ -7,7 +7,10 @@ This README tells developers how to install, run, test, deploy and contribute to
 
 A visitor chooses a template and adds a photo, names, a date and an address.
 The editor then downloads the invitation as a PNG or copies a share link.
-The site is static HTML, CSS and JavaScript with no build step and no backend.
+A host can also publish the invitation to collect replies.
+Guests reply from the invitation link, and the host sees the replies and totals on a private management page.
+The pages are static HTML, CSS and JavaScript.
+API functions on the same origin store published invitations and replies in Neon Postgres.
 It runs at `https://petalpost-beryl.vercel.app`.
 
 ## Quick start
@@ -50,27 +53,35 @@ With `pnpm dev` running:
 2. In the editor, add a photo, names, a date and an address, and pick an accent color.
 3. Click "Download PNG" to save the invitation as an image, or "Copy share link" to send it as a link.
 
+4. Click "Publish" to store the invitation and get an invitation link and a management link.
+5. Open the invitation link in another browser and send a reply.
+6. Open the management link to see the replies and totals, or to delete the invitation.
+
 A share link carries the text, the template and the color, but not the photo.
-The editor keeps the draft and photo in the browser's local storage, so a reload restores them.
+Publishing stores the same fields on the server, and the photo stays in the browser too.
+The editor keeps the draft, the photo and the published invitation's management secret in the browser's local storage, so a reload restores them.
+A lost management link cannot be recovered.
 
 ## Project structure
 
-- `index.html` is the landing page, `editor.html` is the editor, and `privacy.html` and `404.html` are the remaining pages.
+- `index.html` is the landing page, `editor.html` is the editor and the guest view, `manage.html` is the host's management page, and `privacy.html` and `404.html` are the remaining pages.
 - `js/` holds the page scripts:
   - `templates.js` is the template catalog and the `renderInvite` renderer.
   - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
+  - `rsvp.js` validates replies, builds and reads private links, and is the API client. It has no DOM access, so the server and the Node checks import it.
   - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
-  - `editor.js` and `landing.js` are the entry modules of the editor and the landing page.
+  - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page.
   - `icons.js` injects the inline SVG sprite.
   - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
   - `globals.d.ts` declares the types of the `htmlToImage` and analytics globals.
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
+- `api/index.js` is the Vercel Function for every `/api/` path. `server/api.js` routes, validates and stores the requests, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `migrations/`.
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
 - `scripts/` holds the local server, the build, the checks and the link preview generator:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `build.js` copies the site files into `dist/`, which Vercel serves.
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
-  - `browser.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
+  - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
 - `.github/workflows/checks.yml` runs every check on each push and pull request. It is disabled in GitHub because the account has no Actions minutes; `gh workflow enable Checks` turns it back on.
 - `docs/petalpost-flow.html` is a diagram of the site flow.
@@ -87,10 +98,12 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 | Type check     | `pnpm typecheck`                         |
 | Browser tests  | `pnpm test:browser`                      |
 | Site build     | `pnpm build`                             |
+| Migrations     | `pnpm migrate`                           |
 
 To run another check file, replace `check-invite.js` with any `scripts/check-*.js` file.
 
-`test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the contrast, invite, RSVP and site checks in `scripts/` with the Node.js test runner.
+The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
 `test:browser` starts `scripts/server.js` on port 4321 with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
@@ -124,12 +137,29 @@ The Vercel CLI is a dev dependency, so run it as `pnpm exec vercel`.
 `vercel.json` sends a Content-Security-Policy and other security headers on every path.
 `scripts/server.js` reads the headers from `vercel.json`, and `check-site.js` fails when it answers a path differently from production.
 
-All four pages load Vercel Web Analytics.
+### Database
+
+The API reads `DATABASE_URL`, the pooled connection string that the Vercel Neon integration sets.
+The Development, Preview and Production environments all connect to the same Neon resource, and nobody has verified that they use different branches.
+Until a separate Neon branch for development is verified, treat every Neon connection string as production data.
+Local development and every test use PGlite, so they never need a Neon connection string.
+
+Apply schema changes with `pnpm migrate`, which applies the unapplied files in `migrations/` in name order and needs the direct connection string in `DATABASE_URL_UNPOOLED`:
+
+```bash
+DATABASE_URL_UNPOOLED='<connection string>' pnpm migrate
+```
+
+Run it first against a verified non-production Neon branch, then against production before you deploy the code that needs the change.
+Never commit a connection string or an `.env` file.
+
+All five pages load Vercel Web Analytics.
+`js/analytics.js` removes the part after `#` from every address it reports, so private links never reach analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
 
 The footer contact link uses the placeholder `hello@example.com`.
-Replace it in all four pages before launch, then run `pnpm exec node scripts/check-site.js`.
-The check compares the address only on the three pages whose robots tag allows indexing, so check `404.html` by hand.
+Replace it in all five pages before launch, then run `pnpm exec node scripts/check-site.js`.
+The check compares the address only on the three pages whose robots tag allows indexing, so check `404.html` and `manage.html` by hand.
 
 If the production domain changes, update the canonical and Open Graph URLs in the pages, `robots.txt` and `sitemap.xml`.
 Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.

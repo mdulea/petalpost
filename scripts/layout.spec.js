@@ -1,4 +1,5 @@
-// Fails when, at any tested viewport in Chromium or WebKit, a page scrolls sideways, a form control leaves its panel,
+// Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, invitation, management or
+// privacy page scrolls sideways, a form control leaves its panel,
 // single-line inputs differ in height, fields sharing a row differ in top or height, the spacing between stacked
 // fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
 // size, or the Preview button covers a control that has keyboard focus.
@@ -164,5 +165,25 @@ test('the landing page, the guest view and the privacy page fit every viewport',
   await page.goto(await page.locator('#previewGuest').getAttribute('href'));
   await checkAllViewports(page);
   await page.goto('privacy.html');
+  await checkAllViewports(page);
+});
+
+test('the editor after publishing, the invitation with a saved reply and the management page fit every viewport', async ({
+  page,
+  browser,
+}) => {
+  await page.goto('editor.html?t=birthday');
+  await page.click('#publish');
+  await expect(page.locator('#published')).toBeVisible();
+  const manage = await page.locator('#manageLink').inputValue();
+  await checkAllViewports(page);
+  const guest = await (await browser.newContext()).newPage();
+  await guest.goto(await page.locator('#eventLink').inputValue());
+  await guest.fill('#guestName', 'Sam');
+  await guest.click('#sendReply');
+  await expect(guest.locator('#replySaved')).toBeVisible();
+  await checkAllViewports(guest);
+  await page.goto(manage);
+  await expect(page.locator('#responseList li')).toHaveCount(1);
   await checkAllViewports(page);
 });

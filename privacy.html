@@ -38,13 +38,14 @@
 
     <main class="prose">
       <h1>Privacy</h1>
-      <p class="lead">
-        Petalpost has no accounts, no database and no cookies. This page lists every place your data goes.
-      </p>
-      <p>Last updated: 29 October 2026.</p>
+      <p class="lead">Petalpost has no accounts and no cookies. This page lists every place your data goes.</p>
+      <p>Last updated: 14 November 2026.</p>
 
       <h2>What you type and upload</h2>
-      <p>The editor runs in your browser. Your invite text and photo are not sent to us.</p>
+      <p>
+        The editor runs in your browser. Your invite text stays there until you publish the invitation. Your photo is
+        never sent to us.
+      </p>
       <p>
         Your photo is saved in your browser's local storage so it survives a reload. It stays on your device. Remove it
         with "Use the illustration instead" in the editor or by clearing site data in your browser.
@@ -55,11 +56,51 @@
         people you invite.
       </p>
 
+      <h2>Published invitations and replies</h2>
+      <p>
+        When a host clicks "Publish", Petalpost stores the invitation text, the template and the accent color. The photo
+        and its position stay in the host's browser.
+      </p>
+      <p>When a guest replies, Petalpost stores the name the guest enters, the answer and the party size.</p>
+      <p>Petalpost also stores when each invitation and each reply was created and last changed.</p>
+      <p>
+        Petalpost limits how many invitations one connection can publish per day. For that limit it stores a count with
+        a hash of the IP address, never the address itself. Counts from earlier days are deleted when the next
+        invitation is published.
+      </p>
+
+      <h2>Private links</h2>
+      <p>
+        Publishing gives the host a management link. Anyone with it can see every reply and delete the invitation.
+        Replying gives the guest an edit link. Anyone with it can see and change that one reply. Anyone with the
+        invitation link can read the invitation and send a reply.
+      </p>
+      <p>
+        The secret part of a private link comes after the <code>#</code>. Browsers do not send that part of an address
+        to any server. The page sends the secret in a request header to prove access, and Petalpost stores only a hash
+        of it. Petalpost therefore cannot recover a lost link.
+      </p>
+
+      <h2>Deletion and retention</h2>
+      <p>
+        The host deletes the invitation from the management page. That removes the invitation and all its replies.
+        Petalpost does not delete invitations or replies automatically, so they stay until the host deletes them. A
+        guest can change a reply but cannot delete it, so ask the host to delete the invitation if you need your reply
+        removed.
+      </p>
+
+      <h2>Storage</h2>
+      <p>
+        Published invitations, replies and the daily counts are stored in a Postgres database run by Neon, which
+        Petalpost uses through Vercel's Neon integration. Only Petalpost's server code connects to it.
+      </p>
+
       <h2>Hosting</h2>
       <p>
-        Vercel Inc. hosts the site. When your browser requests a page, Vercel receives your IP address and browser
-        details, because it has to in order to deliver the page. Vercel keeps request logs for a short period for
-        security and operation. Vercel acts as our processor under its
+        Vercel Inc. hosts the site and runs the server code that stores published invitations and replies. When your
+        browser requests a page, Vercel receives your IP address and browser details, because it has to in order to
+        deliver the page. Vercel keeps request logs for a short period for security and operation. Vercel acts as our
+        processor under its
         <a href="https://vercel.com/legal/dpa">data processing addendum</a>. Vercel is in the United States and is
         certified under the EU-U.S. Data Privacy Framework.
       </p>
@@ -68,7 +109,8 @@
       <p>
         We use Vercel Web Analytics to count page views. It sets no cookies and stores nothing on your device. Vercel
         identifies a visit with a hash of the request that resets every 24 hours and does not store your IP address. We
-        see only totals, such as page views, referrers, countries and browser types.
+        see only totals, such as page views, referrers, countries and browser types. The page addresses sent to
+        analytics leave out the part after the <code>#</code>, so private links never reach it.
       </p>
       <p>The legal basis is our legitimate interest in knowing which pages people use (Article 6(1)(f) GDPR).</p>
 
