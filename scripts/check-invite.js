@@ -461,3 +461,31 @@ check(
   ctx.TEMPLATES.filter((t) => !ctx.buildIcs(ctx.makeInviteData(t), now)).map((t) => t.id),
   [],
 );
+
+// RFC 5545 section 3.1: lines stay within 75 octets; a longer one continues after a line break and one space.
+const longestIcs = ctx.buildIcs(
+  ctx.makeInviteData(birthday, {
+    title: 'é'.repeat(48),
+    hosts: 'Hosts, '.repeat(9),
+    address: '🎂'.repeat(45),
+    message: 'Café; '.repeat(19),
+    rsvp: 'r'.repeat(40),
+  }),
+  now,
+);
+check(
+  'no calendar line is longer than 75 octets',
+  longestIcs
+    .split('\r\n')
+    .map((l) => new TextEncoder().encode(l).length)
+    .filter((n) => n > 75),
+  [],
+);
+check(
+  'unfolding a calendar line restores its text',
+  longestIcs
+    .replace(/\r\n /g, '')
+    .split('\r\n')
+    .find((l) => l.startsWith('LOCATION')),
+  `LOCATION:Willow Park Pavilion\\, ${'🎂'.repeat(45)}`,
+);
