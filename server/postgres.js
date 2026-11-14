@@ -3,8 +3,13 @@
 // same shape; the transaction commits when the callback resolves and rolls back when it throws. close() ends the pool.
 import pg from 'pg';
 
+// url is a Postgres connection string, or undefined without a database, which makes every query fail.
+// sslmode require, prefer and verify-ca become verify-full, the behavior node-postgres 8 already gives them.
+// pg 9 gives those modes libpq's weaker meaning. The Neon integration owns DATABASE_URL, so the mode is set here.
 export function connect(url) {
-  const pool = new pg.Pool({ connectionString: url });
+  const pool = new pg.Pool({
+    connectionString: url?.replace(/([?&]sslmode=)(require|prefer|verify-ca)(?=&|$)/, '$1verify-full'),
+  });
   // An idle client that loses its connection must not crash the process; the next query reports the failure.
   pool.on('error', (error) => console.error('postgres pool error', /** @type {any} */ (error).code ?? 'unknown'));
   return {
