@@ -11,7 +11,7 @@ A host can also publish the invitation to collect replies.
 Guests reply from the invitation link, and the host sees the replies and totals on a private management page.
 The pages are static HTML, CSS and JavaScript.
 API functions on the same origin store published invitations and replies in Neon Postgres.
-It runs at `https://petalpost-beryl.vercel.app`.
+It runs at `https://petalpost.ro`.
 
 ## Quick start
 
@@ -172,7 +172,12 @@ Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.
 `sitemap.xml` lists every page whose robots tag allows indexing, each with a `<lastmod>` date.
 When you change a page's content, set its `lastmod` to that day; leave it alone for layout or code changes, since Google ignores `lastmod` dates that change without content changes.
 `vercel.json` redirects `/index.html` to `/` with a 301, so the home page has one URL; link to `/`, never to `index.html`.
-`index.html` carries the Google Search Console verification tag for the URL-prefix property of the production origin.
+`index.html` carries the Google Search Console verification tag for the URL-prefix property of the former `https://petalpost-beryl.vercel.app` origin.
+Verify `petalpost.ro` as a Domain property with a DNS TXT record instead, which covers every subdomain and protocol.
+
+### Domain
+
+Production is `https://petalpost.ro`. In the Vercel project's Domains settings, `petalpost.ro` is the primary domain, and `www.petalpost.ro` and `petalpost-beryl.vercel.app` redirect to it with a 301, so Google sees one origin.
 
 `og-image.png` is the 1200 by 630 link preview.
 To regenerate it:
