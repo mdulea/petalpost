@@ -1163,19 +1163,26 @@ div.banner-art {
   font-weight: 700;
   font-size: 15px;
 }
+/* A row of fields keeps the spacing of a single field, whether its fields sit side by side or stack. */
 .field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px 12px;
+  margin-bottom: 14px;
+}
+.field-row .field {
+  margin-bottom: 0;
 }
 .hint {
   font-size: 13px;
   color: var(--muted);
 }
+/* Single-line inputs share one fixed height: date and time controls size to their content and differ by browser. */
 .input {
   width: 100%;
-  min-height: 48px;
-  padding: 10px 14px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px;
   border-radius: 12px;
   border: 1.5px solid var(--line);
   background: var(--bg);
@@ -1185,8 +1192,14 @@ div.banner-art {
     border-color 0.2s,
     box-shadow 0.2s;
 }
+/* Safari centers date and time values. */
+.input::-webkit-date-and-time-value {
+  text-align: left;
+}
 textarea.input {
+  height: auto;
   min-height: 84px;
+  padding: 10px 14px;
   resize: vertical;
 }
 .input:hover {
@@ -1357,7 +1370,7 @@ textarea.input {
   .jump-preview {
     display: inline-flex;
     position: fixed;
-    right: 16px;
+    right: var(--gutter);
     bottom: 16px;
     z-index: 10;
     box-shadow: var(--shadow-lift);

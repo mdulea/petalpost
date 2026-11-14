@@ -66,7 +66,7 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
 - `scripts/` holds the checks and the link preview generator:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
-  - `browser.spec.js` holds the browser tests that `pnpm test:browser` runs.
+  - `browser.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `layout.spec.js` checks the layout at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
 - `.github/workflows/checks.yml` runs every check on each push and pull request. It is disabled in GitHub because the account has no Actions minutes; `gh workflow enable Checks` turns it back on.
 - `docs/petalpost-flow.html` is a diagram of the site flow.
@@ -88,8 +88,9 @@ To run another check file, replace `check-invite.js` with any `scripts/check-*.j
 `test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/` with the Node.js test runner.
 It does not run the type check or the browser tests.
 
-`test:browser` starts `pnpm dev` and runs the Playwright tests in Chromium.
-Before the first run, install Chromium with `pnpm exec playwright install chromium`.
+`test:browser` starts `serve` on port 4321 and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
+Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
+The run fails when another program already uses port 4321.
 The tests fail when a page breaks the Content-Security-Policy.
 
 ### Tooling notes
