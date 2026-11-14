@@ -16,6 +16,7 @@ Run pnpm through Corepack so that nothing is installed globally:
 ```sh
 corepack pnpm install
 corepack pnpm dev
+corepack pnpm format
 corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm test
@@ -25,6 +26,10 @@ corepack pnpm test
 Each page loads its script as an ES module, and browsers refuse modules opened from the file system.
 `serve.json` turns off clean URLs so that `/editor.html` loads without a redirect, as it does on Vercel.
 The site has no build step, and Vercel deploys no package files.
+
+`format` rewrites the HTML, CSS, JavaScript, JSON and Markdown files with Prettier, and `format:check` only reports unformatted files.
+`vendor/` is skipped so the library stays byte-for-byte as published.
+`.gitattributes` keeps LF line endings in the working copy, as Prettier writes them, so Git on Windows does not convert them to CRLF.
 
 `lint` runs ESLint with its recommended rules over `js/`, `scripts/` and `eslint.config.js`.
 `vendor/` is minified third-party code, so ESLint skips it.
