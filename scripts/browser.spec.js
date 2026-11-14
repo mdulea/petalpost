@@ -1,9 +1,10 @@
 // Fails when the landing gallery, the editor preview, the draft reload, the guest view, the calendar download, the photo
-// upload or the PNG download breaks in Chromium, or a page breaks the Content-Security-Policy.
+// upload, the PNG download or the link preview generator breaks in Chromium, or a page breaks the
+// Content-Security-Policy.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { TEMPLATES } from '../js/templates.js';
+import { HERO_TEMPLATES, TEMPLATES } from '../js/templates.js';
 
 // Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
 function watch(page) {
@@ -68,5 +69,12 @@ test('a photo upload and the PNG download work', async ({ page }) => {
   const png = await readFile(await (await download).path());
   expect(png.subarray(1, 4).toString()).toBe('PNG');
   expect(png.length).toBeGreaterThan(10000);
+  expect(problems).toEqual([]);
+});
+
+test('the link preview generator draws the hero templates', async ({ page }) => {
+  const problems = watch(page);
+  await page.goto('scripts/og-card.html');
+  await expect(page.locator('#fan .invite')).toHaveCount(HERO_TEMPLATES.length);
   expect(problems).toEqual([]);
 });

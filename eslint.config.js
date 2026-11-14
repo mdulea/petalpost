@@ -14,9 +14,9 @@ export default [
   },
   { files: ['js/analytics.js'], languageOptions: { sourceType: 'script' } },
   { files: ['scripts/**/*.js', '*.config.js'], languageOptions: { globals: globals.node } },
-  // Callbacks passed to page.evaluate run in the browser.
+  // og-card.js runs in the browser, and so do callbacks that browser.spec.js passes to page.evaluate.
   {
-    files: ['scripts/browser.spec.js'],
+    files: ['scripts/browser.spec.js', 'scripts/og-card.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser, htmlToImage: 'readonly' } },
   },
 ];
