@@ -17,6 +17,6 @@ js/globals.d.ts
 .env.*
 scripts/
 README.md
-worktrees/
+.worktrees/
 docs/
 AGENTS.md

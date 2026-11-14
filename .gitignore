@@ -16,4 +16,4 @@ node_modules/
 Thumbs.db
 
 # Local git worktrees
-worktrees/
+.worktrees/
