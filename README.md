@@ -40,7 +40,7 @@ The code stays plain JavaScript, and JSDoc comments supply types where inference
 Strict mode is off because most functions have no parameter types yet.
 `js/globals.d.ts` declares the globals that classic scripts define for the modules: `htmlToImage` and the Vercel Web Analytics queue.
 
-`test` runs the three checks in `scripts/` and stops at the first failure.
+`test` runs `format:check`, `lint` and the three checks in `scripts/`, and stops at the first failure.
 
 The contrast check covers each template's colors and every accent swatch as rendered on it.
 The invite check covers share links, invite records, storage writes, template switching, template ids and the calendar file.
