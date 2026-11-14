@@ -132,7 +132,7 @@ async function putEvent({ db, request, ids: [id] }) {
   const body = await readBody(request);
   const record = readPublished(body);
   if (!record) throw new Refusal(400, MESSAGES.invite);
-  const client = hash(request.headers.get('x-real-ip') || 'unknown');
+  const ip = request.headers.get('x-real-ip') || 'unknown';
   return db.transaction(async (tx) => {
     const exists = (await tx.query('select 1 from events where id = $1', [id])).rows.length > 0;
     if (!exists && body.version !== undefined) throw new Refusal(404, MESSAGES.eventMissing);
@@ -148,12 +148,16 @@ async function putEvent({ db, request, ids: [id] }) {
       );
       return json(200, { version: event.version + 1, created: false });
     }
+    // The counter keys on a hash of today's random salt and the IP; deleting earlier salts makes old keys unusable.
     await tx.query(`delete from creation_quota where day < ${today}`, []);
+    await tx.query(`delete from quota_salts where day < ${today}`, []);
+    await tx.query(`insert into quota_salts (day) values (${today}) on conflict (day) do nothing`, []);
     const { count } = (
       await tx.query(
-        `insert into creation_quota (client, day, count) values ($1, ${today}, 1)
+        `insert into creation_quota (client, day, count)
+         select encode(sha256(convert_to(salt || $1, 'UTF8')), 'hex'), day, 1 from quota_salts where day = ${today}
          on conflict (client, day) do update set count = creation_quota.count + 1 returning count`,
-        [client],
+        [ip],
       )
     ).rows[0];
     if (count > DAILY_EVENTS) throw new Refusal(429, MESSAGES.dailyEvents);

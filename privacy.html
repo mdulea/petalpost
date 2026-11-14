@@ -65,8 +65,9 @@
       <p>Petalpost also stores when each invitation and each reply was created and last changed.</p>
       <p>
         Petalpost limits how many invitations one connection can publish per day. For that limit it stores a count with
-        a hash of the IP address, never the address itself. Counts from earlier days are deleted when the next
-        invitation is published.
+        a hash of the IP address and a random value that Petalpost makes each day. During that day, someone with access
+        to the database could find the address by hashing every possible address with the random value. Counts and
+        random values from earlier days are deleted when the next invitation is published.
       </p>
 
       <h2>Private links</h2>

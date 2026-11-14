@@ -3,8 +3,10 @@
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
 // reach only their own event or reply; reply totals; deletion with its replies; no secret, hash or reply id in any
 // response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
-// invitation and per-invitation reply quotas; unavailable storage; network failure; private link round trips.
-// Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database.
+// invitation and per-invitation reply quotas; a daily quota key that is not the IP hash and changes with the day;
+// unavailable storage; network failure; private link round trips.
+// Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
+// checks, which read the stored keys in a database of their own.
 // Run: node scripts/check-rsvp.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -17,6 +19,7 @@ import { createApi } from '../server/api.js';
 import { migrate } from '../server/migrate.js';
 
 const ID = 'AAAAAAAAAAAAAAAAAAAAAA';
+const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const SECRET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234';
 
 test('a reply keeps the trimmed name, the answer and the party size', () => {
@@ -338,8 +341,7 @@ test('no response body or header carries a secret, its hash or a reply id, and n
   await recording.loadReply(cred.id, reply);
   await recording.loadResponses(cred);
   await recording.deleteEvent(cred);
-  const sha = (text) => createHash('sha256').update(text).digest('hex');
-  const leaks = [cred.secret, reply.secret, sha(cred.secret), sha(reply.secret), reply.id, 'secret'];
+  const leaks = [cred.secret, reply.secret, sha256(cred.secret), sha256(reply.secret), reply.id, 'secret'];
   assert.deepEqual(
     {
       leaked: seen.filter(({ text, headers }) => leaks.some((l) => text.includes(l) || headers.includes(l))).length,
@@ -412,6 +414,33 @@ test('the 21st invitation from one connection in a day gets 429 and is not store
     },
     { refused: 429, stored: 404, elsewhere: 201 },
   );
+});
+
+// The quota tests read creation_quota directly, because its stored keys are the privacy contract.
+const quotaKeys = async (db) => (await db.query('select client from creation_quota', [])).rows;
+test('the daily invitation quota stores a key that is not the sha256 hash of the IP address', async () => {
+  const db = await openDatabase();
+  after(() => db.close());
+  const { client } = await setup(db);
+  await client('203.0.113.7').publish(host(), party);
+  const keys = await quotaKeys(db);
+  assert.deepEqual(
+    keys.map(({ client: key }) => [/^[0-9a-f]{64}$/.test(key), key === sha256('203.0.113.7')]),
+    [[true, false]],
+  );
+});
+
+test('a new day deletes the earlier counts and keys the same IP address differently', async () => {
+  const db = await openDatabase();
+  after(() => db.close());
+  const { client } = await setup(db);
+  await client('203.0.113.7').publish(host(), party);
+  const [yesterday] = await quotaKeys(db);
+  // Moves every stored day back by one, as if the first invitation was published yesterday.
+  for (const table of ['creation_quota', 'quota_salts']) await db.query(`update ${table} set day = day - 1`, []);
+  await client('203.0.113.7').publish(host(), party);
+  const keys = await quotaKeys(db);
+  assert.deepEqual({ rows: keys.length, rekeyed: keys[0].client !== yesterday.client }, { rows: 1, rekeyed: true });
 });
 
 test('the 201st reply to an invitation gets 429, and existing replies stay editable', async () => {
