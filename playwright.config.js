@@ -1,4 +1,5 @@
-// Browser checks run against serve on port 4321, which sends the same headers as production (scripts/check-site.js).
+// Browser checks run against scripts/server.js on port 4321 with an in-memory database. It answers like production
+// (scripts/check-site.js), and every run starts with no invitations or replies.
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
@@ -13,9 +14,9 @@ export default defineConfig({
     { name: 'webkit', testMatch: 'layout.spec.js', use: { ...devices['iPhone 15'] } },
   ],
   // A port of its own and no reuse: another server on the port, such as an editor preview, fails the run instead of
-  // being tested in place of serve.
+  // being tested in place of scripts/server.js.
   webServer: {
-    command: 'pnpm exec serve --listen 4321 --no-clipboard',
+    command: 'node scripts/server.js --port 4321 --memory',
     url: 'http://localhost:4321/',
     reuseExistingServer: false,
   },

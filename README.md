@@ -38,6 +38,8 @@ pnpm dev
 ```
 
 The site is served at `http://localhost:3000`.
+`scripts/server.js` serves the files and answers the `/api/` paths from a PGlite database in `.pglite/`, so local replies never reach Neon.
+Delete `.pglite/` to start with no invitations.
 Opening the HTML files directly does not work, because browsers refuse ES modules loaded from the file system.
 
 ## Usage
@@ -64,7 +66,8 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
   - `globals.d.ts` declares the types of the `htmlToImage` and analytics globals.
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
-- `scripts/` holds the build, the checks and the link preview generator:
+- `scripts/` holds the local server, the build, the checks and the link preview generator:
+  - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `build.js` copies the site files into `dist/`, which Vercel serves.
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
@@ -90,7 +93,7 @@ To run another check file, replace `check-invite.js` with any `scripts/check-*.j
 `test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/` with the Node.js test runner.
 It does not run the type check or the browser tests.
 
-`test:browser` starts `serve` on port 4321 and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
+`test:browser` starts `scripts/server.js` on port 4321 with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
 Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
 The run fails when another program already uses port 4321.
 The tests fail when a page breaks the Content-Security-Policy.
@@ -119,7 +122,7 @@ They are never site content, because Vercel serves only `dist/` and the function
 The Vercel CLI is a dev dependency, so run it as `pnpm exec vercel`.
 
 `vercel.json` sends a Content-Security-Policy and other security headers on every path.
-`serve.json` sends the same headers locally, and `check-site.js` fails when the two differ.
+`scripts/server.js` reads the headers from `vercel.json`, and `check-site.js` fails when it answers a path differently from production.
 
 All four pages load Vercel Web Analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
