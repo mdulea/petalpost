@@ -55,7 +55,7 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
 - `scripts/` holds the checks that `pnpm test` runs, the browser tests in `browser.spec.js` and `og-card.html`, which generates the link preview image.
-- `.github/workflows/checks.yml` runs every check on each push and pull request.
+- `.github/workflows/checks.yml` runs every check on each push and pull request. It is disabled in GitHub because the account has no Actions minutes; `gh workflow enable Checks` turns it back on.
 - `docs/petalpost-flow.html` is a diagram of the site flow.
 
 ## Development
@@ -78,7 +78,8 @@ The tests fail when a page breaks the Content-Security-Policy.
 ## Deployment
 
 Vercel's GitHub integration deploys every push to `main` to production.
-With Deployment Checks enabled for the `checks` job, a deployment reaches the production domain only after the GitHub checks pass.
+No check holds a deployment back, so run every check locally before pushing `main`.
+With the workflow enabled, a Vercel Deployment Check on the `checks` job can hold production until the GitHub checks pass.
 Pushes to other branches get preview deployments.
 Vercel serves the repository root as static files, with no install or build step.
 `.vercelignore` keeps package files, tooling, `scripts/` and documentation out of the deployment.
