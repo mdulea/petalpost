@@ -31,9 +31,9 @@
         justify-content: center;
         padding: 3rem 2rem;
       }
-      /* Cap the width so the 960 by 600 diagram, heading and padding fit one screen height. */
+      /* Cap the width so the 960 by 840 diagram, heading and padding fit one screen height. */
       .frame {
-        max-width: min(1200px, calc((100vh - 14rem) * 1.6));
+        max-width: min(1200px, calc((100vh - 14rem) * 1.14));
         width: 100%;
       }
       .diagram-container {
@@ -118,19 +118,22 @@
   <body>
     <div class="frame">
       <p class="eyebrow">Architecture · Petalpost</p>
-      <h1>From local to browser, and what runs there</h1>
+      <h1>From local development to production, and what runs there</h1>
       <div class="diagram-container">
         <svg
-          viewBox="0 0 960 600"
+          viewBox="0 0 960 840"
           xmlns="http://www.w3.org/2000/svg"
           role="img"
           aria-labelledby="petalpost-flow-title petalpost-flow-desc"
         >
-          <title id="petalpost-flow-title">Petalpost deployment and execution flow</title>
+          <title id="petalpost-flow-title">Petalpost development, deployment and execution flow</title>
           <desc id="petalpost-flow-desc">
-            A git push from the local repository reaches GitHub, which triggers Vercel to publish the static files to
-            its edge network without a build; a visitor's browser then loads index.html, opens editor.html, exports the
-            invitation as a PNG on the device, and sends pageviews to Vercel Web Analytics.
+            In local development, the developer's browser talks to a local server that serves the pages and the API, and
+            the API stores data in a local database. A git push reaches GitHub, which triggers Vercel to install and
+            build the project and publish the static pages to its edge network and the API as a function. On each visit,
+            the host's and the guests' browsers load the pages from the edge network and call the API function, which
+            stores invitations and replies in Neon Postgres. The host shares the invitation link with the guests outside
+            Petalpost, and the pages send pageviews to Vercel Web Analytics.
           </desc>
           <defs>
             <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
@@ -149,6 +152,18 @@
             x="24"
             y="30"
             width="912"
+            height="170"
+            rx="6"
+            fill="#ebebeb"
+            stroke="#2d3142"
+            stroke-opacity="0.12"
+            stroke-width="0.8"
+          />
+          <text class="zone" x="40" y="50">1. LOCAL DEVELOPMENT</text>
+          <rect
+            x="24"
+            y="230"
+            width="912"
             height="190"
             rx="6"
             fill="#ebebeb"
@@ -156,114 +171,133 @@
             stroke-opacity="0.12"
             stroke-width="0.8"
           />
-          <text class="zone" x="40" y="50">1. DEPLOYMENT, ON EACH PUSH</text>
+          <text class="zone" x="40" y="250">2. DEPLOYMENT, ON EACH PUSH</text>
           <rect
             x="24"
-            y="250"
+            y="450"
             width="912"
-            height="280"
+            height="330"
             rx="6"
             fill="#ebebeb"
             stroke="#2d3142"
             stroke-opacity="0.12"
             stroke-width="0.8"
           />
-          <text class="zone" x="40" y="270">2. EXECUTION, ON EACH VISIT</text>
+          <text class="zone" x="40" y="470">3. EXECUTION, ON EACH VISIT</text>
 
+          <rect x="40" y="80" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="115" y="110">Developer browser</text>
+          <text class="sub" x="115" y="126">localhost</text>
+          <rect x="270" y="80" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="345" y="110">Local server</text>
+          <text class="sub" x="345" y="126">pages and API</text>
+          <rect x="500" y="80" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="575" y="110">Local database</text>
+          <text class="sub" x="575" y="126">PGlite on disk</text>
+          <line x1="190" y1="112" x2="268" y2="112" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
+          <rect x="200" y="92" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-l" x="229" y="101">HTTP</text>
+          <line x1="420" y1="112" x2="498" y2="112" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
+          <rect x="430" y="92" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-l" x="459" y="101">SQL</text>
+          <text class="note" x="40" y="170">
+            The local server sends the same headers and routes as Vercel. The automated tests run against it.
+          </text>
+          <text class="note" x="40" y="186">Local replies stay in the local database and never reach Neon.</text>
+
+          <rect x="40" y="280" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="115" y="310">Local repo</text>
+          <text class="sub" x="115" y="326">pages, API, migrations</text>
+          <rect x="270" y="280" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="345" y="310">GitHub</text>
+          <text class="sub" x="345" y="326">mdulea/petalpost</text>
+          <rect x="500" y="280" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#bf4520" stroke-width="1.2" />
+          <text class="name" x="575" y="310">Vercel build</text>
+          <text class="sub" x="575" y="326">install, then build</text>
           <line
             x1="190"
-            y1="122"
+            y1="312"
             x2="268"
-            y2="122"
+            y2="312"
             stroke="#bf4520"
             stroke-width="1.2"
             marker-end="url(#arrow-accent)"
           />
-          <rect x="200" y="102" width="58" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl lbl-a" x="229" y="111">GIT PUSH</text>
+          <rect x="200" y="292" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-a" x="229" y="301">GIT PUSH</text>
           <line
             x1="420"
-            y1="122"
+            y1="312"
             x2="498"
-            y2="122"
+            y2="312"
             stroke="#bf4520"
             stroke-width="1.2"
             marker-end="url(#arrow-accent)"
           />
-          <rect x="430" y="102" width="58" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl lbl-a" x="459" y="111">WEBHOOK</text>
-          <line
-            x1="650"
-            y1="122"
-            x2="728"
-            y2="122"
-            stroke="#bf4520"
-            stroke-width="1.2"
-            marker-end="url(#arrow-accent)"
-          />
-          <rect x="660" y="102" width="58" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl lbl-a" x="689" y="111">PUBLISH</text>
-
-          <line x1="805" y1="154" x2="805" y2="318" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
-          <rect x="813" y="226" width="62" height="12" rx="2" fill="#f5f5f5" />
-          <text class="lbl lbl-l" x="844" y="235">HTTPS GET</text>
-
-          <line x1="730" y1="352" x2="652" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
-          <rect x="662" y="332" width="58" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl" x="691" y="341">OPENS /</text>
-          <line x1="500" y1="352" x2="422" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
-          <rect x="432" y="332" width="58" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl" x="461" y="341">CHOOSE</text>
-          <line x1="270" y1="352" x2="192" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
-          <rect x="202" y="332" width="58" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl" x="231" y="341">EXPORT</text>
-          <line
-            x1="805"
-            y1="384"
-            x2="805"
-            y2="438"
-            stroke="#4f5d75"
-            stroke-width="1.2"
-            stroke-dasharray="5 4"
-            marker-end="url(#arrow)"
-          />
-          <rect x="813" y="405" width="62" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl" x="844" y="414">PAGEVIEW</text>
-
-          <rect x="40" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="115" y="120">Local repo</text>
-          <text class="sub" x="115" y="136">HTML, CSS, JS · no build</text>
-          <rect x="270" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="345" y="120">GitHub</text>
-          <text class="sub" x="345" y="136">mdulea/petalpost</text>
-          <rect x="500" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="575" y="120">Vercel project</text>
-          <text class="sub" x="575" y="136">build skipped</text>
-          <rect x="730" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#bf4520" stroke-width="1.2" />
-          <text class="name" x="805" y="120">Vercel edge CDN</text>
-          <text class="sub" x="805" y="136">public URL</text>
-          <text class="note" x="40" y="186">
-            .vercelignore drops scripts/, README.md, .env files and node_modules/ before upload.
+          <rect x="430" y="292" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-a" x="459" y="301">WEBHOOK</text>
+          <text class="note" x="40" y="372">
+            The build keeps only the site files, so no URL serves tooling, server code or documentation.
           </text>
-          <text class="note" x="40" y="202">
+          <text class="note" x="40" y="388">
             Pushes to main deploy to production; other branches get preview URLs behind Vercel login.
           </text>
+          <text class="note" x="40" y="404">
+            Database schema changes run by hand against Neon before the deploy that needs them.
+          </text>
 
-          <rect x="730" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="805" y="350">Visitor browser</text>
-          <text class="sub" x="805" y="366">all code runs here</text>
-          <rect x="500" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="575" y="350">Landing page</text>
-          <text class="sub" x="575" y="366">index.html</text>
-          <rect x="270" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="345" y="350">Editor</text>
-          <text class="sub" x="345" y="366">editor.html</text>
-          <rect x="40" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="115" y="350">PNG download</text>
-          <text class="sub" x="115" y="366">html-to-image</text>
+          <line
+            x1="575"
+            y1="344"
+            x2="575"
+            y2="488"
+            stroke="#bf4520"
+            stroke-width="1.2"
+            marker-end="url(#arrow-accent)"
+          />
+          <rect x="583" y="429" width="58" height="12" rx="2" fill="#f5f5f5" />
+          <text class="lbl lbl-a" x="612" y="438">PUBLISH</text>
+
+          <rect
+            x="486"
+            y="490"
+            width="178"
+            height="226"
+            rx="6"
+            fill="none"
+            stroke="#bf4520"
+            stroke-opacity="0.5"
+            stroke-width="1"
+          />
+          <text class="zone" x="498" y="506">VERCEL</text>
+          <rect x="500" y="516" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="575" y="546">Edge CDN</text>
+          <text class="sub" x="575" y="562">static pages</text>
+          <rect x="500" y="636" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="575" y="666">API function</text>
+          <text class="sub" x="575" y="682">same origin</text>
+
+          <rect x="40" y="516" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="115" y="546">Host browser</text>
+          <text class="sub" x="115" y="562">editor, management</text>
+          <rect x="40" y="636" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="115" y="666">Guest browser</text>
+          <text class="sub" x="115" y="682">invitation, reply</text>
+          <line x1="115" y1="580" x2="115" y2="634" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
+          <rect x="123" y="602" width="62" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="154" y="611">SHARES LINK</text>
+
+          <line x1="190" y1="548" x2="498" y2="548" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
+          <line x1="190" y1="668" x2="498" y2="668" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
+          <line x1="230" y1="548" x2="230" y2="668" stroke="#2e5aa8" stroke-width="1.2" />
+          <rect x="336" y="528" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-l" x="365" y="537">PAGES</text>
+          <rect x="336" y="648" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-l" x="365" y="657">API CALLS</text>
+
           <rect
             x="730"
-            y="440"
+            y="516"
             width="150"
             height="64"
             rx="6"
@@ -272,38 +306,47 @@
             stroke-dasharray="5 4"
             stroke-width="1"
           />
-          <text class="name" x="805" y="470">Web Analytics</text>
-          <text class="sub" x="805" y="486">/_vercel/insights</text>
-          <line x1="575" y1="384" x2="575" y2="438" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
-          <rect x="583" y="405" width="36" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl" x="601" y="414">LINK</text>
-          <path
-            d="M345 384 V464 Q345 472 353 472 H498"
-            fill="none"
+          <text class="name" x="805" y="546">Web Analytics</text>
+          <text class="sub" x="805" y="562">pageviews</text>
+          <line
+            x1="650"
+            y1="548"
+            x2="728"
+            y2="548"
             stroke="#4f5d75"
             stroke-width="1.2"
+            stroke-dasharray="5 4"
             marker-end="url(#arrow)"
           />
-          <rect x="407" y="452" width="36" height="12" rx="2" fill="#ebebeb" />
-          <text class="lbl" x="425" y="461">LINK</text>
-          <rect x="500" y="440" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
-          <text class="name" x="575" y="470">Privacy page</text>
-          <text class="sub" x="575" y="486">privacy.html, analytics</text>
-          <text class="note" x="40" y="430">Shared: templates.js, icons.js,</text>
-          <text class="note" x="40" y="446">invite.js, mount.js. No server code.</text>
-          <text class="note" x="40" y="462">The editor keeps the draft and photo</text>
-          <text class="note" x="40" y="478">in localStorage on the device.</text>
+          <rect x="660" y="528" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="689" y="537">PAGEVIEW</text>
+          <rect x="730" y="636" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="805" y="666">Neon Postgres</text>
+          <text class="sub" x="805" y="682">invitations, replies</text>
+          <line x1="650" y1="668" x2="728" y2="668" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
+          <rect x="660" y="648" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-l" x="689" y="657">SQL</text>
 
-          <line x1="30" y1="552" x2="930" y2="552" stroke="#2d3142" stroke-opacity="0.10" stroke-width="0.8" />
-          <text class="zone" x="30" y="570">LEGEND</text>
-          <line x1="100" y1="567" x2="130" y2="567" stroke="#bf4520" stroke-width="1.2" />
-          <text class="note" x="138" y="570">deploy path</text>
-          <line x1="260" y1="567" x2="290" y2="567" stroke="#2e5aa8" stroke-width="1.2" />
-          <text class="note" x="298" y="570">network request</text>
-          <line x1="420" y1="567" x2="450" y2="567" stroke="#4f5d75" stroke-width="1.2" />
-          <text class="note" x="458" y="570">in-browser step</text>
-          <line x1="580" y1="567" x2="610" y2="567" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5 4" />
-          <text class="note" x="618" y="570">background beacon</text>
+          <text class="note" x="40" y="740">
+            The host publishes from the editor, shares the invitation link and reads the replies on the management page.
+          </text>
+          <text class="note" x="40" y="756">
+            Guests open the link, read the invitation and send or edit their reply.
+          </text>
+          <text class="note" x="40" y="772">
+            The host's browser keeps the draft, the photo and the management secret in local storage.
+          </text>
+
+          <line x1="30" y1="800" x2="930" y2="800" stroke="#2d3142" stroke-opacity="0.10" stroke-width="0.8" />
+          <text class="zone" x="30" y="818">LEGEND</text>
+          <line x1="100" y1="815" x2="130" y2="815" stroke="#bf4520" stroke-width="1.2" />
+          <text class="note" x="138" y="818">deploy path</text>
+          <line x1="260" y1="815" x2="290" y2="815" stroke="#2e5aa8" stroke-width="1.2" />
+          <text class="note" x="298" y="818">network request</text>
+          <line x1="420" y1="815" x2="450" y2="815" stroke="#4f5d75" stroke-width="1.2" />
+          <text class="note" x="458" y="818">step outside Petalpost</text>
+          <line x1="620" y1="815" x2="650" y2="815" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5 4" />
+          <text class="note" x="658" y="818">background beacon</text>
         </svg>
       </div>
     </div>
