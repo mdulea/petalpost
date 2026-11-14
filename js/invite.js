@@ -204,6 +204,23 @@ function icsEscape(text) {
     .replace(/([,;])/g, '\\$1');
 }
 
+// RFC 5545 section 3.1: a line longer than 75 octets continues on the next line after one space.
+// Breaks fall between code points, so a multi-byte character stays whole.
+function foldIcs(line) {
+  let folded = '';
+  let size = 0;
+  for (const ch of line) {
+    const octets = new TextEncoder().encode(ch).length;
+    if (size + octets > 75) {
+      folded += '\r\n ';
+      size = 1;
+    }
+    folded += ch;
+    size += octets;
+  }
+  return folded;
+}
+
 // data: a record from makeInviteData. Events last three hours in floating local time. now sets DTSTAMP.
 // Returns null when the date is empty.
 export function buildIcs(data, now) {
@@ -232,5 +249,7 @@ export function buildIcs(data, now) {
     `DESCRIPTION:${icsEscape([data.hosts, data.message, data.rsvp].filter(Boolean).join('\n'))}`,
     'END:VEVENT',
     'END:VCALENDAR',
-  ].join('\r\n');
+  ]
+    .map(foldIcs)
+    .join('\r\n');
 }
