@@ -17,7 +17,7 @@ const hashOf = (link) => link.slice(link.indexOf('#'));
 const searchOf = (link) => link.slice(link.indexOf('?')).split('#')[0];
 const fresh = (id) => ({ t: id, d: ctx.makeInviteData(ctx.getTemplate(id)) });
 for (const t of ctx.TEMPLATES) {
-  check(`${t.id} defaults survive a share link`, ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, fresh(t.id))) }), { ...fresh(t.id), photo: null, guest: false });
+  check(`${t.id} defaults survive a share link`, ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, fresh(t.id))) }), { ...fresh(t.id), photo: null, guest: false, broken: false });
 }
 const zoe = { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { message: 'Café, a piñata and 🎂', photoY: 20 }) };
 const zoeLink = ctx.shareLink(BASE, zoe);
@@ -29,9 +29,9 @@ check('an editor link opens its template for the owner', [ctx.openInvite({ searc
 check('a share link leaves out the photo position', ctx.openInvite({ hash: hashOf(zoeLink) }).d.photoY, 50);
 check('a link made before this change still opens',
   ctx.openInvite({ hash: '#d=eyJ0IjoiYmlydGhkYXkiLCJkIjp7InRpdGxlIjoiQ2Fmw6kgcGnDsWF0YSIsImFjY2VudCI6IiM1MjcwNEMifX0' }),
-  { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Café piñata', accent: '#52704C' }), photo: null, guest: false });
+  { t: 'birthday', d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Café piñata', accent: '#52704C' }), photo: null, guest: false, broken: false });
 for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) {
-  check(`malformed hash "${bad}" opens a new invite`, ctx.openInvite({ hash: `#d=${bad}`, search: '?t=wedding' }), { ...fresh('wedding'), photo: null, guest: false });
+  check(`malformed hash "${bad}" opens a new invite`, ctx.openInvite({ hash: `#d=${bad}`, search: '?t=wedding' }), { ...fresh('wedding'), photo: null, guest: false, broken: false });
 }
 const draft = JSON.stringify({ t: 'birthday', d: { title: 'Zoe turns 30' } });
 check('a share link wins over the stored draft and photo',
@@ -39,12 +39,19 @@ check('a share link wins over the stored draft and photo',
 const switched = ctx.openInvite({ hash: '', draft, photo: 'data:image/jpeg;base64,x', search: '?t=graduation' });
 check('?t= switches the stored draft and keeps its edits', [switched.t, switched.d.title, switched.d.venue, switched.photo],
   ['graduation', 'Zoe turns 30', 'The Okafor home', 'data:image/jpeg;base64,x']);
-check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.draftOf(zoe) }), { ...zoe, photo: null, guest: false });
+check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.draftOf(zoe) }), { ...zoe, photo: null, guest: false, broken: false });
 for (const bad of ['javascript:x', "data:image/jpeg;base64,x');background:url('https://evil.test/", 'data:image/svg+xml;base64,PHN2Zz4', 'https://evil.test/a.jpg']) {
   check(`a stored photo "${bad.slice(0, 24)}" that is not a JPEG or PNG data URL is dropped`, ctx.openInvite({ photo: bad }).photo, null);
 }
 check('a stored PNG data URL is kept', ctx.openInvite({ photo: 'data:image/png;base64,iVBORw0KGgo=' }).photo, 'data:image/png;base64,iVBORw0KGgo=');
-check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '', draft: '{', search: '?t=baby' }), { ...fresh('baby'), photo: null, guest: false });
+// A messaging app can cut a long share link; the guest must not see the sample or this browser's own draft as the invite.
+const cut = hashOf(zoeLink).slice(0, 40);
+for (const hash of [cut, '#d=%%%', '']) {
+  check(`a guest link with hash "${hash.slice(0, 12)}" opens as broken, without the stored draft or photo`,
+    ctx.openInvite({ search: '?view=1', hash, draft, photo: 'data:image/jpeg;base64,x' }), { ...fresh('birthday'), photo: null, guest: true, broken: true });
+}
+check('a share link opens as not broken', opened.broken, false);
+check('an unreadable draft opens a new invite for ?t=',ctx.openInvite({ hash: '', draft: '{', search: '?t=baby' }), { ...fresh('baby'), photo: null, guest: false, broken: false });
 
 // Invite records.
 const birthday = ctx.getTemplate('birthday');
