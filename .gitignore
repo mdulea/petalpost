@@ -18,6 +18,10 @@ Thumbs.db
 # Local git worktrees
 .worktrees/
 
+# Build output and the local database
+dist/
+.pglite/
+
 # Playwright output
 test-results/
 playwright-report/

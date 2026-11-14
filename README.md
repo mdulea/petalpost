@@ -64,7 +64,8 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
   - `globals.d.ts` declares the types of the `htmlToImage` and analytics globals.
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
-- `scripts/` holds the checks and the link preview generator:
+- `scripts/` holds the build, the checks and the link preview generator:
+  - `build.js` copies the site files into `dist/`, which Vercel serves.
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
@@ -82,6 +83,7 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 | Format check   | `pnpm format:check`                      |
 | Type check     | `pnpm typecheck`                         |
 | Browser tests  | `pnpm test:browser`                      |
+| Site build     | `pnpm build`                             |
 
 To run another check file, replace `check-invite.js` with any `scripts/check-*.js` file.
 
@@ -106,8 +108,14 @@ No check holds a deployment back.
 Run `pnpm test`, `pnpm typecheck` and `pnpm test:browser` locally before you push `main`.
 After you enable the workflow, you can add a Vercel Deployment Check on the `checks` job, which holds production until the GitHub checks pass.
 Pushes to other branches get preview deployments.
-Vercel serves the repository root as static files, with no install or build step.
-`.vercelignore` keeps package files, tooling, `scripts/` and documentation out of the deployment.
+Vercel runs `pnpm install --prod --frozen-lockfile`, then `pnpm build`, and serves `dist/` as static files.
+`scripts/build.js` copies only the site files from an allowlist into `dist/`: the root pages, images, `robots.txt`, `sitemap.xml` and `THIRD_PARTY_NOTICES.txt`, and `css/`, `fonts/`, `vendor/` and the `js/` modules.
+A new kind of site file needs an entry in that allowlist.
+`check-site.js` fails when a page, or a file a page loads, is missing from the build, and when the build contains package files, server code, migrations, tooling or documentation.
+The install needs `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, and the API functions need `api/`, `server/` and `migrations/`, so `.vercelignore` uploads them.
+They are never site content, because Vercel serves only `dist/` and the functions.
+`.vercelignore` keeps the other scripts, tooling and documentation out of the upload.
+`vercel.json` rewrites every `/api/` path to the function in `api/index.js`.
 The Vercel CLI is a dev dependency, so run it as `pnpm exec vercel`.
 
 `vercel.json` sends a Content-Security-Policy and other security headers on every path.

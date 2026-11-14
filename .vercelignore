@@ -2,9 +2,6 @@
 .npm-cache/
 node_modules/
 .pnpm-store/
-package.json
-pnpm-lock.yaml
-pnpm-workspace.yaml
 serve.json
 .gitattributes
 .git-blame-ignore-revs
@@ -15,7 +12,11 @@ tsconfig.json
 js/globals.d.ts
 .env
 .env.*
-scripts/
+# The build runs scripts/build.js on Vercel; the other scripts are local tooling.
+scripts/*
+!scripts/build.js
+dist/
+.pglite/
 README.md
 .worktrees/
 docs/

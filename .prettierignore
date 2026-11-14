@@ -4,6 +4,8 @@ pnpm-lock.yaml
 .pnpm-store/
 .npm-cache/
 .vercel/
+dist/
+.pglite/
 .worktrees/
 test-results/
 playwright-report/
