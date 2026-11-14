@@ -81,6 +81,12 @@
         to any server. The page sends the secret in a request header to prove access, and Petalpost stores only a hash
         of it. Petalpost therefore cannot recover a lost link.
       </p>
+      <p>
+        When the host clicks "Publish", the editor saves the management secret in the browser's local storage, so the
+        editor can publish changes after a reload. Clearing site data in the browser removes it. The management link
+        still works if the host saved it. The page saves nothing in a guest's browser, but the edit link stays in the
+        address bar and in the browser history.
+      </p>
 
       <h2>Deletion and retention</h2>
       <p>
