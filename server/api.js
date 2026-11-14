@@ -16,7 +16,7 @@
 // or 409 with the error and the current record when the version is stale.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readPublished } from '../js/invite.js';
-import { ID_PATTERN, makeReply, SECRET_PATTERN, tally } from '../js/rsvp.js';
+import { ID_PATTERN, makeReply, REPLY_LIMITS, SECRET_PATTERN, tally } from '../js/rsvp.js';
 
 const DAILY_EVENTS = 20;
 const EVENT_RESPONSES = 200;
@@ -32,7 +32,7 @@ const MESSAGES = {
   body: 'The request could not be read.',
   version: 'The version must be a positive whole number.',
   invite: 'The invitation has fields that are missing, too long or not allowed.',
-  reply: 'Enter a name of up to 80 characters, an answer, and a party size from 1 to 10 when attending.',
+  reply: `Enter a name of up to ${REPLY_LIMITS.name} characters, an answer, and a party size from 1 to ${REPLY_LIMITS.partySize} when attending.`,
   eventMissing: 'This invitation does not exist. It may have been deleted.',
   replyMissing: 'This reply does not exist. It may have been deleted with the invitation.',
   eventForbidden: 'This link does not give access to this invitation.',

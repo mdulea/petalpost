@@ -21,7 +21,16 @@ import {
   switchTemplate,
   updateInvite,
 } from './invite.js';
-import { createClient, makeReply, manageLink, newId, newSecret, readCredential, responseLink } from './rsvp.js';
+import {
+  REPLY_LIMITS,
+  createClient,
+  makeReply,
+  manageLink,
+  newId,
+  newSecret,
+  readCredential,
+  responseLink,
+} from './rsvp.js';
 
 const form = /** @type {HTMLFormElement} */ (document.getElementById('form'));
 const previewCard = document.getElementById('previewCard');
@@ -345,6 +354,8 @@ const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById(
 const sendReply = /** @type {HTMLButtonElement} */ (document.getElementById('sendReply'));
 const nameInput = /** @type {HTMLInputElement} */ (document.getElementById('guestName'));
 const partySizeInput = /** @type {HTMLInputElement} */ (document.getElementById('partySize'));
+nameInput.maxLength = REPLY_LIMITS.name;
+partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
 
@@ -384,7 +395,7 @@ rsvpForm.addEventListener('submit', async (e) => {
     partySize: attending ? Number(partySizeInput.value) : 0,
   });
   if (!reply) {
-    rsvpStatus.textContent = 'Enter your name, and a party size from 1 to 10 when you come.';
+    rsvpStatus.textContent = `Enter your name, and a party size from 1 to ${REPLY_LIMITS.partySize} when you come.`;
     return;
   }
   // The edit link replaces the address before the request, so a reload or bookmark opens the reply if it was saved.
