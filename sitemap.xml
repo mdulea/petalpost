@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://petalpost-beryl.vercel.app/</loc></url>
-  <url><loc>https://petalpost-beryl.vercel.app/editor.html</loc></url>
-  <url><loc>https://petalpost-beryl.vercel.app/privacy.html</loc></url>
+  <url><loc>https://petalpost-beryl.vercel.app/</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/editor.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/birthday-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/wedding-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/baby-shower-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/brunch-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/graduation-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/housewarming-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/invitation-wording.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/when-to-send-invitations.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/about.html</loc><lastmod>2026-11-14</lastmod></url>
+  <url><loc>https://petalpost-beryl.vercel.app/privacy.html</loc><lastmod>2026-11-14</lastmod></url>
 </urlset>

@@ -64,13 +64,15 @@ A lost management link cannot be recovered.
 
 ## Project structure
 
-- `index.html` is the landing page, `editor.html` is the editor and the guest view, `manage.html` is the host's management page, and `privacy.html` and `404.html` are the remaining pages.
+- `index.html` is the landing page, `editor.html` is the editor and the guest view, and `manage.html` is the host's management page.
+- `birthday-invitations.html` and the five other `*-invitations.html` pages show one occasion's templates and advice. `pnpm pages` generates them; do not edit them by hand.
+- `invitation-wording.html` and `when-to-send-invitations.html` are the guides, and `about.html`, `privacy.html` and `404.html` are the remaining pages.
 - `js/` holds the page scripts:
   - `templates.js` is the template catalog and the `renderInvite` renderer.
   - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
   - `rsvp.js` validates replies, builds and reads private links, and is the API client. It has no DOM access, so the server and the Node checks import it.
   - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
-  - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page.
+  - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page. `page.js` is the entry module of the occasion pages, the guides and the About page.
   - `icons.js` injects the inline SVG sprite.
   - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
   - `globals.d.ts` declares the types of the `htmlToImage` and analytics globals.
@@ -80,6 +82,7 @@ A lost management link cannot be recovered.
 - `scripts/` holds the local server, the build, the checks and the link preview generator:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `build.js` copies the site files into `dist/`, which Vercel serves.
+  - `pages.js` generates the HTML that search engines must read without running JavaScript: the occasion pages, the landing gallery and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the text of the occasion pages.
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
@@ -98,6 +101,7 @@ A lost management link cannot be recovered.
 | Type check     | `pnpm typecheck`                         |
 | Browser tests  | `pnpm test:browser`                      |
 | Site build     | `pnpm build`                             |
+| Generate pages | `pnpm pages`                             |
 | Migrations     | `pnpm migrate`                           |
 
 To run another check file, replace `check-invite.js` with any `scripts/check-*.js` file.
@@ -153,16 +157,22 @@ DATABASE_URL_UNPOOLED='<connection string>' pnpm migrate
 Run it first against a verified non-production Neon branch, then against production before you deploy the code that needs the change.
 Never commit a connection string or an `.env` file.
 
-All five pages load Vercel Web Analytics.
+Every page loads Vercel Web Analytics.
 `js/analytics.js` removes the part after `#` from every address it reports, so private links never reach analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
 
-The footer contact link uses the placeholder `hello@example.com`.
-Replace it in all five pages before launch, then run `pnpm exec node scripts/check-site.js`.
-The check compares the address only on the three pages whose robots tag allows indexing, so check `404.html` and `manage.html` by hand.
+The contact links use the placeholder `hello@example.com`.
+Before launch, replace `CONTACT` in `scripts/pages.js` and the address in the body of `about.html`, run `pnpm pages`, then run `pnpm exec node scripts/check-site.js`.
 
-If the production domain changes, update the canonical and Open Graph URLs in the pages, `robots.txt` and `sitemap.xml`.
+If the production domain changes, update the canonical and Open Graph URLs in the hand-written pages, `robots.txt` and `sitemap.xml`, then run `pnpm pages`, which takes the origin from the `index.html` canonical.
 Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.
+
+### Search indexing
+
+`sitemap.xml` lists every page whose robots tag allows indexing, each with a `<lastmod>` date.
+When you change a page's content, set its `lastmod` to that day; leave it alone for layout or code changes, since Google ignores `lastmod` dates that change without content changes.
+`vercel.json` redirects `/index.html` to `/` with a 301, so the home page has one URL; link to `/`, never to `index.html`.
+`index.html` carries the Google Search Console verification tag for the URL-prefix property of the production origin.
 
 `og-image.png` is the 1200 by 630 link preview.
 To regenerate it:

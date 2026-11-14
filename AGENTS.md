@@ -37,6 +37,7 @@ README.md sections, by need:
 - new page-level global from classic script -> declare in `js/globals.d.ts` + ESLint globals
 - pushing `main` releases to production -> run [Testing](#testing) checks first
 - new non-site file -> `.vercelignore`
+- `*-invitations.html`, landing gallery, page footers == `pnpm pages` output -> edit `scripts/pages.js` or `scripts/occasions.js`, rerun; `check-site.js` fails on drift
 
 ## Git and output
 

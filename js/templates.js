@@ -882,10 +882,10 @@ function escapeHtml(value) {
   );
 }
 
-function formatDate(iso) {
+function formatDate(iso, locale) {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+  return new Date(y, m - 1, d).toLocaleDateString(locale, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -893,10 +893,10 @@ function formatDate(iso) {
   });
 }
 
-function formatTime(hhmm) {
+function formatTime(hhmm, locale) {
   if (!hhmm) return '';
   const [h, m] = hhmm.split(':').map(Number);
-  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
 // The card colors as rendered: a known accent swatch replaces the template accent.
@@ -914,19 +914,20 @@ export const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 // The card sizes in container units, so it renders inside its .invite-wrap container:
 // a link when href is set, a <span> when inline is set for use inside a <label>, otherwise a <div>.
 // label becomes the container's aria-label. decorative hides a sample thumbnail from screen readers.
+// locale formats the date and time; it defaults to the browser's, and scripts/pages.js fixes it so its output is stable.
 // Pages insert the result with mountInvites (js/mount.js), which also fits the text.
 /**
  * @param {(typeof TEMPLATES)[number]} template
  * @param {Record<string, any>} d
- * @param {{ href?: string, label?: string, inline?: boolean, decorative?: boolean }} [options]
+ * @param {{ href?: string, label?: string, inline?: boolean, decorative?: boolean, locale?: string }} [options]
  */
-export function renderInvite(template, d, { href, label, inline, decorative } = {}) {
+export function renderInvite(template, d, { href, label, inline, decorative, locale } = {}) {
   const c = inviteColors(template, d.accent);
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;
   const art = PHOTO_URL.test(d.photo)
     ? `<div class="invite-photo" role="img" aria-label="Event photo" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY)}%"></div>`
     : template.art;
-  const when = [formatDate(d.date), formatTime(d.time)].filter(Boolean).join(' at ');
+  const when = [formatDate(d.date, locale), formatTime(d.time, locale)].filter(Boolean).join(' at ');
   const tag = href ? 'a' : inline ? 'span' : 'div';
   const attrs =
     (href ? ` href="${escapeHtml(href)}"` : '') +
