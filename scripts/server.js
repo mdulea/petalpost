@@ -1,5 +1,5 @@
-// The local server for pnpm dev and the browser checks, in place of Vercel. It serves the repository root as
-// static files with the vercel.json headers on every path, / as index.html, no clean URLs, no directory listing
+// The local server for pnpm dev and the browser checks, in place of Vercel. It serves the site files that buildSite
+// copies, with the vercel.json headers on every path, / as index.html, no clean URLs, no directory listing
 // and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
 // /api paths go to createApi over PGlite after migrate: in memory with --memory, otherwise in .pglite/.
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
@@ -12,6 +12,7 @@ import { parseArgs } from 'node:util';
 import { PGlite } from '@electric-sql/pglite';
 import { createApi } from '../server/api.js';
 import { migrate } from '../server/migrate.js';
+import { isSiteFile } from './build.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -33,7 +34,12 @@ const RULES = JSON.parse(await readFile(join(root, 'vercel.json'), 'utf8')).head
   headers: rule.headers,
 }));
 
-// The file a static path names, or null. A path that leaves the root or has a dot segment names no file.
+// The social card generator is a local tool that Vercel never serves. It is served here in addition to the site
+// files, because the README steps for og-image.png and the browser checks open it from this server.
+const LOCAL_TOOLS = ['scripts/og-card.html', 'scripts/og-card.js'];
+
+// The file a static path names, or null. A path that leaves the root, has a dot segment, or is neither a site file
+// nor a local tool names no file.
 async function staticFile(pathname) {
   let path;
   try {
@@ -43,6 +49,7 @@ async function staticFile(pathname) {
   }
   const segments = path.split(/[/\\]/).slice(1);
   if (segments.some((s) => s.startsWith('.'))) return null;
+  if (!isSiteFile(segments.join('/')) && !LOCAL_TOOLS.includes(segments.join('/'))) return null;
   const file = join(root, ...segments);
   if (!file.startsWith(root.endsWith(sep) ? root : root + sep)) return null;
   const info = await stat(file).catch(() => null);
