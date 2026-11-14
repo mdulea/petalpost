@@ -2,7 +2,6 @@
 .npm-cache/
 node_modules/
 .pnpm-store/
-serve.json
 .gitattributes
 .git-blame-ignore-revs
 .prettierrc.json

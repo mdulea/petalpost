@@ -28,7 +28,7 @@ README.md sections, by need:
 
 ## Gotchas
 
-- `serve.json` matches Vercel: clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`; dir listings off
+- `scripts/server.js` matches Vercel: `vercel.json` headers; clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`; dir listings off; `/api/*` -> PGlite, never Neon; `check-site.js` checks it
 - inline scripts blocked by CSP -> page scripts in files; inline `style` attributes allowed for `renderInvite`
 - package store: `.pnpm-store/` inside repo
 - `js/analytics.js` == classic script; ESLint `sourceType: 'script'`

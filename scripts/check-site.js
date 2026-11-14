@@ -1,4 +1,4 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, a page or the Preview button ignores the safe-area insets of notched phones, vercel.json and serve.json send different headers, the buildSite output misses a root page or a file a built page, stylesheet or module loads or links to, or the output contains a package file, server code, a migration, tooling, documentation, a dotfile or a type declaration.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, a page or the Preview button ignores the safe-area insets of notched phones, scripts/server.js answers a path differently from production, the buildSite output misses a root page or a file a built page, stylesheet or module loads or links to, or the output contains a package file, server code, a migration, tooling, documentation, a dotfile or a type declaration.
 // Run: node scripts/check-site.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { after, test } from 'node:test';
 import { buildSite } from './build.js';
+import { startServer } from './server.js';
 import { EDITABLE } from '../js/invite.js';
 import { ACCENTS, TEMPLATES } from '../js/templates.js';
 
@@ -119,16 +120,45 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
   );
 });
 
-// Vercel serves production and serve runs pnpm dev and the browser checks; both must send the same headers.
-test('vercel.json and serve.json send the same headers to every path', () => {
-  const vercel = JSON.parse(read('vercel.json')).headers;
-  const serve = JSON.parse(read('serve.json')).headers;
+// scripts/server.js runs pnpm dev and the browser checks in place of Vercel, so it must answer like production:
+// the vercel.json headers on every path, / as index.html, no clean URLs, no directory listing, 404.html for
+// unknown paths, no dotfiles, and /api paths through the API.
+const local = await startServer({ port: 0, memory: true });
+after(() => local.close());
+const fetchLocal = (path) => fetch(new URL(path, local.url), { redirect: 'manual' });
+const vercelHeaders = JSON.parse(read('vercel.json')).headers.flatMap((rule) => rule.headers);
+
+for (const path of ['/', '/editor.html', '/css/styles.css', '/missing.html', `/api/events/${'A'.repeat(22)}`]) {
+  test(`the local server sends the vercel.json headers on ${path}`, async () => {
+    const response = await fetchLocal(path);
+    assert.deepEqual(
+      vercelHeaders.filter(({ key, value }) => response.headers.get(key) !== value).map(({ key }) => key),
+      [],
+    );
+  });
+}
+
+test('the local server answers / with index.html and a page by its file name', async () => {
+  const responses = await Promise.all(['/', '/editor.html'].map(fetchLocal));
+  assert.deepEqual(await Promise.all(responses.map(async (r) => [r.status, await r.text()])), [
+    [200, read('index.html')],
+    [200, read('editor.html')],
+  ]);
+});
+
+for (const path of ['/editor', '/css/', '/.gitignore', '/.git/HEAD', '/scripts/../.env.local']) {
+  test(`the local server answers ${path} with 404.html`, async () => {
+    const response = await fetchLocal(path);
+    assert.deepEqual([response.status, await response.text()], [404, read('404.html')]);
+  });
+}
+
+test('the local server routes /api paths to the API', async () => {
+  const response = await fetchLocal(`/api/events/${'A'.repeat(22)}`);
   assert.deepEqual(
-    [vercel.length, vercel[0].source, serve.length, serve[0].source],
-    [1, '/(.*)', 1, '**'],
-    'each file needs one rule for every path',
+    [response.status, response.headers.get('cache-control'), await response.json()],
+    [404, 'no-store', { error: 'This invitation does not exist. It may have been deleted.' }],
   );
-  assert.deepEqual(vercel[0].headers, serve[0].headers);
 });
 
 // Vercel serves only the buildSite output, so the pages must find in it every file they load.
