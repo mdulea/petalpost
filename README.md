@@ -161,8 +161,8 @@ Every page loads Vercel Web Analytics.
 `js/analytics.js` removes the part after `#` from every address it reports, so private links never reach analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
 
-The contact links use the placeholder `hello@example.com`.
-Before launch, replace `CONTACT` in `scripts/pages.js` and the address in the body of `about.html`, run `pnpm pages`, then run `pnpm exec node scripts/check-site.js`.
+The contact address is `contact@petalpost.ro`.
+To change it, replace `CONTACT` in `scripts/pages.js` and the address in the body of `about.html`, run `pnpm pages`, then run `pnpm exec node scripts/check-site.js`.
 
 If the production domain changes, update the canonical and Open Graph URLs in the hand-written pages, `robots.txt` and `sitemap.xml`, then run `pnpm pages`, which takes the origin from the `index.html` canonical.
 Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.
