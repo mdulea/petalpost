@@ -1,4 +1,4 @@
-// Fails when the landing gallery, the editor preview, the draft reload, the guest view, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the editor preview, the draft reload, the guest view, the calendar download, the photo
 // upload, the PNG download or the link preview generator breaks in Chromium, or a page breaks the
 // Content-Security-Policy.
 // Run: pnpm test:browser
@@ -28,6 +28,24 @@ test('the landing page shows every template', async ({ page }) => {
   await expect(page.locator('#gallery .card')).toHaveCount(TEMPLATES.length);
   expect(problems).toEqual([]);
 });
+
+test('the landing filter shows only the chosen occasion', async ({ page }) => {
+  await page.goto('/');
+  await page.click('.filter[data-filter="Wedding"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(
+    TEMPLATES.filter((t) => t.category === 'Wedding').length,
+  );
+});
+
+// The occasion pages, guides and About page load js/page.js for the icon sprite and the sample invite fit.
+for (const path of ['birthday-invitations.html', 'invitation-wording.html', 'about.html']) {
+  test(`${path} loads its icons without errors`, async ({ page }) => {
+    const problems = watch(page);
+    await page.goto(path);
+    await expect(page.locator('#i-pen')).toHaveCount(1);
+    expect(problems).toEqual([]);
+  });
+}
 
 test('an edit shows in the preview and survives a reload', async ({ page }) => {
   const problems = watch(page);

@@ -1,5 +1,5 @@
-// Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, invitation, management or
-// privacy page scrolls sideways, a form control leaves its panel,
+// Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, invitation, management,
+// privacy, About, guide or occasion page scrolls sideways, a form control leaves its panel,
 // single-line inputs differ in height, fields sharing a row differ in top or height, the spacing between stacked
 // fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
 // size, or the Preview button covers a control that has keyboard focus.
@@ -166,6 +166,19 @@ test('the landing page, the guest view and the privacy page fit every viewport',
   await checkAllViewports(page);
   await page.goto('privacy.html');
   await checkAllViewports(page);
+});
+
+// One occasion page stands for all six, which scripts/pages.js builds from the same markup.
+test('the About page, both guides and an occasion page fit every viewport', async ({ page }) => {
+  for (const path of [
+    'about.html',
+    'invitation-wording.html',
+    'when-to-send-invitations.html',
+    'wedding-invitations.html',
+  ]) {
+    await page.goto(path);
+    await checkAllViewports(page);
+  }
 });
 
 test('the editor after publishing, the invitation with a saved reply and the management page fit every viewport', async ({

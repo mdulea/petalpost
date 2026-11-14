@@ -4,7 +4,6 @@ import {
   BANNER_TEMPLATE,
   CATEGORIES,
   HERO_TEMPLATES,
-  POPULAR_TEMPLATES,
   TEMPLATES,
   getTemplate,
   renderInvite,
@@ -34,33 +33,12 @@ mountInvites(
 document.getElementById('templateCount').textContent = String(TEMPLATES.length);
 document.getElementById('accentCount').textContent = String(ACCENTS.length);
 
-document.getElementById('categoryChips').innerHTML = CATEGORIES.map(
-  (c) => `<a class="chip-link" href="#templates" data-jump="${c}">${c}</a>`,
-).join('');
-
 const banner = getTemplate(BANNER_TEMPLATE);
 mountInvites(document.getElementById('bannerArt'), renderInvite(banner, makeInviteData(banner)));
 
-// Gallery with occasion filters.
+// The gallery cards and occasion links are static HTML from scripts/pages.js, so crawlers read them without this
+// script. It adds the occasion filters, which only work with JavaScript.
 const gallery = document.getElementById('gallery');
-mountInvites(
-  gallery,
-  TEMPLATES.map(
-    (t) => `
-  <article class="card" data-category="${t.category}">
-    ${POPULAR_TEMPLATES.includes(t.id) ? '<span class="badge">Popular</span>' : ''}
-    <div class="card-art">${renderInvite(t, makeInviteData(t), { decorative: true })}</div>
-    <div class="card-body">
-      <div>
-        <h3><a class="card-link" href="${editorUrl(t.id)}">${t.name}</a></h3>
-        <p>${t.category}. ${t.tagline}</p>
-      </div>
-      <span class="card-go" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
-    </div>
-  </article>`,
-  ).join(''),
-);
-
 const filters = document.getElementById('filters');
 filters.innerHTML = ['All', ...CATEGORIES]
   .map((c, i) => `<button class="filter" type="button" aria-pressed="${i === 0}" data-filter="${c}">${c}</button>`)
@@ -78,9 +56,4 @@ function applyFilter(category) {
 filters.addEventListener('click', (e) => {
   const button = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('.filter'));
   if (button) applyFilter(button.dataset.filter);
-});
-
-document.getElementById('categoryChips').addEventListener('click', (e) => {
-  const chip = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('[data-jump]'));
-  if (chip) applyFilter(chip.dataset.jump);
 });

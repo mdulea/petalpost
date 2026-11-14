@@ -1,6 +1,6 @@
 // The local server for pnpm dev and the browser checks, in place of Vercel. It serves the site files that buildSite
-// copies, with the vercel.json headers on every path, / as index.html, no clean URLs, no directory listing
-// and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
+// copies, with the vercel.json headers on every path and its redirects, / as index.html, no clean URLs, no directory
+// listing and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
 // /api paths go to createApi over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
 // Run: node scripts/server.js --port <n> [--memory]
@@ -29,10 +29,9 @@ const TYPES = {
 };
 
 // Each vercel.json rule source, such as /(.*), is a regular expression over the whole path.
-const RULES = JSON.parse(await readFile(join(root, 'vercel.json'), 'utf8')).headers.map((rule) => ({
-  pattern: new RegExp(`^${rule.source}$`),
-  headers: rule.headers,
-}));
+const VERCEL = JSON.parse(await readFile(join(root, 'vercel.json'), 'utf8'));
+const RULES = VERCEL.headers.map((rule) => ({ pattern: new RegExp(`^${rule.source}$`), headers: rule.headers }));
+const REDIRECTS = VERCEL.redirects.map((rule) => ({ ...rule, pattern: new RegExp(`^${rule.source}$`) }));
 
 // The social card generator is a local tool that Vercel never serves. It is served here in addition to the site
 // files, because the README steps for og-image.png and the browser checks open it from this server.
@@ -86,6 +85,13 @@ export async function startServer({ port, memory = false }) {
       });
       res.writeHead(response.status, headers);
       res.end(Buffer.from(await response.arrayBuffer()));
+      return;
+    }
+    // Vercel keeps the query string on a redirect.
+    const redirect = REDIRECTS.find((r) => r.pattern.test(url.pathname));
+    if (redirect) {
+      res.writeHead(redirect.statusCode, { ...headers, location: redirect.destination + url.search });
+      res.end();
       return;
     }
     const file = await staticFile(url.pathname);
