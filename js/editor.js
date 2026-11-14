@@ -24,6 +24,7 @@ import {
 import {
   REPLY_LIMITS,
   createClient,
+  editorPage,
   makeReply,
   manageLink,
   newId,
@@ -46,8 +47,7 @@ try {
 
 const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage) });
 
-// The editor page URL without query or fragment, which every link to this page starts from.
-const pageBase = location.href.split(/[?#]/)[0];
+const pageBase = editorPage(location.origin);
 const shareUrl = () => shareLink(pageBase, state);
 const client = createClient();
 
