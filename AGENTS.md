@@ -1,60 +1,44 @@
-## Project overview
+## Invariants
 
-See [Overview](README.md#overview) in the README.
+- always: fonts + code self-hosted; pages load nothing external except Vercel's `/_vercel/insights/script.js`
+- forbidden: edit `vendor/` (byte-for-byte as published); commit `.env.local` or other `.env.*`
+- ask first: changing production domain `https://petalpost-beryl.vercel.app`
+- NEVER skip/disable/delete failing checks to pass
 
-## Setup
+## Docs
 
-Follow [Installation](README.md#installation) in the README. No environment variables required.
+README.md sections, by need:
 
-## Commands
+- project, setup, commands, layout -> Overview, Installation, Run, Development, Project structure; env vars: none required
+- line endings, dependency upgrades, install errors -> Tooling notes
+- deployment, security headers, placeholder contact address, production-origin changes -> Deployment
 
-See [Run](README.md#run) and [Development](README.md#development) in the README. Run every command through `pnpm`; never install Node.js globally.
+## Code
 
-## Project structure
-
-See [Project structure](README.md#project-structure) in the README. When adding a test to a `scripts/check-*.js` file, update the header comment that lists what the file checks.
-
-## Code style
-
-- Plain JavaScript; JSDoc types only where inference fails, such as DOM lookup element types. TypeScript strict mode off: most functions lack parameter types.
-- Prettier: 120-character lines, single quotes.
-- Comments above modules and functions state contract; follow existing pattern.
-- Keep DOM-free logic in `js/invite.js` or `js/templates.js` so `scripts/` checks run it in Node.
-- Justify each new dependency.
+- commands via `pnpm` only; global Node.js install forbidden
+- plain JavaScript; JSDoc types only where inference fails, e.g. DOM lookup element types; TypeScript strict off
+- module/function comments state contract; follow existing pattern
+- DOM-free logic -> `js/invite.js` or `js/templates.js`, so `scripts/` checks run in Node
+- new dependency -> justify
 
 ## Testing
 
-Behavior changes: add/update checks in `scripts/`. Checks use `node:test`. Before finishing: run `pnpm test`, `pnpm typecheck` and `pnpm test:browser`; require all passing. NEVER skip/disable/delete failing checks to pass.
-
-## Git
-
-- Worktrees live in `.worktrees/` (gitignored).
-- Commit subject: imperative sentence-case reason, no type prefix, e.g. `Run the format check and lint in pnpm test`. Blank line, body: approach rationale + context/constraints/tradeoffs absent from diff. Implementation details: diff only.
-- Formatting-only commits: add hash to `.git-blame-ignore-revs`.
-- Output: changes, reasons, tests.
-
-## Boundaries
-
-### Always
-
-- Keep fonts and code self-hosted; pages load nothing from external services except Vercel's own `/_vercel/insights/script.js`.
-
-### Never
-
-- Edit `vendor/`; it stays byte-for-byte as published.
-- Commit `.env.local` or other `.env.*` files.
-
-### Ask first
-
-- Changing production domain `https://petalpost-beryl.vercel.app`.
+- behavior change -> add/update `node:test` checks in `scripts/`; test added to `scripts/check-*.js` -> update header comment listing checks
+- before finishing: `pnpm test`, `pnpm typecheck`, `pnpm test:browser` all pass
 
 ## Gotchas
 
-- `serve.json` disables clean URLs so `/editor.html` loads without redirect, rewrites `/` to `index.html` and disables directory listings, matching Vercel.
-- CSP blocks inline scripts: put page scripts in files. Inline `style` attributes stay allowed for `renderInvite`.
-- Line endings, dependency upgrades and install errors: see [Tooling notes](README.md#tooling-notes) in the README.
-- Package store lives in `.pnpm-store/` inside repository.
-- `js/analytics.js` is a classic script, not module; ESLint config sets `sourceType: 'script'`.
-- New page-level globals from classic scripts need declarations in `js/globals.d.ts` and ESLint globals.
-- Pushing `main` releases to production. Run the checks in [Testing](#testing) first. Deployment, security headers, the placeholder contact address and production-origin changes: see [Deployment](README.md#deployment) in the README.
-- Add new non-site files to `.vercelignore`.
+- `serve.json` matches Vercel: clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`; dir listings off
+- inline scripts blocked by CSP -> page scripts in files; inline `style` attributes allowed for `renderInvite`
+- package store: `.pnpm-store/` inside repo
+- `js/analytics.js` == classic script; ESLint `sourceType: 'script'`
+- new page-level global from classic script -> declare in `js/globals.d.ts` + ESLint globals
+- pushing `main` releases to production -> run [Testing](#testing) checks first
+- new non-site file -> `.vercelignore`
+
+## Git and output
+
+- worktrees -> `.worktrees/`
+- commit subject: imperative sentence-case reason, type prefix forbidden, e.g. `Run the format check and lint in pnpm test`; blank line; body: approach rationale + context/constraints/tradeoffs absent from diff; implementation details -> diff only
+- formatting-only commit -> hash to `.git-blame-ignore-revs`
+- output: changes, reasons, tests
