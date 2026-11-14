@@ -1,4 +1,4 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, or the vendored library differs from its published release.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, or vercel.json and serve.json send different headers.
 // Run: node scripts/check-site.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -93,4 +93,16 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
     createHash('sha256').update(bytes).digest('hex'),
     '0181b9a4ea3351540751b2e72b6baecb5c2297093fcb0bd2af94fc531cb0fbda',
   );
+});
+
+// Vercel serves production and serve runs pnpm dev and the browser checks; both must send the same headers.
+test('vercel.json and serve.json send the same headers to every path', () => {
+  const vercel = JSON.parse(read('vercel.json')).headers;
+  const serve = JSON.parse(read('serve.json')).headers;
+  assert.deepEqual(
+    [vercel.length, vercel[0].source, serve.length, serve[0].source],
+    [1, '/(.*)', 1, '**'],
+    'each file needs one rule for every path',
+  );
+  assert.deepEqual(vercel[0].headers, serve[0].headers);
 });
