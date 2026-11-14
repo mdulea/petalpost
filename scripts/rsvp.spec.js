@@ -2,7 +2,8 @@
 // scripts/server.js. Checks: an invitation published in one browser opens in another; a guest's reply, its edit
 // link and an edit that keeps one reply; the management totals and reply list; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
-// the failure and no confirmation, and its retry saves one reply; a reply changed elsewhere loads the latest answer;
+// the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
+// after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer;
 // publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
@@ -173,6 +174,34 @@ test('a failed reply shows the failure without a confirmation, and the retry sav
   await expect(sam.page.locator('#rsvpStatus')).toHaveText('Your reply is saved. The host can see it now.');
   await host.page.goto(manage);
   expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam\b/)]);
+  expect([...host.problems, ...sam.problems]).toEqual([]);
+});
+
+test('a reply whose confirmation is lost loads again after a reload, and the resend keeps one reply', async ({
+  browser,
+}) => {
+  const host = await newBrowser(browser);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  // The first PUT reaches the server and commits, but the page gets a 503 instead of the answer.
+  await sam.page.route(
+    '**/api/events/*/responses/*',
+    async (route) => {
+      await route.fetch();
+      await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Lost.' }) });
+    },
+    { times: 1 },
+  );
+  await sam.page.fill('#guestName', 'Sam');
+  await sam.page.click('#sendReply');
+  await expect(sam.page.locator('#rsvpStatus')).toHaveText('Lost.');
+
+  await sam.page.reload();
+  await expect(sam.page.locator('#guestName')).toHaveValue('Sam');
+  await reply(sam.page, { name: 'Sam Lee' });
+  await host.page.goto(manage);
+  expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam Lee\b/)]);
   expect([...host.problems, ...sam.problems]).toEqual([]);
 });
 

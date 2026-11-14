@@ -335,9 +335,10 @@ document.getElementById('copyManageLink').addEventListener('click', () =>
   }),
 );
 
-// Guest replies to a published event. The reply id and secret are made once per page and kept only in memory,
-// because the guest view never writes storage; a retry reuses them, so it cannot create a second reply.
-// An edit link #r=<id>.<secret> loads that reply instead, and saving sends its version.
+// Guest replies to a published event. The reply id and secret are made once per page. The guest view never writes
+// storage, so the first send puts them in the address as the edit link #r=<id>.<secret> before the request. A retry
+// or a reload after a lost confirmation then reuses them and cannot create a second reply. An edit link loads that
+// reply, and saving sends its version.
 const rsvpForm = /** @type {HTMLFormElement} */ (document.getElementById('rsvpForm'));
 const rsvpStatus = document.getElementById('rsvpStatus');
 const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('replyLink'));
@@ -365,11 +366,10 @@ function fillReply(reply) {
   syncPartySize();
 }
 
-// The edit link replaces the address, so a reload or bookmark opens the saved reply.
+const replyLink = () => responseLink(pageBase, state.event, replyCred.id, replyCred.secret);
+
 function showReplyLink() {
-  const link = responseLink(pageBase, state.event, replyCred.id, replyCred.secret);
-  history.replaceState(null, '', link);
-  replyLinkInput.value = link;
+  replyLinkInput.value = replyLink();
   document.getElementById('replySaved').hidden = false;
 }
 
@@ -387,6 +387,8 @@ rsvpForm.addEventListener('submit', async (e) => {
     rsvpStatus.textContent = 'Enter your name, and a party size from 1 to 10 when you come.';
     return;
   }
+  // The edit link replaces the address before the request, so a reload or bookmark opens the reply if it was saved.
+  history.replaceState(null, '', replyLink());
   sendReply.disabled = true;
   rsvpStatus.textContent = 'Sending your reply.';
   const result = await client.saveReply(state.event, replyCred, reply);
@@ -433,6 +435,8 @@ async function openEvent() {
   rsvpForm.hidden = false;
   if (!fromLink) return;
   const saved = await client.loadReply(state.event, replyCred);
+  // The event exists, so a missing reply was never saved. The empty form sends it as a new reply.
+  if (saved.status === 404) return;
   if (!saved.ok) {
     rsvpStatus.textContent = saved.message;
     return;
