@@ -1,4 +1,4 @@
-// Builds the static site that Vercel serves: buildSite(outDir) replaces outDir with copies of the site files only.
+// Builds the static site that Vercel serves. buildSite(outDir) replaces outDir with copies of the site files only.
 // Package files, server code, migrations, tooling and documentation stay out, so no URL can serve them.
 // Run: pnpm build, which writes dist/.
 import { cpSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
