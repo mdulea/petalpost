@@ -30,6 +30,7 @@ The site has no build step, and Vercel deploys no package files.
 `format` rewrites the HTML, CSS, JavaScript, JSON and Markdown files with Prettier, and `format:check` only reports unformatted files.
 `vendor/` is skipped so the library stays byte-for-byte as published.
 `.gitattributes` keeps LF line endings in the working copy, as Prettier writes them, so Git on Windows does not convert them to CRLF.
+`.git-blame-ignore-revs` lists the commit that first formatted the project. Run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once so `git blame` skips it.
 
 `lint` runs ESLint with its recommended rules over `js/`, `scripts/` and `eslint.config.js`.
 `vendor/` is minified third-party code, so ESLint skips it.
