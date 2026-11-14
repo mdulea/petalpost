@@ -1,160 +1,208 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Petalpost | Make your invite</title>
-  <meta name="description" content="Choose a template, add your photo, names, date and address, then download a PNG or share your invitation with a link.">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://petalpost-beryl.vercel.app/editor.html">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Petalpost">
-  <meta property="og:title" content="Petalpost | Make your invite">
-  <meta property="og:description" content="Choose a template, add your photo, names, date and address, then download a PNG or share your invitation with a link.">
-  <meta property="og:url" content="https://petalpost-beryl.vercel.app/editor.html">
-  <meta property="og:image" content="https://petalpost-beryl.vercel.app/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Petalpost: three hand-drawn invitation cards beside the words Your day, your invite.">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <script src="vendor/html-to-image.js" defer></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Petalpost home">
-      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-        <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2"/>
-        <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74"/>
-      </svg>
-      Petalpost
-    </a>
-    <nav class="nav" aria-label="Main">
-      <a class="pill owner-only" href="index.html#templates"><svg class="icon"><use href="#i-layout"/></svg>All templates</a>
-      <a class="pill pill-cta guest-only" href="editor.html"><svg class="icon"><use href="#i-pen"/></svg>Make your own</a>
-    </nav>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Petalpost | Make your invite</title>
+    <meta
+      name="description"
+      content="Choose a template, add your photo, names, date and address, then download a PNG or share your invitation with a link."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://petalpost-beryl.vercel.app/editor.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Petalpost" />
+    <meta property="og:title" content="Petalpost | Make your invite" />
+    <meta
+      property="og:description"
+      content="Choose a template, add your photo, names, date and address, then download a PNG or share your invitation with a link."
+    />
+    <meta property="og:url" content="https://petalpost-beryl.vercel.app/editor.html" />
+    <meta property="og:image" content="https://petalpost-beryl.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Petalpost: three hand-drawn invitation cards beside the words Your day, your invite."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="vendor/html-to-image.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Petalpost home">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2" />
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round" />
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74" />
+        </svg>
+        Petalpost
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a class="pill owner-only" href="index.html#templates"
+          ><svg class="icon"><use href="#i-layout" /></svg>All templates</a
+        >
+        <a class="pill pill-cta guest-only" href="editor.html"
+          ><svg class="icon"><use href="#i-pen" /></svg>Make your own</a
+        >
+      </nav>
+    </header>
 
-  <main class="editor">
-    <div class="editor-head">
-      <div>
-        <h1>Make it yours</h1>
-        <p>Changes save in this browser as you type.</p>
+    <main class="editor">
+      <div class="editor-head">
+        <div>
+          <h1>Make it yours</h1>
+          <p>Changes save in this browser as you type.</p>
+        </div>
       </div>
-    </div>
 
-    <form class="editor-form" id="form" autocomplete="off" novalidate>
-      <section class="panel" id="templates-panel" aria-labelledby="h-template">
-        <h2 id="h-template"><svg class="icon"><use href="#i-layout"/></svg>Template</h2>
-        <div class="filters picker-tabs" id="pickerTabs" role="group" aria-label="Show templates for an occasion"></div>
-        <div class="picker" id="picker" role="radiogroup" aria-labelledby="h-template"></div>
-      </section>
+      <form class="editor-form" id="form" autocomplete="off" novalidate>
+        <section class="panel" id="templates-panel" aria-labelledby="h-template">
+          <h2 id="h-template">
+            <svg class="icon"><use href="#i-layout" /></svg>Template
+          </h2>
+          <div
+            class="filters picker-tabs"
+            id="pickerTabs"
+            role="group"
+            aria-label="Show templates for an occasion"
+          ></div>
+          <div class="picker" id="picker" role="radiogroup" aria-labelledby="h-template"></div>
+        </section>
 
-      <section class="panel" id="photo-panel" aria-labelledby="h-photo">
-        <h2 id="h-photo"><svg class="icon"><use href="#i-image"/></svg>Photo</h2>
-        <label class="dropzone" id="dropzone">
-          <input type="file" id="photoInput" accept="image/*">
-          <svg class="icon"><use href="#i-upload"/></svg>
-          <strong>Upload a photo</strong>
-          <span class="hint">Drop an image here or tap to choose. It replaces the illustration.</span>
-        </label>
-        <div class="photo-tools">
-          <div class="field">
-            <label for="photoY">Photo position</label>
-            <input class="range" type="range" id="photoY" name="photoY" min="0" max="100" value="50">
+        <section class="panel" id="photo-panel" aria-labelledby="h-photo">
+          <h2 id="h-photo">
+            <svg class="icon"><use href="#i-image" /></svg>Photo
+          </h2>
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="photoInput" accept="image/*" />
+            <svg class="icon"><use href="#i-upload" /></svg>
+            <strong>Upload a photo</strong>
+            <span class="hint">Drop an image here or tap to choose. It replaces the illustration.</span>
+          </label>
+          <div class="photo-tools">
+            <div class="field">
+              <label for="photoY">Photo position</label>
+              <input class="range" type="range" id="photoY" name="photoY" min="0" max="100" value="50" />
+            </div>
+            <button class="btn btn-ghost btn-small" type="button" id="removePhoto">
+              <svg class="icon"><use href="#i-trash" /></svg>Use the illustration instead
+            </button>
           </div>
-          <button class="btn btn-ghost btn-small" type="button" id="removePhoto"><svg class="icon"><use href="#i-trash"/></svg>Use the illustration instead</button>
-        </div>
-      </section>
+        </section>
 
-      <section class="panel" id="details-panel" aria-labelledby="h-details">
-        <h2 id="h-details"><svg class="icon"><use href="#i-pen"/></svg>Details</h2>
-        <div class="field">
-          <label for="eyebrow">Opening line</label>
-          <input class="input" id="eyebrow" name="eyebrow">
-        </div>
-        <div class="field">
-          <label for="title">Event name or names</label>
-          <input class="input" id="title" name="title">
-        </div>
-        <div class="field">
-          <label for="hosts">Hosted by</label>
-          <input class="input" id="hosts" name="hosts">
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="h-when">
-        <h2 id="h-when"><svg class="icon"><use href="#i-calendar"/></svg>When and where</h2>
-        <div class="field-row">
+        <section class="panel" id="details-panel" aria-labelledby="h-details">
+          <h2 id="h-details">
+            <svg class="icon"><use href="#i-pen" /></svg>Details
+          </h2>
           <div class="field">
-            <label for="date">Date</label>
-            <input class="input" type="date" id="date" name="date">
+            <label for="eyebrow">Opening line</label>
+            <input class="input" id="eyebrow" name="eyebrow" />
           </div>
           <div class="field">
-            <label for="time">Start time</label>
-            <input class="input" type="time" id="time" name="time">
+            <label for="title">Event name or names</label>
+            <input class="input" id="title" name="title" />
           </div>
-        </div>
-        <div class="field">
-          <label for="venue">Venue</label>
-          <input class="input" id="venue" name="venue">
-        </div>
-        <div class="field">
-          <label for="address">Address</label>
-          <input class="input" id="address" name="address">
-          <span class="hint">Guests get a map button for this address.</span>
-        </div>
-      </section>
+          <div class="field">
+            <label for="hosts">Hosted by</label>
+            <input class="input" id="hosts" name="hosts" />
+          </div>
+        </section>
 
-      <section class="panel" aria-labelledby="h-note">
-        <h2 id="h-note"><svg class="icon"><use href="#i-heart"/></svg>Note and reply</h2>
-        <div class="field">
-          <label for="message">Short note</label>
-          <textarea class="input" id="message" name="message"></textarea>
-          <span class="hint">Up to two lines show on the card.</span>
-        </div>
-        <div class="field">
-          <label for="rsvp">How to reply</label>
-          <input class="input" id="rsvp" name="rsvp">
-        </div>
-      </section>
+        <section class="panel" aria-labelledby="h-when">
+          <h2 id="h-when">
+            <svg class="icon"><use href="#i-calendar" /></svg>When and where
+          </h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="date">Date</label>
+              <input class="input" type="date" id="date" name="date" />
+            </div>
+            <div class="field">
+              <label for="time">Start time</label>
+              <input class="input" type="time" id="time" name="time" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="venue">Venue</label>
+            <input class="input" id="venue" name="venue" />
+          </div>
+          <div class="field">
+            <label for="address">Address</label>
+            <input class="input" id="address" name="address" />
+            <span class="hint">Guests get a map button for this address.</span>
+          </div>
+        </section>
 
-      <section class="panel" id="color-panel" aria-labelledby="h-color">
-        <h2 id="h-color"><svg class="icon"><use href="#i-palette"/></svg>Accent color</h2>
-        <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="h-color"></div>
-      </section>
-    </form>
+        <section class="panel" aria-labelledby="h-note">
+          <h2 id="h-note">
+            <svg class="icon"><use href="#i-heart" /></svg>Note and reply
+          </h2>
+          <div class="field">
+            <label for="message">Short note</label>
+            <textarea class="input" id="message" name="message"></textarea>
+            <span class="hint">Up to two lines show on the card.</span>
+          </div>
+          <div class="field">
+            <label for="rsvp">How to reply</label>
+            <input class="input" id="rsvp" name="rsvp" />
+          </div>
+        </section>
 
-    <div class="preview-col" id="preview">
-      <div class="preview-stage">
-        <div class="preview-card" id="previewCard"></div>
+        <section class="panel" id="color-panel" aria-labelledby="h-color">
+          <h2 id="h-color">
+            <svg class="icon"><use href="#i-palette" /></svg>Accent color
+          </h2>
+          <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="h-color"></div>
+        </section>
+      </form>
+
+      <div class="preview-col" id="preview">
+        <div class="preview-stage">
+          <div class="preview-card" id="previewCard"></div>
+        </div>
+        <div class="actions" id="share-panel">
+          <button class="btn btn-primary owner-only" type="button" id="copyLink">
+            <svg class="icon"><use href="#i-link" /></svg>Copy share link
+          </button>
+          <button class="btn btn-ghost owner-only" type="button" id="downloadPng">
+            <svg class="icon"><use href="#i-download" /></svg>Download PNG
+          </button>
+          <a class="btn btn-ghost owner-only" href="#" id="previewGuest" target="_blank" rel="noopener"
+            ><svg class="icon"><use href="#i-eye" /></svg>Guest view</a
+          >
+          <button class="btn btn-ghost btn-small owner-only" type="button" id="reset">
+            <svg class="icon"><use href="#i-reset" /></svg>Reset text
+          </button>
+          <button class="btn btn-primary guest-only" type="button" id="addCalendar">
+            <svg class="icon"><use href="#i-calendar" /></svg>Add to calendar
+          </button>
+          <a class="btn btn-ghost guest-only" id="openMap" target="_blank" rel="noopener"
+            ><svg class="icon"><use href="#i-pin" /></svg>Open map</a
+          >
+        </div>
+        <p class="hint share-note owner-only">
+          Share links carry the text, template and color. To send your photo too, download the PNG.
+        </p>
+        <p class="status" id="status" role="status"></p>
       </div>
-      <div class="actions" id="share-panel">
-        <button class="btn btn-primary owner-only" type="button" id="copyLink"><svg class="icon"><use href="#i-link"/></svg>Copy share link</button>
-        <button class="btn btn-ghost owner-only" type="button" id="downloadPng"><svg class="icon"><use href="#i-download"/></svg>Download PNG</button>
-        <a class="btn btn-ghost owner-only" href="#" id="previewGuest" target="_blank" rel="noopener"><svg class="icon"><use href="#i-eye"/></svg>Guest view</a>
-        <button class="btn btn-ghost btn-small owner-only" type="button" id="reset"><svg class="icon"><use href="#i-reset"/></svg>Reset text</button>
-        <button class="btn btn-primary guest-only" type="button" id="addCalendar"><svg class="icon"><use href="#i-calendar"/></svg>Add to calendar</button>
-        <a class="btn btn-ghost guest-only" id="openMap" target="_blank" rel="noopener"><svg class="icon"><use href="#i-pin"/></svg>Open map</a>
-      </div>
-      <p class="hint share-note owner-only">Share links carry the text, template and color. To send your photo too, download the PNG.</p>
-      <p class="status" id="status" role="status"></p>
-    </div>
 
-    <a class="btn btn-primary jump-preview" href="#preview"><svg class="icon"><use href="#i-eye"/></svg>Preview</a>
-  </main>
+      <a class="btn btn-primary jump-preview" href="#preview"
+        ><svg class="icon"><use href="#i-eye" /></svg>Preview</a
+      >
+    </main>
 
-  <footer class="site-footer">
-    <span>Petalpost. Made for the people you love to gather.</span>
-    <a href="privacy.html">Privacy</a>
-    <a href="mailto:hello@example.com">Contact</a>
-  </footer>
+    <footer class="site-footer">
+      <span>Petalpost. Made for the people you love to gather.</span>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:hello@example.com">Contact</a>
+    </footer>
 
-  <script type="module" src="js/editor.js"></script>
-  <script src="js/analytics.js"></script>
-  <script defer src="/_vercel/insights/script.js"></script>
-</body>
+    <script type="module" src="js/editor.js"></script>
+    <script src="js/analytics.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
 </html>

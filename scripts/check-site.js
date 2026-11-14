@@ -8,7 +8,10 @@ const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf
 const attr = (html, pattern) => (html.match(pattern) || [])[1];
 
 let failures = 0;
-const fail = (message) => { console.log(message); failures++; };
+const fail = (message) => {
+  console.log(message);
+  failures++;
+};
 
 // Indexed pages are the root pages whose robots tag allows indexing.
 const pages = readdirSync(new URL('..', import.meta.url))
@@ -21,11 +24,15 @@ for (const { file, html } of pages) {
   const canonical = attr(html, /<link rel="canonical" href="([^"]+)"/);
   const ogUrl = attr(html, /<meta property="og:url" content="([^"]+)"/);
   const ogImage = attr(html, /<meta property="og:image" content="([^"]+)"/);
-  if (!canonical || !ogUrl || !ogImage) { fail(`${file}: missing canonical, og:url or og:image`); continue; }
+  if (!canonical || !ogUrl || !ogImage) {
+    fail(`${file}: missing canonical, og:url or og:image`);
+    continue;
+  }
   const path = file === 'index.html' ? '/' : `/${file}`;
   if (new URL(canonical).pathname !== path) fail(`${file}: canonical ${canonical} does not end in ${path}`);
   if (ogUrl !== canonical) fail(`${file}: og:url ${ogUrl} differs from canonical ${canonical}`);
-  if (!existsSync(new URL(`..${new URL(ogImage).pathname}`, import.meta.url))) fail(`${file}: og:image ${ogImage} has no file`);
+  if (!existsSync(new URL(`..${new URL(ogImage).pathname}`, import.meta.url)))
+    fail(`${file}: og:image ${ogImage} has no file`);
   urls.push(canonical, ogImage);
   const icon = attr(html, /<link rel="icon" href="([^"]+)"/);
   if (!icon || !existsSync(new URL(`../${icon}`, import.meta.url))) fail(`${file}: missing favicon link or file`);
@@ -71,10 +78,17 @@ for (const [, name, value] of styles.matchAll(/(--[\w-]+):([^;]+);/g)) {
 
 // landing.js writes the template and accent counts; the HTML text is what shows before it runs.
 const index = read('index.html');
-for (const [id, count] of [['templateCount', TEMPLATES.length], ['accentCount', ACCENTS.length]]) {
+for (const [id, count] of [
+  ['templateCount', TEMPLATES.length],
+  ['accentCount', ACCENTS.length],
+]) {
   const shown = attr(index, new RegExp(`id="${id}">([^<]*)<`));
   if (shown !== String(count)) fail(`index.html: #${id} shows ${shown}, landing.js writes ${count}`);
 }
 
-console.log(failures ? `${failures} failed` : `site checks passed: ${pages.length} indexed pages under ${origins[0]}, contact ${addresses[0]}`);
+console.log(
+  failures
+    ? `${failures} failed`
+    : `site checks passed: ${pages.length} indexed pages under ${origins[0]}, contact ${addresses[0]}`,
+);
 process.exit(failures ? 1 : 0);

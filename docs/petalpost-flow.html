@@ -1,114 +1,311 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Petalpost Flow</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --color-paper: #f5f5f5; --color-ink: #2d3142; --color-muted: #4f5d75; --color-accent: #bf4520;
-      --font-sans: 'Geist', system-ui, sans-serif;
-      --font-serif: 'Instrument Serif', 'Noto Serif', serif;
-      --font-mono: 'Geist Mono', ui-monospace, monospace;
-    }
-    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
-    /* Cap the width so the 960 by 600 diagram, heading and padding fit one screen height. */
-    .frame { max-width: min(1200px, calc((100vh - 14rem) * 1.6)); width: 100%; }
-    .diagram-container { width: 100%; overflow-x: auto; overflow-y: hidden; }
-    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
-    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
-    svg { width: 100%; min-width: 960px; display: block; }
-    .zone { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.14em; fill: #4f5d75; }
-    .name { font-family: var(--font-sans); font-size: 12px; font-weight: 600; fill: #2d3142; text-anchor: middle; }
-    .sub { font-family: var(--font-mono); font-size: 9px; fill: #4f5d75; text-anchor: middle; }
-    .lbl { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.06em; fill: #4f5d75; text-anchor: middle; }
-    .lbl-a { fill: #bf4520; }
-    .lbl-l { fill: #2e5aa8; }
-    .note { font-family: var(--font-mono); font-size: 9px; fill: #4f5d75; }
-    ::selection { background: #f2c9b8; color: #2d3142; fill: #2d3142; }
-    @media print { .diagram-container { overflow-x: visible; } svg { min-width: 0; } }
-  </style>
-</head>
-<body>
-  <div class="frame">
-    <p class="eyebrow">Architecture · Petalpost</p>
-    <h1>From local to browser, and what runs there</h1>
-    <div class="diagram-container">
-      <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="petalpost-flow-title petalpost-flow-desc">
-        <title id="petalpost-flow-title">Petalpost deployment and execution flow</title>
-        <desc id="petalpost-flow-desc">A git push from the local repository reaches GitHub, which triggers Vercel to publish the static files to its edge network without a build; a visitor's browser then loads index.html, opens editor.html, exports the invitation as a PNG on the device, and sends pageviews to Vercel Web Analytics.</desc>
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
-          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
-          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
-        </defs>
-        <rect width="100%" height="100%" fill="#f5f5f5"/>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Petalpost Flow</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #f5f5f5;
+        --color-ink: #2d3142;
+        --color-muted: #4f5d75;
+        --color-accent: #bf4520;
+        --font-sans: 'Geist', system-ui, sans-serif;
+        --font-serif: 'Instrument Serif', 'Noto Serif', serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 2rem;
+      }
+      /* Cap the width so the 960 by 600 diagram, heading and padding fit one screen height. */
+      .frame {
+        max-width: min(1200px, calc((100vh - 14rem) * 1.6));
+        width: 100%;
+      }
+      .diagram-container {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.66rem;
+        font-weight: 500;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 0.5rem;
+      }
+      h1 {
+        font-family: var(--font-serif);
+        font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        margin-bottom: 1.5rem;
+      }
+      svg {
+        width: 100%;
+        min-width: 960px;
+        display: block;
+      }
+      .zone {
+        font-family: var(--font-mono);
+        font-size: 8px;
+        letter-spacing: 0.14em;
+        fill: #4f5d75;
+      }
+      .name {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        fill: #2d3142;
+        text-anchor: middle;
+      }
+      .sub {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        fill: #4f5d75;
+        text-anchor: middle;
+      }
+      .lbl {
+        font-family: var(--font-mono);
+        font-size: 8px;
+        letter-spacing: 0.06em;
+        fill: #4f5d75;
+        text-anchor: middle;
+      }
+      .lbl-a {
+        fill: #bf4520;
+      }
+      .lbl-l {
+        fill: #2e5aa8;
+      }
+      .note {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        fill: #4f5d75;
+      }
+      ::selection {
+        background: #f2c9b8;
+        color: #2d3142;
+        fill: #2d3142;
+      }
+      @media print {
+        .diagram-container {
+          overflow-x: visible;
+        }
+        svg {
+          min-width: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p class="eyebrow">Architecture · Petalpost</p>
+      <h1>From local to browser, and what runs there</h1>
+      <div class="diagram-container">
+        <svg
+          viewBox="0 0 960 600"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-labelledby="petalpost-flow-title petalpost-flow-desc"
+        >
+          <title id="petalpost-flow-title">Petalpost deployment and execution flow</title>
+          <desc id="petalpost-flow-desc">
+            A git push from the local repository reaches GitHub, which triggers Vercel to publish the static files to
+            its edge network without a build; a visitor's browser then loads index.html, opens editor.html, exports the
+            invitation as a PNG on the device, and sends pageviews to Vercel Web Analytics.
+          </desc>
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4f5d75" />
+            </marker>
+            <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#bf4520" />
+            </marker>
+            <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8" />
+            </marker>
+          </defs>
+          <rect width="100%" height="100%" fill="#f5f5f5" />
 
-        <rect x="24" y="30" width="912" height="190" rx="6" fill="#ebebeb" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
-        <text class="zone" x="40" y="50">1. DEPLOYMENT, ON EACH PUSH</text>
-        <rect x="24" y="250" width="912" height="280" rx="6" fill="#ebebeb" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
-        <text class="zone" x="40" y="270">2. EXECUTION, ON EACH VISIT</text>
+          <rect
+            x="24"
+            y="30"
+            width="912"
+            height="190"
+            rx="6"
+            fill="#ebebeb"
+            stroke="#2d3142"
+            stroke-opacity="0.12"
+            stroke-width="0.8"
+          />
+          <text class="zone" x="40" y="50">1. DEPLOYMENT, ON EACH PUSH</text>
+          <rect
+            x="24"
+            y="250"
+            width="912"
+            height="280"
+            rx="6"
+            fill="#ebebeb"
+            stroke="#2d3142"
+            stroke-opacity="0.12"
+            stroke-width="0.8"
+          />
+          <text class="zone" x="40" y="270">2. EXECUTION, ON EACH VISIT</text>
 
-        <line x1="190" y1="122" x2="268" y2="122" stroke="#bf4520" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
-        <rect x="200" y="102" width="58" height="12" rx="2" fill="#ebebeb"/><text class="lbl lbl-a" x="229" y="111">GIT PUSH</text>
-        <line x1="420" y1="122" x2="498" y2="122" stroke="#bf4520" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
-        <rect x="430" y="102" width="58" height="12" rx="2" fill="#ebebeb"/><text class="lbl lbl-a" x="459" y="111">WEBHOOK</text>
-        <line x1="650" y1="122" x2="728" y2="122" stroke="#bf4520" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
-        <rect x="660" y="102" width="58" height="12" rx="2" fill="#ebebeb"/><text class="lbl lbl-a" x="689" y="111">PUBLISH</text>
+          <line
+            x1="190"
+            y1="122"
+            x2="268"
+            y2="122"
+            stroke="#bf4520"
+            stroke-width="1.2"
+            marker-end="url(#arrow-accent)"
+          />
+          <rect x="200" y="102" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-a" x="229" y="111">GIT PUSH</text>
+          <line
+            x1="420"
+            y1="122"
+            x2="498"
+            y2="122"
+            stroke="#bf4520"
+            stroke-width="1.2"
+            marker-end="url(#arrow-accent)"
+          />
+          <rect x="430" y="102" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-a" x="459" y="111">WEBHOOK</text>
+          <line
+            x1="650"
+            y1="122"
+            x2="728"
+            y2="122"
+            stroke="#bf4520"
+            stroke-width="1.2"
+            marker-end="url(#arrow-accent)"
+          />
+          <rect x="660" y="102" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl lbl-a" x="689" y="111">PUBLISH</text>
 
-        <line x1="805" y1="154" x2="805" y2="318" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
-        <rect x="813" y="226" width="62" height="12" rx="2" fill="#f5f5f5"/><text class="lbl lbl-l" x="844" y="235">HTTPS GET</text>
+          <line x1="805" y1="154" x2="805" y2="318" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)" />
+          <rect x="813" y="226" width="62" height="12" rx="2" fill="#f5f5f5" />
+          <text class="lbl lbl-l" x="844" y="235">HTTPS GET</text>
 
-        <line x1="730" y1="352" x2="652" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <rect x="662" y="332" width="58" height="12" rx="2" fill="#ebebeb"/><text class="lbl" x="691" y="341">OPENS /</text>
-        <line x1="500" y1="352" x2="422" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <rect x="432" y="332" width="58" height="12" rx="2" fill="#ebebeb"/><text class="lbl" x="461" y="341">CHOOSE</text>
-        <line x1="270" y1="352" x2="192" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <rect x="202" y="332" width="58" height="12" rx="2" fill="#ebebeb"/><text class="lbl" x="231" y="341">EXPORT</text>
-        <line x1="805" y1="384" x2="805" y2="438" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-        <rect x="813" y="405" width="62" height="12" rx="2" fill="#ebebeb"/><text class="lbl" x="844" y="414">PAGEVIEW</text>
+          <line x1="730" y1="352" x2="652" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
+          <rect x="662" y="332" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="691" y="341">OPENS /</text>
+          <line x1="500" y1="352" x2="422" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
+          <rect x="432" y="332" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="461" y="341">CHOOSE</text>
+          <line x1="270" y1="352" x2="192" y2="352" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
+          <rect x="202" y="332" width="58" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="231" y="341">EXPORT</text>
+          <line
+            x1="805"
+            y1="384"
+            x2="805"
+            y2="438"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            stroke-dasharray="5 4"
+            marker-end="url(#arrow)"
+          />
+          <rect x="813" y="405" width="62" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="844" y="414">PAGEVIEW</text>
 
-        <rect x="40" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="115" y="120">Local repo</text><text class="sub" x="115" y="136">HTML, CSS, JS · no build</text>
-        <rect x="270" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="345" y="120">GitHub</text><text class="sub" x="345" y="136">mdulea/petalpost</text>
-        <rect x="500" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="575" y="120">Vercel project</text><text class="sub" x="575" y="136">build skipped</text>
-        <rect x="730" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#bf4520" stroke-width="1.2"/>
-        <text class="name" x="805" y="120">Vercel edge CDN</text><text class="sub" x="805" y="136">public URL</text>
-        <text class="note" x="40" y="186">.vercelignore drops scripts/, README.md, .env files and node_modules/ before upload.</text>
-        <text class="note" x="40" y="202">Pushes to main deploy to production; other branches get preview URLs behind Vercel login.</text>
+          <rect x="40" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="115" y="120">Local repo</text>
+          <text class="sub" x="115" y="136">HTML, CSS, JS · no build</text>
+          <rect x="270" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="345" y="120">GitHub</text>
+          <text class="sub" x="345" y="136">mdulea/petalpost</text>
+          <rect x="500" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="575" y="120">Vercel project</text>
+          <text class="sub" x="575" y="136">build skipped</text>
+          <rect x="730" y="90" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#bf4520" stroke-width="1.2" />
+          <text class="name" x="805" y="120">Vercel edge CDN</text>
+          <text class="sub" x="805" y="136">public URL</text>
+          <text class="note" x="40" y="186">
+            .vercelignore drops scripts/, README.md, .env files and node_modules/ before upload.
+          </text>
+          <text class="note" x="40" y="202">
+            Pushes to main deploy to production; other branches get preview URLs behind Vercel login.
+          </text>
 
-        <rect x="730" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="805" y="350">Visitor browser</text><text class="sub" x="805" y="366">all code runs here</text>
-        <rect x="500" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="575" y="350">Landing page</text><text class="sub" x="575" y="366">index.html</text>
-        <rect x="270" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="345" y="350">Editor</text><text class="sub" x="345" y="366">editor.html</text>
-        <rect x="40" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="115" y="350">PNG download</text><text class="sub" x="115" y="366">html-to-image</text>
-        <rect x="730" y="440" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-dasharray="5 4" stroke-width="1"/>
-        <text class="name" x="805" y="470">Web Analytics</text><text class="sub" x="805" y="486">/_vercel/insights</text>
-        <line x1="575" y1="384" x2="575" y2="438" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <rect x="583" y="405" width="36" height="12" rx="2" fill="#ebebeb"/><text class="lbl" x="601" y="414">LINK</text>
-        <path d="M345 384 V464 Q345 472 353 472 H498" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <rect x="407" y="452" width="36" height="12" rx="2" fill="#ebebeb"/><text class="lbl" x="425" y="461">LINK</text>
-        <rect x="500" y="440" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
-        <text class="name" x="575" y="470">Privacy page</text><text class="sub" x="575" y="486">privacy.html, analytics</text>
-        <text class="note" x="40" y="430">Shared: templates.js, icons.js,</text>
-        <text class="note" x="40" y="446">invite.js, mount.js. No server code.</text>
-        <text class="note" x="40" y="462">The editor keeps the draft and photo</text>
-        <text class="note" x="40" y="478">in localStorage on the device.</text>
+          <rect x="730" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="805" y="350">Visitor browser</text>
+          <text class="sub" x="805" y="366">all code runs here</text>
+          <rect x="500" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="575" y="350">Landing page</text>
+          <text class="sub" x="575" y="366">index.html</text>
+          <rect x="270" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="345" y="350">Editor</text>
+          <text class="sub" x="345" y="366">editor.html</text>
+          <rect x="40" y="320" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="115" y="350">PNG download</text>
+          <text class="sub" x="115" y="366">html-to-image</text>
+          <rect
+            x="730"
+            y="440"
+            width="150"
+            height="64"
+            rx="6"
+            fill="#f5f5f5"
+            stroke="#2d3142"
+            stroke-dasharray="5 4"
+            stroke-width="1"
+          />
+          <text class="name" x="805" y="470">Web Analytics</text>
+          <text class="sub" x="805" y="486">/_vercel/insights</text>
+          <line x1="575" y1="384" x2="575" y2="438" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)" />
+          <rect x="583" y="405" width="36" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="601" y="414">LINK</text>
+          <path
+            d="M345 384 V464 Q345 472 353 472 H498"
+            fill="none"
+            stroke="#4f5d75"
+            stroke-width="1.2"
+            marker-end="url(#arrow)"
+          />
+          <rect x="407" y="452" width="36" height="12" rx="2" fill="#ebebeb" />
+          <text class="lbl" x="425" y="461">LINK</text>
+          <rect x="500" y="440" width="150" height="64" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1" />
+          <text class="name" x="575" y="470">Privacy page</text>
+          <text class="sub" x="575" y="486">privacy.html, analytics</text>
+          <text class="note" x="40" y="430">Shared: templates.js, icons.js,</text>
+          <text class="note" x="40" y="446">invite.js, mount.js. No server code.</text>
+          <text class="note" x="40" y="462">The editor keeps the draft and photo</text>
+          <text class="note" x="40" y="478">in localStorage on the device.</text>
 
-        <line x1="30" y1="552" x2="930" y2="552" stroke="#2d3142" stroke-opacity="0.10" stroke-width="0.8"/>
-        <text class="zone" x="30" y="570">LEGEND</text>
-        <line x1="100" y1="567" x2="130" y2="567" stroke="#bf4520" stroke-width="1.2"/><text class="note" x="138" y="570">deploy path</text>
-        <line x1="260" y1="567" x2="290" y2="567" stroke="#2e5aa8" stroke-width="1.2"/><text class="note" x="298" y="570">network request</text>
-        <line x1="420" y1="567" x2="450" y2="567" stroke="#4f5d75" stroke-width="1.2"/><text class="note" x="458" y="570">in-browser step</text>
-        <line x1="580" y1="567" x2="610" y2="567" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5 4"/><text class="note" x="618" y="570">background beacon</text>
-      </svg>
+          <line x1="30" y1="552" x2="930" y2="552" stroke="#2d3142" stroke-opacity="0.10" stroke-width="0.8" />
+          <text class="zone" x="30" y="570">LEGEND</text>
+          <line x1="100" y1="567" x2="130" y2="567" stroke="#bf4520" stroke-width="1.2" />
+          <text class="note" x="138" y="570">deploy path</text>
+          <line x1="260" y1="567" x2="290" y2="567" stroke="#2e5aa8" stroke-width="1.2" />
+          <text class="note" x="298" y="570">network request</text>
+          <line x1="420" y1="567" x2="450" y2="567" stroke="#4f5d75" stroke-width="1.2" />
+          <text class="note" x="458" y="570">in-browser step</text>
+          <line x1="580" y1="567" x2="610" y2="567" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5 4" />
+          <text class="note" x="618" y="570">background beacon</text>
+        </svg>
+      </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>

@@ -2,8 +2,21 @@ import './icons.js';
 import { ACCENTS, CATEGORIES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import {
-  EDITABLE, FIELDS, FIELD_LIMITS, buildIcs, changePhoto, makeInviteData, mapLink, openInvite, resetInvite, saveDraft, shareLink, slug,
-  storedInvite, switchTemplate, updateInvite,
+  EDITABLE,
+  FIELDS,
+  FIELD_LIMITS,
+  buildIcs,
+  changePhoto,
+  makeInviteData,
+  mapLink,
+  openInvite,
+  resetInvite,
+  saveDraft,
+  shareLink,
+  slug,
+  storedInvite,
+  switchTemplate,
+  updateInvite,
 } from './invite.js';
 
 const form = /** @type {HTMLFormElement} */ (document.getElementById('form'));
@@ -12,7 +25,11 @@ const statusEl = document.getElementById('status');
 
 // Reading localStorage throws when the browser blocks storage; null storage then keeps nothing.
 let storage = null;
-try { storage = localStorage; } catch { storage = null; }
+try {
+  storage = localStorage;
+} catch {
+  storage = null;
+}
 
 const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage) });
 
@@ -24,7 +41,10 @@ let statusTimer;
 function setStatus(text, { keep = false } = {}) {
   statusEl.textContent = text;
   clearTimeout(statusTimer);
-  if (!keep) statusTimer = setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  if (!keep)
+    statusTimer = setTimeout(() => {
+      statusEl.textContent = '';
+    }, 4000);
 }
 
 let saveTimer;
@@ -50,25 +70,38 @@ function commit() {
 
 // The accent radio group takes its value too: a null accent checks the template default swatch.
 function fillForm() {
-  EDITABLE.forEach((f) => { form.elements[f].value = state.d[f] ?? ''; });
+  EDITABLE.forEach((f) => {
+    form.elements[f].value = state.d[f] ?? '';
+  });
 }
 
-FIELDS.forEach((f) => { if (FIELD_LIMITS[f]) form.elements[f].maxLength = FIELD_LIMITS[f]; });
+FIELDS.forEach((f) => {
+  if (FIELD_LIMITS[f]) form.elements[f].maxLength = FIELD_LIMITS[f];
+});
 
 // The picker shows one occasion at a time; the tab follows the selected template.
 const pickerTabs = document.getElementById('pickerTabs');
-pickerTabs.innerHTML = CATEGORIES
-  .map((c) => `<button class="filter" type="button" data-category="${c}">${c}</button>`)
-  .join('');
+pickerTabs.innerHTML = CATEGORIES.map(
+  (c) => `<button class="filter" type="button" data-category="${c}">${c}</button>`,
+).join('');
 
 function renderPicker(category) {
-  pickerTabs.querySelectorAll('.filter').forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.category === category)));
-  mountInvites(document.getElementById('picker'), TEMPLATES.filter((t) => t.category === category).map((t) => `
+  pickerTabs
+    .querySelectorAll('.filter')
+    .forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.category === category)));
+  mountInvites(
+    document.getElementById('picker'),
+    TEMPLATES.filter((t) => t.category === category)
+      .map(
+        (t) => `
     <label class="picker-item">
       <input type="radio" name="template" value="${t.id}" ${t.id === state.t ? 'checked' : ''}>
       ${renderInvite(t, makeInviteData(t), { inline: true, decorative: true })}
       <span class="picker-name">${t.name}</span>
-    </label>`).join(''));
+    </label>`,
+      )
+      .join(''),
+  );
 }
 
 pickerTabs.addEventListener('click', (e) => {
@@ -80,10 +113,12 @@ pickerTabs.addEventListener('click', (e) => {
 
 document.getElementById('swatches').innerHTML =
   `<label class="swatch swatch-default" title="Template default"><input type="radio" name="accent" value="" aria-label="Template default"></label>` +
-  ACCENTS.map((a) => `
+  ACCENTS.map(
+    (a) => `
     <label class="swatch" style="background:${a.hex}" title="${a.name}">
       <input type="radio" name="accent" value="${a.hex}" aria-label="${a.name}">
-    </label>`).join('');
+    </label>`,
+  ).join('');
 
 form.addEventListener('input', (e) => {
   const { name, value } = /** @type {HTMLInputElement} */ (e.target);
@@ -138,7 +173,10 @@ photoInput.addEventListener('change', () => {
   if (photoInput.files[0]) loadPhoto(photoInput.files[0]);
   photoInput.value = '';
 });
-dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('is-over'); });
+dropzone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropzone.classList.add('is-over');
+});
 // dragleave also fires when the pointer moves onto a child of the dropzone.
 dropzone.addEventListener('dragleave', (e) => {
   if (!dropzone.contains(/** @type {Node} */ (e.relatedTarget))) dropzone.classList.remove('is-over');
@@ -195,7 +233,10 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
 // Guest view: calendar file built from the invite fields.
 document.getElementById('addCalendar').addEventListener('click', () => {
   const ics = buildIcs(state.d, new Date());
-  if (!ics) { setStatus('This invite has no valid date yet.'); return; }
+  if (!ics) {
+    setStatus('This invite has no valid date yet.');
+    return;
+  }
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
   link.download = `${slug(state.d.title)}.ics`;
@@ -211,7 +252,8 @@ if (state.guest) {
   document.body.classList.toggle('link-broken', state.broken);
   document.title = `${heading} | Petalpost`;
   document.querySelector('.editor-head h1').textContent = heading;
-  if (state.broken) setStatus('This invite link is incomplete. Ask the host to send the whole link again.', { keep: true });
+  if (state.broken)
+    setStatus('This invite link is incomplete. Ask the host to send the whole link again.', { keep: true });
 }
 
 fillForm();

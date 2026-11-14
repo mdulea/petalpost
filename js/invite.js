@@ -3,7 +3,17 @@
 import { ACCENTS, getTemplate, PHOTO_URL } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
-export const FIELD_LIMITS = { eyebrow: 60, title: 48, hosts: 60, date: null, time: null, venue: 60, address: 90, message: 110, rsvp: 40 };
+export const FIELD_LIMITS = {
+  eyebrow: 60,
+  title: 48,
+  hosts: 60,
+  date: null,
+  time: null,
+  venue: 60,
+  address: 90,
+  message: 110,
+  rsvp: 40,
+};
 export const FIELDS = Object.keys(FIELD_LIMITS);
 // Every name the editor form writes, and every key of a record.
 export const EDITABLE = [...FIELDS, 'photoY', 'accent'];
@@ -86,8 +96,17 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null 
   if (shared) return { ...shared, photo: null, guest, broken: false };
   if (guest) return { ...restoreInvite({ t: requested }), photo: null, guest, broken: true };
   let saved;
-  try { saved = JSON.parse(draft); } catch { saved = null; }
-  const state = { ...(restoreInvite(saved) || restoreInvite({ t: requested })), photo: isPhoto(photo) ? photo : null, guest, broken: false };
+  try {
+    saved = JSON.parse(draft);
+  } catch {
+    saved = null;
+  }
+  const state = {
+    ...(restoreInvite(saved) || restoreInvite({ t: requested })),
+    photo: isPhoto(photo) ? photo : null,
+    guest,
+    broken: false,
+  };
   if (requested && requested !== state.t) switchTemplate(state, requested);
   return state;
 }
@@ -98,7 +117,11 @@ const DRAFT_KEY = 'petalpost:draft';
 const PHOTO_KEY = 'petalpost:photo';
 
 function readStorage(storage, key) {
-  try { return storage.getItem(key); } catch { return null; }
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 function writeStorage(storage, key, value) {
@@ -112,7 +135,10 @@ function writeStorage(storage, key, value) {
 }
 
 // The stored draft and photo strings, as openInvite takes them.
-export const storedInvite = (storage) => ({ draft: readStorage(storage, DRAFT_KEY), photo: readStorage(storage, PHOTO_KEY) });
+export const storedInvite = (storage) => ({
+  draft: readStorage(storage, DRAFT_KEY),
+  photo: readStorage(storage, PHOTO_KEY),
+});
 
 // The guest view never writes: a share link opens on the owner's origin and would overwrite the owner's draft.
 export function saveDraft(state, storage) {
@@ -129,7 +155,11 @@ export async function changePhoto(state, source, storage) {
   const request = {};
   photoChanges.set(state, request);
   let url;
-  try { url = await source; } catch { url = undefined; }
+  try {
+    url = await source;
+  } catch {
+    url = undefined;
+  }
   if (photoChanges.get(state) !== request) return 'superseded';
   if (!isPhoto(url)) return 'refused';
   state.photo = url;
@@ -142,7 +172,9 @@ export async function changePhoto(state, source, storage) {
 function encodeState(value) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
   let binary = '';
-  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -156,12 +188,20 @@ function decodeState(text) {
 }
 
 // Guest view: the address as a Google Maps search, or null without an address.
-export const mapLink = (data) => (data.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address)}` : null);
+export const mapLink = (data) =>
+  data.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address)}` : null;
 
-export const slug = (text) => (text || 'invite').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'invite';
+export const slug = (text) =>
+  (text || 'invite')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'invite';
 
 function icsEscape(text) {
-  return String(text || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  return String(text || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/([,;])/g, '\\$1');
 }
 
 // data: a record from makeInviteData. Events last three hours in floating local time. now sets DTSTAMP.
@@ -172,15 +212,25 @@ export function buildIcs(data, now) {
   const [h, m] = (data.time || '12:00').split(':').map(Number);
   const start = new Date(Date.UTC(y, mo - 1, day, h, m));
   const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
-  const local = (date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, '');
+  const local = (date) =>
+    date
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d+Z$/, '');
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
   return [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Petalpost//Invite//EN', 'BEGIN:VEVENT',
-    `UID:${data.date.replace(/-/g, '')}-${slug(data.title)}@petalpost`, `DTSTAMP:${stamp}`,
-    `DTSTART:${local(start)}`, `DTEND:${local(end)}`,
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Petalpost//Invite//EN',
+    'BEGIN:VEVENT',
+    `UID:${data.date.replace(/-/g, '')}-${slug(data.title)}@petalpost`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${local(start)}`,
+    `DTEND:${local(end)}`,
     `SUMMARY:${icsEscape(data.title)}`,
     `LOCATION:${icsEscape([data.venue, data.address].filter(Boolean).join(', '))}`,
     `DESCRIPTION:${icsEscape([data.hosts, data.message, data.rsvp].filter(Boolean).join('\n'))}`,
-    'END:VEVENT', 'END:VCALENDAR',
+    'END:VEVENT',
+    'END:VCALENDAR',
   ].join('\r\n');
 }
