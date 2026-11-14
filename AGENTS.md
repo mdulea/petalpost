@@ -47,7 +47,7 @@ Behavior changes: add/update checks in `scripts/`. Before finishing: run `pnpm t
 
 ## Git
 
-- Worktrees live in `worktrees/` (gitignored).
+- Worktrees live in `.worktrees/` (gitignored).
 - Commit subject: imperative sentence-case reason, no type prefix, e.g. `Run the format check and lint in pnpm test`. Blank line, body: approach rationale + context/constraints/tradeoffs absent from diff. Implementation details: diff only.
 - Formatting-only commits: add hash to `.git-blame-ignore-revs`.
 - Output: changes, reasons, tests.

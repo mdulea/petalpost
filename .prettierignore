@@ -4,4 +4,4 @@ pnpm-lock.yaml
 .pnpm-store/
 .npm-cache/
 .vercel/
-worktrees/
+.worktrees/
