@@ -742,6 +742,11 @@ export const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 // a link when href is set, a <span> when inline is set for use inside a <label>, otherwise a <div>.
 // label becomes the container's aria-label. decorative hides a sample thumbnail from screen readers.
 // Pages insert the result with mountInvites (js/mount.js), which also fits the text.
+/**
+ * @param {(typeof TEMPLATES)[number]} template
+ * @param {Record<string, any>} d
+ * @param {{ href?: string, label?: string, inline?: boolean, decorative?: boolean }} [options]
+ */
 export function renderInvite(template, d, { href, label, inline, decorative } = {}) {
   const c = inviteColors(template, d.accent);
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;

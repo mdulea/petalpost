@@ -14,12 +14,12 @@ mountInvites(document.getElementById('heroFan'), HERO_TEMPLATES
 // Today's pick rotates daily so returning visitors see a different template.
 const dayIndex = Math.floor(Date.now() / 86400000) % TEMPLATES.length;
 const pick = TEMPLATES[dayIndex];
-const pickLink = document.getElementById('todaysPick');
+const pickLink = /** @type {HTMLAnchorElement} */ (document.getElementById('todaysPick'));
 pickLink.href = editorUrl(pick.id);
 mountInvites(pickLink, `${renderInvite(pick, makeInviteData(pick), { decorative: true })}<div><strong>${pick.name}</strong><span>${pick.tagline}</span></div>`);
 
-document.getElementById('templateCount').textContent = TEMPLATES.length;
-document.getElementById('accentCount').textContent = ACCENTS.length;
+document.getElementById('templateCount').textContent = String(TEMPLATES.length);
+document.getElementById('accentCount').textContent = String(ACCENTS.length);
 
 document.getElementById('categoryChips').innerHTML = CATEGORIES
   .map((c) => `<a class="chip-link" href="#templates" data-jump="${c}">${c}</a>`)
@@ -49,18 +49,18 @@ filters.innerHTML = ['All', ...CATEGORIES]
   .join('');
 
 function applyFilter(category) {
-  filters.querySelectorAll('.filter').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === category)));
-  gallery.querySelectorAll('.card').forEach((card) => {
+  filters.querySelectorAll('.filter').forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.filter === category)));
+  gallery.querySelectorAll('.card').forEach((/** @type {HTMLElement} */ card) => {
     card.hidden = category !== 'All' && card.dataset.category !== category;
   });
 }
 
 filters.addEventListener('click', (e) => {
-  const button = e.target.closest('.filter');
+  const button = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('.filter'));
   if (button) applyFilter(button.dataset.filter);
 });
 
 document.getElementById('categoryChips').addEventListener('click', (e) => {
-  const chip = e.target.closest('[data-jump]');
+  const chip = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('[data-jump]'));
   if (chip) applyFilter(chip.dataset.jump);
 });

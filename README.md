@@ -16,6 +16,8 @@ Run pnpm through Corepack so that nothing is installed globally:
 ```sh
 corepack pnpm install
 corepack pnpm dev
+corepack pnpm lint
+corepack pnpm typecheck
 corepack pnpm test
 ```
 
@@ -23,6 +25,14 @@ corepack pnpm test
 Each page loads its script as an ES module, and browsers refuse modules opened from the file system.
 `serve.json` turns off clean URLs so that `/editor.html` loads without a redirect, as it does on Vercel.
 The site has no build step, and Vercel deploys no package files.
+
+`lint` runs ESLint with its recommended rules over `js/`, `scripts/` and `eslint.config.js`.
+`vendor/` is minified third-party code, so ESLint skips it.
+
+`typecheck` runs TypeScript over the same files without emitting output.
+The code stays plain JavaScript, and JSDoc comments supply types where inference falls short, such as the element type of a DOM lookup.
+Strict mode is off because most functions have no parameter types yet.
+`js/globals.d.ts` declares the globals that classic scripts define for the modules: `htmlToImage` and the Vercel Web Analytics queue.
 
 `test` runs the three checks in `scripts/` and stops at the first failure.
 
