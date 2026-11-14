@@ -226,6 +226,11 @@ check(
 check('clearing a field keeps it empty', [ctx.updateInvite(typed, 'venue', ''), typed.d.venue], [true, '']);
 check('the photo slider stores a number', [ctx.updateInvite(typed, 'photoY', '20'), typed.d.photoY], [true, 20]);
 check(
+  'a photo position outside the slider range stops at its end',
+  [-5, 500].map((photoY) => ctx.makeInviteData(birthday, { photoY }).photoY),
+  [0, 100],
+);
+check(
   'a known accent is kept and the default accent is null',
   [ctx.updateInvite(typed, 'accent', '#52704C'), typed.d.accent, ctx.updateInvite(typed, 'accent', ''), typed.d.accent],
   [true, '#52704C', true, null],

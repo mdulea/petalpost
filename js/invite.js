@@ -31,7 +31,8 @@ export function makeInviteData(template, source) {
     if (typeof s[f] !== 'string' || (FIELD_FORMATS[f] && !FIELD_FORMATS[f](s[f]))) return;
     d[f] = FIELD_LIMITS[f] ? s[f].slice(0, FIELD_LIMITS[f]) : s[f];
   });
-  d.photoY = s.photoY != null && Number.isFinite(Number(s.photoY)) ? Number(s.photoY) : 50;
+  // The photo position is a percentage within the editor slider's 0 to 100 range.
+  d.photoY = s.photoY != null && Number.isFinite(Number(s.photoY)) ? Math.min(100, Math.max(0, Number(s.photoY))) : 50;
   d.accent = ACCENTS.some((a) => a.hex === s.accent) ? s.accent : null;
   return d;
 }
