@@ -1,0 +1,473 @@
+// Fails when guest replies, private links, the API client or the RSVP API break. Checks: reply and link fragment
+// validation; publishing and opening an invitation from another browser with presentation fields only; updates,
+// replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
+// reach only their own event or reply; reply totals; deletion with its replies; no secret, hash or reply id in any
+// response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
+// invitation and per-invitation reply quotas; unavailable storage; network failure; private link round trips.
+// Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database.
+// Run: node scripts/check-rsvp.js
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { after, test } from 'node:test';
+import { PGlite } from '@electric-sql/pglite';
+import { getTemplate } from '../js/templates.js';
+import { eventLink, makeInviteData } from '../js/invite.js';
+import { createClient, makeReply, manageLink, newId, newSecret, readCredential, responseLink } from '../js/rsvp.js';
+import { createApi } from '../server/api.js';
+import { migrate } from '../server/migrate.js';
+
+const ID = 'AAAAAAAAAAAAAAAAAAAAAA';
+const SECRET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234';
+
+test('a reply keeps the trimmed name, the answer and the party size', () => {
+  assert.deepEqual(makeReply({ name: '  Zoë 🎂 ', attending: true, partySize: 3 }), {
+    name: 'Zoë 🎂',
+    attending: true,
+    partySize: 3,
+  });
+});
+
+test('a declined reply has a party size of 0', () => {
+  assert.deepEqual(makeReply({ name: 'Sam', attending: false, partySize: 0 }), {
+    name: 'Sam',
+    attending: false,
+    partySize: 0,
+  });
+});
+
+test('a name of 80 code points is accepted, counting each emoji once', () => {
+  assert.equal(makeReply({ name: '🎂'.repeat(80), attending: true, partySize: 1 })?.name, '🎂'.repeat(80));
+});
+
+const invalidReplies = {
+  'an empty name': { name: '   ', attending: true, partySize: 1 },
+  'a name of 81 code points': { name: 'a'.repeat(81), attending: true, partySize: 1 },
+  'a control character in the name': { name: 'Sam\nLee', attending: true, partySize: 1 },
+  'a name that is not text': { name: 5, attending: true, partySize: 1 },
+  'an answer that is not a boolean': { name: 'Sam', attending: 'yes', partySize: 1 },
+  'an attending party of 0': { name: 'Sam', attending: true, partySize: 0 },
+  'an attending party of 11': { name: 'Sam', attending: true, partySize: 11 },
+  'a fractional party size': { name: 'Sam', attending: true, partySize: 1.5 },
+  'a party size given as text': { name: 'Sam', attending: true, partySize: '2' },
+  'a declined reply with guests': { name: 'Sam', attending: false, partySize: 1 },
+};
+for (const [label, source] of Object.entries(invalidReplies)) {
+  test(`a reply with ${label} is refused`, () => assert.equal(makeReply(source), null));
+}
+test('a missing reply is refused', () => assert.equal(makeReply(null), null));
+
+test('a management link fragment gives the event id and secret', () => {
+  assert.deepEqual(readCredential(`#${ID}.${SECRET}`, ''), { id: ID, secret: SECRET });
+});
+
+test('a response edit link fragment gives the response id and secret', () => {
+  assert.deepEqual(readCredential(`#r=${ID}.${SECRET}`, 'r='), { id: ID, secret: SECRET });
+});
+
+const invalidFragments = {
+  'no fragment': ['', ''],
+  'the wrong prefix': [`#${ID}.${SECRET}`, 'r='],
+  'a short secret': [`#${ID}.${SECRET.slice(1)}`, ''],
+  'a long id': [`#${ID}A.${SECRET}`, ''],
+  'no separator': [`#${ID}${SECRET}`, ''],
+  'a character outside base64url': [`#${ID}.${SECRET.slice(1)}+`, ''],
+  'a trailing part': [`#${ID}.${SECRET}.x`, ''],
+};
+for (const [label, [hash, prefix]] of Object.entries(invalidFragments)) {
+  test(`a fragment with ${label} gives no credential`, () => assert.equal(readCredential(hash, prefix), null));
+}
+
+// Tests share one migrated in-memory database. Every id is random, and each setup call gets its own client IP,
+// so tests stay independent. client(ip) talks to the API the way the browser does;
+// raw(path, init) sends a hand-made request for input that the client never produces.
+let shared;
+after(async () => (await shared)?.close());
+async function openDatabase() {
+  const db = new PGlite();
+  await migrate(db);
+  return db;
+}
+async function setup(db) {
+  db ??= await (shared ??= openDatabase());
+  const api = createApi(db);
+  const ownIp = newId();
+  const raw = (path, init = {}) => api(new Request(new URL(path, 'http://petalpost.test'), init));
+  const client = (ip = ownIp) =>
+    createClient((path, init = {}) => raw(path, { ...init, headers: { ...init.headers, 'x-real-ip': ip } }));
+  return { raw, client };
+}
+
+const host = () => ({ id: newId(), secret: newSecret(), version: null });
+const party = {
+  t: 'birthday',
+  d: makeInviteData(getTemplate('birthday'), { title: 'Zoë turns 7', message: 'Café, a piñata and 🎂', photoY: 20 }),
+};
+const { photoY, ...partyFields } = party.d;
+
+test('a published invitation opens from another browser with its presentation fields', async () => {
+  const { client } = await setup();
+  const cred = host();
+  const published = await client().publish(cred, party);
+  const opened = await client('198.51.100.2').loadEvent(cred.id);
+  assert.deepEqual(
+    { published: published.data, opened: opened.data },
+    { published: { version: 1, created: true }, opened: { t: 'birthday', d: partyFields } },
+  );
+});
+
+const edited = { t: 'wedding', d: makeInviteData(getTemplate('wedding'), { title: 'Ana and Lee' }) };
+const { photoY: editedPhotoY, ...editedFields } = edited.d;
+
+test('a publish with the version updates the invitation and the version', async () => {
+  const { client } = await setup();
+  const cred = host();
+  await client().publish(cred, party);
+  const updated = await client().publish({ ...cred, version: 1 }, edited);
+  assert.deepEqual(
+    { updated: updated.data, opened: (await client().loadEvent(cred.id)).data },
+    { updated: { version: 2, created: false }, opened: { t: 'wedding', d: editedFields } },
+  );
+});
+
+test('a publish retried after a lost confirmation applies the newer fields to the same event', async () => {
+  const { client } = await setup();
+  const cred = host();
+  await client().publish(cred, party);
+  const retried = await client().publish(cred, edited);
+  assert.deepEqual(
+    { retried: retried.data, opened: (await client().loadEvent(cred.id)).data },
+    { retried: { version: 2, created: false }, opened: { t: 'wedding', d: editedFields } },
+  );
+});
+
+test('a publish with a stale version gets 409 with the current invitation', async () => {
+  const { client } = await setup();
+  const cred = host();
+  await client().publish(cred, party);
+  await client().publish({ ...cred, version: 1 }, edited);
+  const stale = await client().publish({ ...cred, version: 1 }, party);
+  const { error, ...current } = stale.data;
+  assert.deepEqual(
+    { ok: stale.ok, status: stale.status, current, message: stale.message === error },
+    { ok: false, status: 409, current: { version: 2, t: 'wedding', d: editedFields }, message: true },
+  );
+});
+
+test('two simultaneous publishes with the same version give one success and one 409', async () => {
+  const { client } = await setup();
+  const cred = host();
+  await client().publish(cred, party);
+  const results = await Promise.all([
+    client().publish({ ...cred, version: 1 }, edited),
+    client().publish({ ...cred, version: 1 }, party),
+  ]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
+});
+
+test('a publish with another secret cannot change the invitation', async () => {
+  const { client } = await setup();
+  const cred = host();
+  await client().publish(cred, party);
+  const results = await Promise.all([
+    client().publish({ ...cred, secret: newSecret() }, edited),
+    client().publish({ ...cred, secret: newSecret(), version: 1 }, edited),
+  ]);
+  assert.deepEqual(
+    { statuses: results.map((r) => r.status), opened: (await client().loadEvent(cred.id)).data },
+    { statuses: [403, 403], opened: { t: 'birthday', d: partyFields } },
+  );
+});
+
+test('an update of a missing invitation gets 404', async () => {
+  const { client } = await setup();
+  assert.equal((await client().publish({ ...host(), version: 1 }, party)).status, 404);
+});
+
+const guest = () => ({ id: newId(), secret: newSecret(), version: null });
+const sam = { name: 'Sam', attending: true, partySize: 2 };
+const ana = { name: 'Ana', attending: false, partySize: 0 };
+const lee = { name: 'Lee', attending: true, partySize: 1 };
+const answers = (list) => list.data.responses.map(({ name, attending, partySize }) => ({ name, attending, partySize }));
+
+// A published event; a separate browser, without the management secret, plays the guests.
+async function publishedEvent() {
+  const { client, raw } = await setup();
+  const cred = host();
+  await client().publish(cred, party);
+  return { client, raw, cred, guests: client(newId()) };
+}
+
+test('the host sees every reply oldest first with the totals', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  for (const reply of [sam, ana, lee]) await guests.saveReply(cred.id, guest(), reply);
+  const list = await client().loadResponses(cred);
+  assert.deepEqual(
+    { answers: answers(list), totals: list.data.totals, t: list.data.t, version: list.data.version },
+    {
+      answers: [sam, ana, lee],
+      totals: { responses: 3, yes: 2, no: 1, attending: 3 },
+      t: 'birthday',
+      version: 1,
+    },
+  );
+});
+
+test('a saved reply loads back with its edit secret', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  const saved = await guests.saveReply(cred.id, reply, sam);
+  assert.deepEqual(
+    { saved: saved.data, loaded: (await guests.loadReply(cred.id, reply)).data },
+    { saved: { version: 1, created: true }, loaded: { ...sam, version: 1 } },
+  );
+});
+
+test('a repeated reply submission keeps one response', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  await guests.saveReply(cred.id, reply, sam);
+  assert.deepEqual(answers(await client().loadResponses(cred)), [sam]);
+});
+
+test('a reply retried after a lost confirmation applies the newer answer to the same response', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  const retried = await guests.saveReply(cred.id, reply, { ...sam, attending: false, partySize: 0 });
+  assert.deepEqual(
+    { retried: retried.data, answers: answers(await client().loadResponses(cred)) },
+    { retried: { version: 2, created: false }, answers: [{ ...sam, attending: false, partySize: 0 }] },
+  );
+});
+
+test('a reply with a stale version gets 409 with the current answer', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  await guests.saveReply(cred.id, { ...reply, version: 1 }, lee);
+  const stale = await guests.saveReply(cred.id, { ...reply, version: 1 }, ana);
+  const { error, ...current } = stale.data;
+  assert.deepEqual(
+    { status: stale.status, current, message: stale.message === error },
+    { status: 409, current: { version: 2, ...lee }, message: true },
+  );
+});
+
+test('an edit secret changes and reads only its own response', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const first = guest();
+  const second = guest();
+  await guests.saveReply(cred.id, first, sam);
+  await guests.saveReply(cred.id, second, ana);
+  const stolen = { ...first, secret: second.secret };
+  const results = await Promise.all([
+    guests.saveReply(cred.id, stolen, lee),
+    guests.saveReply(cred.id, { ...stolen, version: 1 }, lee),
+    guests.loadReply(cred.id, stolen),
+  ]);
+  assert.deepEqual(
+    { statuses: results.map((r) => r.status), answers: answers(await client().loadResponses(cred)) },
+    { statuses: [403, 403, 403], answers: [sam, ana] },
+  );
+});
+
+test('a response id under another event cannot be read or changed there', async () => {
+  const { cred, guests } = await publishedEvent();
+  const other = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  const results = await Promise.all([
+    guests.saveReply(other.cred.id, reply, lee),
+    guests.loadReply(other.cred.id, reply),
+  ]);
+  assert.deepEqual(
+    results.map((r) => r.status),
+    [403, 403],
+  );
+});
+
+test('the public id or a wrong secret cannot list replies or delete the invitation', async () => {
+  const { client, raw, cred, guests } = await publishedEvent();
+  await guests.saveReply(cred.id, guest(), sam);
+  const wrong = { ...cred, secret: newSecret() };
+  const results = await Promise.all([
+    guests.loadResponses(wrong),
+    guests.deleteEvent(wrong),
+    raw(`/api/events/${cred.id}/responses`),
+    raw(`/api/events/${cred.id}`, { method: 'DELETE' }),
+  ]);
+  assert.deepEqual(
+    { statuses: results.map((r) => r.status), answers: answers(await client().loadResponses(cred)) },
+    { statuses: [403, 403, 401, 401], answers: [sam] },
+  );
+});
+
+test('deleting the invitation removes it and its replies', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  const deleted = await client().deleteEvent(cred);
+  const gone = await Promise.all([
+    guests.loadEvent(cred.id),
+    client().loadResponses(cred),
+    guests.loadReply(cred.id, reply),
+    guests.saveReply(cred.id, { ...reply, version: 1 }, lee),
+    guests.saveReply(cred.id, guest(), lee),
+  ]);
+  assert.deepEqual([deleted.status, ...gone.map((r) => r.status)], [204, 404, 404, 404, 404, 404]);
+});
+
+test('no response body or header carries a secret, its hash or a reply id, and none is cached', async () => {
+  const { raw } = await setup();
+  const seen = [];
+  const recording = createClient(async (path, init) => {
+    const response = await raw(path, init);
+    seen.push({ text: await response.clone().text(), headers: [...response.headers].join(' '), response });
+    return response;
+  });
+  const cred = host();
+  const reply = guest();
+  await recording.publish(cred, party);
+  await recording.publish({ ...cred, version: 1 }, edited);
+  await recording.publish({ ...cred, version: 1 }, party);
+  await recording.loadEvent(cred.id);
+  await recording.saveReply(cred.id, reply, sam);
+  await recording.saveReply(cred.id, { ...reply, version: 1 }, lee);
+  await recording.saveReply(cred.id, { ...reply, version: 1 }, ana);
+  await recording.loadReply(cred.id, reply);
+  await recording.loadResponses(cred);
+  await recording.deleteEvent(cred);
+  const sha = (text) => createHash('sha256').update(text).digest('hex');
+  const leaks = [cred.secret, reply.secret, sha(cred.secret), sha(reply.secret), reply.id, 'secret'];
+  assert.deepEqual(
+    {
+      leaked: seen.filter(({ text, headers }) => leaks.some((l) => text.includes(l) || headers.includes(l))).length,
+      cached: seen.filter(({ response }) => response.headers.get('cache-control') !== 'no-store').length,
+    },
+    { leaked: 0, cached: 0 },
+  );
+});
+
+const bearer = (secret) => ({ authorization: `Bearer ${secret}` });
+const put = (body, headers = {}) => ({
+  method: 'PUT',
+  headers: { 'content-type': 'application/json', ...headers },
+  body: typeof body === 'string' ? body : JSON.stringify(body),
+});
+
+test('malformed requests get their status and an error message', async () => {
+  const { raw, cred } = await publishedEvent();
+  const auth = bearer(cred.secret);
+  const event = `/api/events/${cred.id}`;
+  const reply = `${event}/responses/${newId()}`;
+  const fields = { t: 'birthday', d: partyFields };
+  const withField = (change) => ({ ...fields, d: { ...partyFields, ...change } });
+  const cases = {
+    'an unknown path': [404, '/api/guests', {}],
+    'a path below a reply': [404, `${reply}/x`, {}],
+    'a POST to an event': [405, event, { method: 'POST', headers: auth, body: '{}' }],
+    'a DELETE of the response list': [405, `${event}/responses`, { method: 'DELETE', headers: auth }],
+    'a short event id': [400, '/api/events/abc', {}],
+    'a response id with a character outside base64url': [400, `${event}/responses/${'+'.repeat(22)}`, {}],
+    'no Authorization header': [401, event, put(fields)],
+    'a Basic Authorization header': [401, event, put(fields, { authorization: `Basic ${cred.secret}` })],
+    'a short secret': [401, event, put(fields, bearer(cred.secret.slice(1)))],
+    'a body that is not JSON': [400, event, put('{t:', auth)],
+    'a JSON array body': [400, event, put('[]', auth)],
+    'a body over 8 KB': [413, event, put({ ...fields, pad: 'x'.repeat(8 * 1024) }, auth)],
+    'a version of 0': [400, event, put({ ...fields, version: 0 }, auth)],
+    'a version given as text': [400, event, put({ ...fields, version: '1' }, auth)],
+    'an unknown template': [400, event, put({ ...fields, t: 'picnic' }, auth)],
+    'a title over its limit': [400, event, put(withField({ title: 'x'.repeat(49) }), auth)],
+    'an impossible date': [400, event, put(withField({ date: '2026-02-30' }), auth)],
+    'an accent outside the palette': [400, event, put(withField({ accent: '#123456' }), auth)],
+    'a photo position': [400, event, put(withField({ photoY: 20 }), auth)],
+    'a missing field': [400, event, put(withField({ venue: undefined }), auth)],
+    'a field that is not text': [400, event, put(withField({ venue: 7 }), auth)],
+    'a reply with an empty name': [400, reply, put({ ...sam, name: ' ' }, bearer(newSecret()))],
+    'a reply with a party of 11': [400, reply, put({ ...sam, partySize: 11 }, bearer(newSecret()))],
+  };
+  const results = {};
+  for (const [label, [, path, init]] of Object.entries(cases)) {
+    const response = await raw(path, init);
+    const body = await response.json();
+    results[label] = [response.status, typeof body.error === 'string' && body.error.length > 0];
+  }
+  const expected = Object.fromEntries(Object.entries(cases).map(([label, [status]]) => [label, [status, true]]));
+  assert.deepEqual(results, expected);
+});
+
+test('the 21st invitation from one connection in a day gets 429 and is not stored', async () => {
+  const { client } = await setup();
+  const browser = client();
+  for (let i = 0; i < 20; i += 1) assert.equal((await browser.publish(host(), party)).status, 201);
+  const refused = host();
+  const result = await browser.publish(refused, party);
+  assert.deepEqual(
+    {
+      refused: result.status,
+      stored: (await browser.loadEvent(refused.id)).status,
+      elsewhere: (await client(newId()).publish(host(), party)).status,
+    },
+    { refused: 429, stored: 404, elsewhere: 201 },
+  );
+});
+
+test('the 201st reply to an invitation gets 429, and existing replies stay editable', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const first = guest();
+  await guests.saveReply(cred.id, first, sam);
+  for (let i = 1; i < 200; i += 1) await guests.saveReply(cred.id, guest(), lee);
+  const results = await Promise.all([
+    guests.saveReply(cred.id, guest(), ana),
+    guests.saveReply(cred.id, { ...first, version: 1 }, ana),
+  ]);
+  assert.deepEqual(
+    { statuses: results.map((r) => r.status), totals: (await client().loadResponses(cred)).data.totals },
+    { statuses: [429, 200], totals: { responses: 200, yes: 199, no: 1, attending: 199 } },
+  );
+});
+
+test('a closed database gives 503 with the fixed message, and the client reports the failure', async () => {
+  const db = await openDatabase();
+  await db.close();
+  const { client } = await setup(db);
+  const result = await client().publish(host(), party);
+  assert.deepEqual(
+    { ok: result.ok, status: result.status, message: result.message },
+    {
+      ok: false,
+      status: 503,
+      message: 'Storage is unavailable right now. Nothing was changed. Try again in a minute.',
+    },
+  );
+});
+
+test('a network failure resolves with status 0 and a message', async () => {
+  const offline = createClient(() => Promise.reject(new TypeError('Failed to fetch')));
+  const result = await offline.loadEvent(newId());
+  assert.deepEqual(
+    { ok: result.ok, status: result.status, message: typeof result.message },
+    { ok: false, status: 0, message: 'string' },
+  );
+});
+
+test('private links read back to the credential they carry', () => {
+  const [eventId, id, secret] = [newId(), newId(), newSecret()];
+  const page = 'https://petalpost.example/editor.html';
+  const reply = responseLink(page, eventId, id, secret);
+  const manage = manageLink('https://petalpost.example', eventId, secret);
+  assert.deepEqual(
+    {
+      reply: [reply.split('#')[0], readCredential(reply.slice(reply.indexOf('#')), 'r=')],
+      manage: [manage.split('#')[0], readCredential(manage.slice(manage.indexOf('#')), '')],
+      event: eventLink(page, eventId),
+    },
+    {
+      reply: [`${page}?view=1&e=${eventId}`, { id, secret }],
+      manage: ['https://petalpost.example/manage.html', { id: eventId, secret }],
+      event: `${page}?view=1&e=${eventId}`,
+    },
+  );
+});

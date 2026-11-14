@@ -1,6 +1,6 @@
 // Invite records, share links and the calendar file. No DOM access, so scripts/check-invite.js runs it in Node.
 
-import { ACCENTS, getTemplate, PHOTO_URL } from './templates.js';
+import { ACCENTS, getTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
 export const FIELD_LIMITS = {
@@ -67,6 +67,30 @@ function restoreInvite(value) {
   const template = getTemplate(value.t);
   return { t: template.id, d: makeInviteData(template, value.d) };
 }
+
+// Untrusted {t, d} for a published event becomes {t, d}, or null. Unlike makeInviteData it repairs nothing:
+// t names a template, d has exactly the text fields and accent, each text within its limit and format, and the
+// accent is null or one of ACCENTS. The photo position stays with the owner's draft, so d has no photoY.
+export function readPublished(value) {
+  if (!value || typeof value !== 'object' || !TEMPLATES.some((t) => t.id === value.t)) return null;
+  const s = value.d;
+  if (!s || typeof s !== 'object' || Object.keys(s).length !== FIELDS.length + 1) return null;
+  const valid = FIELDS.every(
+    (f) =>
+      typeof s[f] === 'string' &&
+      (!FIELD_LIMITS[f] || s[f].length <= FIELD_LIMITS[f]) &&
+      (!FIELD_FORMATS[f] || FIELD_FORMATS[f](s[f])),
+  );
+  if (!valid || !(s.accent === null || ACCENTS.some((a) => a.hex === s.accent))) return null;
+  const d = {};
+  [...FIELDS, 'accent'].forEach((f) => {
+    d[f] = s[f];
+  });
+  return { t: value.t, d };
+}
+
+// The invitation link of a published event opens the guest view, which loads the event by its public id.
+export const eventLink = (base, id) => `${base}?view=1&e=${id}`;
 
 // A photo is a JPEG or PNG data URL, or null for none.
 const isPhoto = (url) => url === null || PHOTO_URL.test(url);
