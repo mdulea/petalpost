@@ -193,6 +193,10 @@ export const storedInvite = (storage) => ({
   publishedEvent: readStorage(storage, EVENT_KEY),
 });
 
+// The stored event identity alone, or null. A publish reads it again, because another tab may have stored one
+// since this page opened.
+export const storedPublishedEvent = (storage) => readPublishedEvent(readStorage(storage, EVENT_KEY));
+
 // The guest view never writes: a share link opens on the owner's origin and would overwrite the owner's draft.
 export function saveDraft(state, storage) {
   if (!state.guest) writeStorage(storage, DRAFT_KEY, draftOf(state));

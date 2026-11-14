@@ -15,6 +15,7 @@ import {
   saveDraft,
   savePublishedEvent,
   shareLink,
+  storedPublishedEvent,
   slug,
   storedInvite,
   switchTemplate,
@@ -270,9 +271,9 @@ document.getElementById('addCalendar').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
-// Publishing: the first publish creates the event identity and stores it before the request, so a retry after a
-// lost confirmation reuses the id and secret. Later publishes send the version. Nothing reaches the server
-// without a click on Publish.
+// The first publish takes the identity that another tab may have stored since this page opened. Without one, it
+// creates the event identity and stores it before the request, so a retry after a lost confirmation reuses the id
+// and secret. Later publishes send the version. Nothing reaches the server without a click on Publish.
 const publishButton = /** @type {HTMLButtonElement} */ (document.getElementById('publish'));
 const publishStatus = document.getElementById('publishStatus');
 const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
@@ -297,6 +298,7 @@ function rememberEvent(cred) {
 }
 
 publishButton.addEventListener('click', async () => {
+  state.publishedEvent ??= storedPublishedEvent(storage);
   if (!state.publishedEvent) rememberEvent({ id: newId(), secret: newSecret(), version: null });
   const cred = state.publishedEvent;
   publishButton.disabled = true;
