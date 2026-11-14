@@ -1,6 +1,7 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, or the index.html template or accent count differs from the data.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, or the vendored library differs from its published release.
 // Run: node scripts/check-site.js
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { EDITABLE } from '../js/invite.js';
@@ -83,4 +84,13 @@ test('index.html shows the template and accent counts that landing.js writes', (
   const index = read('index.html');
   assert.equal(attr(index, /id="templateCount">([^<]*)</), String(TEMPLATES.length));
   assert.equal(attr(index, /id="accentCount">([^<]*)</), String(ACCENTS.length));
+});
+
+// vendor/ stays byte-for-byte as published. Replacing the library means updating this hash and THIRD_PARTY_NOTICES.txt.
+test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-to-image.js', () => {
+  const bytes = readFileSync(new URL('../vendor/html-to-image.js', import.meta.url));
+  assert.equal(
+    createHash('sha256').update(bytes).digest('hex'),
+    '0181b9a4ea3351540751b2e72b6baecb5c2297093fcb0bd2af94fc531cb0fbda',
+  );
 });
