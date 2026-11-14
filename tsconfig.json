@@ -9,5 +9,5 @@
     "lib": ["esnext", "dom", "dom.iterable"],
     "types": ["node"]
   },
-  "include": ["js", "scripts", "eslint.config.js"]
+  "include": ["js", "scripts", "eslint.config.js", "playwright.config.js"]
 }

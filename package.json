@@ -16,10 +16,12 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "tsc -p .",
-    "test": "pnpm format:check && pnpm lint && node --test scripts/check-*.js"
+    "test": "pnpm format:check && pnpm lint && node --test scripts/check-*.js",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
     "@types/node": "26.6.6",
     "eslint": "10.14.0",
     "globals": "17.14.0",

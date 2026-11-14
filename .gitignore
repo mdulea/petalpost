@@ -17,3 +17,7 @@ Thumbs.db
 
 # Local git worktrees
 .worktrees/
+
+# Playwright output
+test-results/
+playwright-report/
