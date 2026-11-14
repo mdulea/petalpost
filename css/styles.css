@@ -51,6 +51,9 @@ body {
   -webkit-font-smoothing: antialiased;
   caret-color: var(--sage-deep);
   overflow-x: hidden;
+  /* viewport-fit=cover lets the background reach under the notch in landscape; the content stays clear of it. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 img,
@@ -878,6 +881,19 @@ div.banner-art {
   font-size: 14px;
   border-top: 2px dotted var(--line);
 }
+.site-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+/* Touch screens get the 44px iOS minimum target for links that are not part of a sentence. */
+@media (pointer: coarse) {
+  .brand,
+  .chip-link,
+  .site-footer a {
+    min-height: 44px;
+  }
+}
 
 /* Invite card: every size is in container units so one markup scales from thumbnail to download. */
 
@@ -1352,7 +1368,7 @@ textarea.input {
 
 @media (max-width: 960px) {
   html:has(.jump-preview) {
-    scroll-padding-bottom: 88px;
+    scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
   .editor {
     grid-template-columns: 1fr;
@@ -1370,8 +1386,9 @@ textarea.input {
   .jump-preview {
     display: inline-flex;
     position: fixed;
-    right: var(--gutter);
-    bottom: 16px;
+    /* The insets keep the button on the panels' right edge and above the home indicator. */
+    right: calc(var(--gutter) + env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
     z-index: 10;
     box-shadow: var(--shadow-lift);
   }

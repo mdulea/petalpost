@@ -66,7 +66,7 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
 - `scripts/` holds the checks and the link preview generator:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
-  - `browser.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `layout.spec.js` checks the layout at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes.
+  - `browser.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
 - `.github/workflows/checks.yml` runs every check on each push and pull request. It is disabled in GitHub because the account has no Actions minutes; `gh workflow enable Checks` turns it back on.
 - `docs/petalpost-flow.html` is a diagram of the site flow.

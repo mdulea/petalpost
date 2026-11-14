@@ -131,6 +131,20 @@ form.addEventListener('input', (e) => {
   commit();
 });
 
+// On narrow layouts the floating Preview button covers the bottom of the screen. The browser scrolls a focused
+// control into view only when it is off screen, so a control under the button stays hidden; scroll it above the
+// button after the browser's own scroll. Hidden radios and the file input show through their label.
+const jumpPreview = document.querySelector('.jump-preview');
+form.addEventListener('focusin', (e) => {
+  requestAnimationFrame(() => {
+    const cover = jumpPreview.getBoundingClientRect();
+    const target = /** @type {HTMLElement} */ (e.target);
+    const rect = (target.closest('label') ?? target).getBoundingClientRect();
+    const overlaps = rect.left < cover.right && cover.left < rect.right && rect.bottom > cover.top;
+    if (cover.height && overlaps) scrollBy({ top: rect.bottom - cover.top + 16, behavior: 'instant' });
+  });
+});
+
 // Photos are downscaled to 1200px JPEG so drafts fit in browser storage.
 async function decodePhoto(file) {
   const url = URL.createObjectURL(file);

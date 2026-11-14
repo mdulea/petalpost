@@ -1,4 +1,4 @@
-// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, or vercel.json and serve.json send different headers.
+// Fails when the pages, robots.txt and sitemap.xml disagree on the production origin, the sitemap misses an indexed page, a page has no favicon, the contact address differs between pages, editor.html lacks a control for an invite field, a template's frame or title font has no CSS rule, a CSS custom property refers to itself, the index.html template or accent count differs from the data, the vendored library differs from its published release, a page or the Preview button ignores the safe-area insets of notched phones, or vercel.json and serve.json send different headers.
 // Run: node scripts/check-site.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -77,6 +77,27 @@ test('no CSS custom property refers to itself', () => {
     .filter(([, name, value]) => value.includes(`var(${name})`))
     .map(([, name]) => name);
   assert.deepEqual(selfReferring, []);
+});
+
+// Browsers report safe-area insets only under viewport-fit=cover, and no test browser has a notch or home indicator,
+// so this checks the rules that keep content and the Preview button clear of them.
+test('every page extends under the notch and keeps its content and Preview button clear of it', () => {
+  const html = readdirSync(new URL('..', import.meta.url)).filter((file) => file.endsWith('.html'));
+  const withoutCover = html.filter(
+    (file) => !/<meta name="viewport" content="[^"]*viewport-fit=cover/.test(read(file)),
+  );
+  assert.deepEqual(withoutCover, []);
+  // The declarations of every rule for the selector, at the top level or indented in a media query, joined.
+  const rule = (selector) =>
+    styles
+      .split(new RegExp(`\\n *${selector.replace('.', '\\.')} \\{`))
+      .slice(1)
+      .map((block) => block.split('}')[0])
+      .join('');
+  assert.match(rule('body'), /padding-left: env\(safe-area-inset-left\)/);
+  assert.match(rule('body'), /padding-right: env\(safe-area-inset-right\)/);
+  assert.match(rule('.jump-preview'), /bottom: calc\([^;]*env\(safe-area-inset-bottom\)/);
+  assert.match(rule('.jump-preview'), /right: calc\([^;]*env\(safe-area-inset-right\)/);
 });
 
 // landing.js writes the template and accent counts; the HTML text is what shows before it runs.

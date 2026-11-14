@@ -1,6 +1,10 @@
 // Fails when, at any tested viewport in Chromium or WebKit, a page scrolls sideways, a form control leaves its panel,
 // single-line inputs differ in height, fields sharing a row differ in top or height, the spacing between stacked
-// fields is uneven, or the floating Preview button leaves the panels' right edge.
+// fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
+// size, or the Preview button covers a control that has keyboard focus.
+// Target sizes: 44px where the primary pointer is touch, which is iOS's minimum, and 24px elsewhere, which is
+// WCAG 2.2 Target Size (Minimum). Links inside a sentence are exempt, as WCAG allows. A stretched link is measured by
+// the card it covers.
 // The widths are both sides of every width breakpoint in css/styles.css plus common phone, tablet and desktop widths,
 // so a new breakpoint is tested without editing this file.
 // Run: pnpm test:browser
@@ -11,8 +15,8 @@ const CSS = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
 const BREAKPOINTS = [...CSS.matchAll(/\((max|min)-width:\s*(\d+)px\)/g)].flatMap(([, side, px]) =>
   side === 'max' ? [Number(px), Number(px) + 1] : [Number(px) - 1, Number(px)],
 );
-// iPhone SE, iPhone 13 to 17, Plus and Max phones, iPad mini, iPad, iPad Air, laptops and desktops.
-const DEVICES = [320, 375, 390, 402, 414, 430, 440, 744, 768, 820, 1024, 1280, 1440, 1920];
+// iPhone SE, iPhone 13 to 17, Plus and Max phones, iPad mini, iPad, iPad Air, laptops, desktops, 1440p and 4K.
+const DEVICES = [320, 375, 390, 402, 414, 430, 440, 744, 768, 820, 1024, 1280, 1440, 1920, 2560, 3840];
 const WIDTHS = [...new Set([...BREAKPOINTS, ...DEVICES])].sort((a, b) => a - b);
 // Landscape phones and tablets, where the height is the short side.
 const VIEWPORTS = [
@@ -76,6 +80,19 @@ function layoutProblems(slack) {
     }
   }
 
+  const target = matchMedia('(pointer: coarse)').matches ? 44 : 24;
+  const controls = 'a[href], button, .input, .range, .picker-item, .swatch, .filter, .pill, .btn';
+  const found = /** @type {HTMLElement[]} */ ([...document.querySelectorAll(controls)]);
+  for (const control of found.filter(visible)) {
+    if (control.matches('p a, li a')) continue;
+    // A stretched link's ::after covers its card, so the card is the target.
+    const stretched = getComputedStyle(control, '::after').position === 'absolute';
+    const rect = (stretched ? control.offsetParent : control).getBoundingClientRect();
+    if (rect.width < target - slack || rect.height < target - slack) {
+      problems.push(`${name(control)} ${control.tagName} is ${Math.round(rect.width)}x${Math.round(rect.height)}px`);
+    }
+  }
+
   const jump = document.querySelector('.jump-preview');
   if (jump && visible(jump) && panels.length) {
     const right = panels[0].getBoundingClientRect().right;
@@ -106,10 +123,46 @@ test('the editor keeps its grid at every viewport', async ({ page }) => {
   await checkAllViewports(page);
 });
 
-test('the landing page and the guest view fit every viewport', async ({ page }) => {
+// Tabs from the page top through the form at each narrow viewport, where the Preview button floats.
+test('the Preview button never covers the focused control', async ({ page }) => {
+  test.setTimeout(180000);
+  const failures = [];
+  for (const viewport of VIEWPORTS.filter(({ width }) => width <= 960)) {
+    await page.setViewportSize(viewport);
+    await page.goto('editor.html?t=birthday');
+    let state = 'before';
+    for (let step = 0; step < 80 && state !== 'after'; step += 1) {
+      await page.keyboard.press('Tab');
+      // Two frames: the browser's focus scroll, then the editor's scroll above the button.
+      state = await page.evaluate(
+        () =>
+          new Promise((done) =>
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                const focused = document.activeElement;
+                if (!focused?.closest('#form')) return done(document.body.dataset.tabbed ? 'after' : 'before');
+                document.body.dataset.tabbed = 'yes';
+                // Hidden radios and the file input show through their label.
+                const a = (focused.closest('label') ?? focused).getBoundingClientRect();
+                const b = document.querySelector('.jump-preview').getBoundingClientRect();
+                const covered = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+                done(covered ? `#${focused.id || focused.getAttribute('name')} is under the Preview button` : 'inside');
+              }),
+            ),
+          ),
+      );
+      if (state.startsWith('#')) failures.push(`${viewport.width}x${viewport.height}: ${state}`);
+    }
+  }
+  expect(failures).toEqual([]);
+});
+
+test('the landing page, the guest view and the privacy page fit every viewport', async ({ page }) => {
   await page.goto('/');
   await checkAllViewports(page);
   await page.goto('editor.html?t=birthday');
   await page.goto(await page.locator('#previewGuest').getAttribute('href'));
+  await checkAllViewports(page);
+  await page.goto('privacy.html');
   await checkAllViewports(page);
 });
