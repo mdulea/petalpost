@@ -1,4 +1,4 @@
-# Vercel Deployment Checks wait for the checks job before a push to main reaches the production domain.
+# A Vercel Deployment Check on the checks job, once configured, holds a push to main back from production until the job passes.
 name: Checks
 on:
   push:

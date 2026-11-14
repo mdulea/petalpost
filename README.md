@@ -51,22 +51,36 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 ## Project structure
 
 - `index.html` is the landing page, `editor.html` is the editor, and `privacy.html` and `404.html` are the remaining pages.
-- `js/` holds the page scripts: `templates.js` is the template catalog and renderer, and `invite.js` handles invite records, share links and the calendar file.
+- `js/` holds the page scripts:
+  - `templates.js` is the template catalog and the `renderInvite` renderer.
+  - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
+  - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
+  - `editor.js` and `landing.js` are the entry modules of the editor and the landing page.
+  - `icons.js` injects the inline SVG sprite.
+  - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
+  - `globals.d.ts` declares the types of the `htmlToImage` and analytics globals.
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
-- `scripts/` holds the checks that `pnpm test` runs, the browser tests in `browser.spec.js` and `og-card.html`, which generates the link preview image.
+- `scripts/` holds the checks and the link preview generator:
+  - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
+  - `browser.spec.js` holds the browser tests that `pnpm test:browser` runs.
+  - `og-card.html` and `og-card.js` generate `og-image.png`.
 - `.github/workflows/checks.yml` runs every check on each push and pull request. It is disabled in GitHub because the account has no Actions minutes; `gh workflow enable Checks` turns it back on.
 - `docs/petalpost-flow.html` is a diagram of the site flow.
 
 ## Development
 
-```bash
-pnpm test
-pnpm lint
-pnpm format
-pnpm typecheck
-pnpm test:browser
-```
+| Task            | Command                                  |
+| --------------- | ---------------------------------------- |
+| Test (all)      | `pnpm test`                              |
+| Test (one file) | `pnpm exec node scripts/check-invite.js` |
+| Lint            | `pnpm lint`                              |
+| Format          | `pnpm format`                            |
+| Format check    | `pnpm format:check`                      |
+| Type check      | `pnpm typecheck`                         |
+| Browser tests   | `pnpm test:browser`                      |
+
+The one-file command works for each `scripts/check-*.js`.
 
 `test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/` with the Node.js test runner.
 It does not run the type check or the browser tests.
@@ -74,6 +88,12 @@ It does not run the type check or the browser tests.
 `test:browser` starts `pnpm dev` and runs the Playwright tests in Chromium.
 Install Chromium once with `pnpm exec playwright install chromium`.
 The tests fail when a page breaks the Content-Security-Policy.
+
+### Tooling notes
+
+- `.gitattributes` forces LF line endings. A CRLF checkout makes `pnpm format:check` fail on every file and makes the vendored library hash check fail.
+- pnpm refuses package releases younger than its minimum release age. When you upgrade a dependency, pick a release older than that age.
+- `pnpm-workspace.yaml` denies the esbuild build script. Without that entry, pnpm 12 fails the install with `ERR_PNPM_IGNORED_BUILDS`.
 
 ## Deployment
 
@@ -93,6 +113,7 @@ Enable Web Analytics in the Vercel project dashboard before deploying.
 
 The footer contact link uses the placeholder `hello@example.com`.
 Replace it in all four pages before launch, then run `pnpm exec node scripts/check-site.js`.
+The check compares the address on the three indexed pages only, so check `404.html` by hand.
 
 If the production domain changes, update the canonical and Open Graph URLs in the pages, `robots.txt` and `sitemap.xml`.
 Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.
