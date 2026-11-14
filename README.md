@@ -53,8 +53,9 @@ The editor keeps the draft and photo in the browser's local storage, so a reload
 - `index.html` is the landing page, `editor.html` is the editor, and `privacy.html` and `404.html` are the remaining pages.
 - `js/` holds the page scripts: `templates.js` is the template catalog and renderer, and `invite.js` handles invite records, share links and the calendar file.
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
-- `vendor/html-to-image.js` is the library that renders the PNG.
-- `scripts/` holds the checks that `pnpm test` runs and `og-card.html`, which generates the link preview image.
+- `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
+- `scripts/` holds the checks that `pnpm test` runs, the browser tests in `browser.spec.js` and `og-card.html`, which generates the link preview image.
+- `.github/workflows/checks.yml` runs every check on each push and pull request.
 - `docs/petalpost-flow.html` is a diagram of the site flow.
 
 ## Development
@@ -64,18 +65,27 @@ pnpm test
 pnpm lint
 pnpm format
 pnpm typecheck
+pnpm test:browser
 ```
 
-`test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/`.
-It does not run the type check.
+`test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/` with the Node.js test runner.
+It does not run the type check or the browser tests.
+
+`test:browser` starts `pnpm dev` and runs the Playwright tests in Chromium.
+Install Chromium once with `pnpm exec playwright install chromium`.
+The tests fail when a page breaks the Content-Security-Policy.
 
 ## Deployment
 
 Vercel's GitHub integration deploys every push to `main` to production.
+With Deployment Checks enabled for the `checks` job, a deployment reaches the production domain only after the GitHub checks pass.
 Pushes to other branches get preview deployments.
 Vercel serves the repository root as static files, with no install or build step.
 `.vercelignore` keeps package files, tooling, `scripts/` and documentation out of the deployment.
 The Vercel CLI is a dev dependency, so run it as `pnpm exec vercel`.
+
+`vercel.json` sends a Content-Security-Policy and other security headers on every path.
+`serve.json` sends the same headers locally, and `check-site.js` fails when the two differ.
 
 All four pages load Vercel Web Analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
@@ -94,7 +104,7 @@ Move the downloaded file to the repository root and commit it.
 
 1. Branch from `main`.
 2. Make the change and add tests to the checks in `scripts/`.
-3. Run `pnpm test` and `pnpm typecheck`.
+3. Run `pnpm test`, `pnpm typecheck` and `pnpm test:browser`.
 4. Describe what the branch changes and why.
 
 Agents: [AGENTS.md](AGENTS.md).

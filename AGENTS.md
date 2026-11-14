@@ -23,15 +23,17 @@ No environment variables required.
 | Format          | `pnpm format`                            |
 | Format check    | `pnpm format:check`                      |
 | Type check      | `pnpm typecheck`                         |
+| Browser tests   | `pnpm test:browser`                      |
 
-Run every command through `pnpm`; never install Node.js globally. `dev` serves `http://localhost:3000`. Test (one file) works for each `scripts/check-*.js`.
+Run every command through `pnpm`; never install Node.js globally. `dev` serves `http://localhost:3000`. Test (one file) works for each `scripts/check-*.js`. Browser tests need Chromium once: `pnpm exec playwright install chromium`.
 
 ## Project structure
 
 - `index.html` landing, `editor.html` editor, `privacy.html`, `404.html`.
 - `js/templates.js`: template catalog, `renderInvite`. `js/invite.js`: invite records, share links, storage policy, calendar file; no DOM access, so Node tests import it. `js/mount.js`: browser-only invite mounting and text fitting. `js/editor.js`, `js/landing.js`: page entry modules. `js/icons.js`: inline SVG sprite. `js/analytics.js`: classic script for Vercel Web Analytics queue. `js/globals.d.ts`: types for `htmlToImage` and analytics queue globals.
-- `scripts/check-contrast.js`: WCAG AA contrast of template text colors and accent swatches. `scripts/check-invite.js`: share links, invite records, storage writes, template switching, template ids, calendar file. `scripts/check-site.js`: production origin across pages, `robots.txt`, `sitemap.xml`; sitemap coverage; favicons; contact address; editor control per invite field; CSS rule per template frame and title font; self-referencing custom properties; `index.html` counts. `scripts/og-card.html`: generates `og-image.png`.
-- `css/`, `fonts/` (self-hosted), `vendor/html-to-image.js`, `docs/petalpost-flow.html` (flow diagram).
+- `scripts/check-contrast.js`: WCAG AA contrast of template text colors and accent swatches. `scripts/check-invite.js`: share links, invite records, storage writes, template switching, template ids, calendar file. `scripts/check-site.js`: production origin across pages, `robots.txt`, `sitemap.xml`; sitemap coverage; favicons; contact address; editor control per invite field; CSS rule per template frame and title font; self-referencing custom properties; `index.html` counts; vendored library hash; `vercel.json` and `serve.json` header parity. `scripts/browser.spec.js`: Playwright smoke tests in Chromium against `pnpm dev`, failing on Content-Security-Policy violations. `scripts/og-card.html` with `scripts/og-card.js`: generates `og-image.png`.
+- `css/`, `fonts/` (self-hosted), `vendor/html-to-image.js` (html-to-image 1.11.11; license in `THIRD_PARTY_NOTICES.txt`), `docs/petalpost-flow.html` (flow diagram).
+- `.github/workflows/checks.yml`: `checks` job runs `pnpm test`, `pnpm typecheck`, `pnpm test:browser` on every push and pull request.
 
 ## Code style
 
@@ -43,7 +45,7 @@ Run every command through `pnpm`; never install Node.js globally. `dev` serves `
 
 ## Testing
 
-Behavior changes: add/update checks in `scripts/`. Before finishing: run `pnpm test` and `pnpm typecheck`; require all passing. NEVER skip/disable/delete failing checks to pass.
+Behavior changes: add/update checks in `scripts/`. Checks use `node:test`. Before finishing: run `pnpm test`, `pnpm typecheck` and, for page or header changes, `pnpm test:browser`; require all passing. NEVER skip/disable/delete failing checks to pass.
 
 ## Git
 
@@ -71,14 +73,15 @@ Behavior changes: add/update checks in `scripts/`. Before finishing: run `pnpm t
 
 - `pnpm test` skips typecheck; run `pnpm typecheck` separately.
 - Pages load ES modules; opening HTML from file system fails. Use `pnpm dev`.
-- `serve.json` disables clean URLs so `/editor.html` loads without redirect, matching Vercel.
-- `.gitattributes` forces LF; CRLF checkout makes `format:check` fail on every file.
+- `serve.json` disables clean URLs so `/editor.html` loads without redirect, rewrites `/` to `index.html` and disables directory listings, matching Vercel.
+- Security headers live in `vercel.json` and `serve.json`; keep both identical (`check-site.js`). CSP blocks inline scripts: put page scripts in files. Inline `style` attributes stay allowed for `renderInvite`.
+- `.gitattributes` forces LF; CRLF checkout makes `format:check` fail on every file and the vendor hash check fail.
 - Prettier pinned to 3.9.10: newer releases are younger than pnpm's minimum release age.
 - `pnpm-workspace.yaml` denies esbuild build script; pnpm 12 otherwise fails install with `ERR_PNPM_IGNORED_BUILDS`.
 - Package store lives in `.pnpm-store/` inside repository.
 - `js/analytics.js` is a classic script, not module; ESLint config sets `sourceType: 'script'`.
 - New page-level globals from classic scripts need declarations in `js/globals.d.ts` and ESLint globals.
-- Vercel GitHub integration deploys every push to `main` to production; other branches get preview deployments. Pushing `main` == releasing.
-- `.vercelignore` excludes `AGENTS.md`, `README.md`, `scripts/`, `docs/` and tooling; add new non-site files there.
+- Vercel GitHub integration deploys every push to `main` to production; other branches get preview deployments. Pushing `main` == releasing unless Vercel Deployment Checks require the `checks` job.
+- `.vercelignore` excludes `AGENTS.md`, `README.md`, `scripts/`, `docs/`, `.github/` and tooling; `THIRD_PARTY_NOTICES.txt` ships; add new non-site files there.
 - Footer contact `hello@example.com` is placeholder; must match across all four pages (`check-site.js`).
 - Changing production origin: update canonical, Open Graph, `robots.txt`, `sitemap.xml`; run `pnpm exec node scripts/check-site.js`.
