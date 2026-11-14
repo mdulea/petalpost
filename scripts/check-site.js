@@ -122,7 +122,7 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
 
 // scripts/server.js runs pnpm dev and the browser checks in place of Vercel, so it must answer like production:
 // the vercel.json headers on every path, / as index.html, no clean URLs, no directory listing, 404.html for
-// unknown paths, no dotfiles, and /api paths through the API.
+// unknown paths, no dotfiles, no file outside the buildSite allowlist, and /api paths through the API.
 const local = await startServer({ port: 0, memory: true });
 after(() => local.close());
 const fetchLocal = (path) => fetch(new URL(path, local.url), { redirect: 'manual' });
@@ -146,7 +146,8 @@ test('the local server answers / with index.html and a page by its file name', a
   ]);
 });
 
-for (const path of ['/editor', '/css/', '/.gitignore', '/.git/HEAD', '/scripts/../.env.local']) {
+const nonSitePaths = ['/package.json', '/server/api.js', '/migrations/001_rsvp.sql', '/scripts/build.js', '/README.md'];
+for (const path of ['/editor', '/css/', '/.gitignore', '/.git/HEAD', '/scripts/../.env.local', ...nonSitePaths]) {
   test(`the local server answers ${path} with 404.html`, async () => {
     const response = await fetchLocal(path);
     assert.deepEqual([response.status, await response.text()], [404, read('404.html')]);
