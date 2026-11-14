@@ -1,66 +1,100 @@
 # Petalpost
 
-A static invitation editor built with HTML, CSS, and JavaScript.
+Petalpost is a website where anyone can design an invitation in the browser and share it.
 
-## Local development
+## Overview
 
-The project pins its own tools in `package.json`.
-`packageManager` pins pnpm, and Corepack downloads that version on first use.
-`devEngines.runtime` pins Node.js, and pnpm installs that version into `node_modules/.bin`.
+A visitor chooses a template and adds a photo, names, a date and an address.
+The editor then downloads the invitation as a PNG or copies a share link.
+The site is static HTML, CSS and JavaScript with no build step and no backend.
+It runs at `https://petalpost-beryl.vercel.app`.
+
+## Quick start
+
+### Prerequisites
+
+- pnpm 12.18.0 on your PATH, installed standalone or through `corepack enable pnpm`.
+
+`package.json` pins pnpm 12.18.0 in `packageManager`.
+`devEngines.runtime` pins Node.js 26.13.1, and pnpm installs it into `node_modules/.bin`.
 Every `pnpm` script runs on the pinned Node.js, whatever version is installed globally.
-`pnpm-workspace.yaml` keeps the package store in `.pnpm-store/` inside the repository.
 
-The only requirement is a global Node.js that ships Corepack, such as Node.js 24.
-Run pnpm through Corepack so that nothing is installed globally:
+### Installation
 
-```sh
-corepack pnpm install
-corepack pnpm dev
-corepack pnpm format
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test
+```bash
+git clone https://github.com/mdulea/petalpost.git
+cd petalpost
+pnpm install
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
-`dev` serves the repository root at `http://localhost:3000`.
-Each page loads its script as an ES module, and browsers refuse modules opened from the file system.
-`serve.json` turns off clean URLs so that `/editor.html` loads without a redirect, as it does on Vercel.
-The site has no build step, and Vercel deploys no package files.
+The last command makes `git blame` skip the commit that first formatted the project with Prettier.
 
-`format` rewrites the HTML, CSS, JavaScript, JSON and Markdown files with Prettier, and `format:check` only reports unformatted files.
-`vendor/` is skipped so the library stays byte-for-byte as published.
-`.gitattributes` keeps LF line endings in the working copy, as Prettier writes them, so Git on Windows does not convert them to CRLF.
-`.git-blame-ignore-revs` lists the commit that first formatted the project. Run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once so `git blame` skips it.
+### Run
 
-`lint` runs ESLint with its recommended rules over `js/`, `scripts/` and `eslint.config.js`.
-`vendor/` is minified third-party code, so ESLint skips it.
+```bash
+pnpm dev
+```
 
-`typecheck` runs TypeScript over the same files without emitting output.
-The code stays plain JavaScript, and JSDoc comments supply types where inference falls short, such as the element type of a DOM lookup.
-Strict mode is off because most functions have no parameter types yet.
-`js/globals.d.ts` declares the globals that classic scripts define for the modules: `htmlToImage` and the Vercel Web Analytics queue.
+The site is served at `http://localhost:3000`.
+Opening the HTML files directly does not work, because browsers refuse ES modules loaded from the file system.
 
-`test` runs `format:check`, `lint` and the three checks in `scripts/`, and stops at the first failure.
+## Usage
 
-The contrast check covers each template's colors and every accent swatch as rendered on it.
-The invite check covers share links, invite records, storage writes, template switching, template ids and the calendar file.
-The site check covers the production origin in the pages, `robots.txt` and `sitemap.xml`, the sitemap's list of indexed pages, the footer contact address, an editor control for every invite field and a CSS rule for every template frame and title font.
+1. Open `http://localhost:3000` and choose a template.
+2. In the editor, add a photo, names, a date and an address, and pick an accent color.
+3. Click "Download PNG" to save the invitation as an image, or "Copy share link" to send it as a link.
 
-Fonts live in `fonts/` and the editor's html-to-image library lives in `vendor/`.
-No page loads code or fonts from an external service.
-No environment variables are required.
+A share link carries the text, the template and the color, but not the photo.
+The editor keeps the draft and photo in the browser's local storage, so a reload restores them.
 
-All three pages load Vercel Web Analytics through its static-site script.
+## Project structure
+
+- `index.html` is the landing page, `editor.html` is the editor, and `privacy.html` and `404.html` are the remaining pages.
+- `js/` holds the page scripts: `templates.js` is the template catalog and renderer, and `invite.js` handles invite records, share links and the calendar file.
+- `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
+- `vendor/html-to-image.js` is the library that renders the PNG.
+- `scripts/` holds the checks that `pnpm test` runs and `og-card.html`, which generates the link preview image.
+- `docs/petalpost-flow.html` is a diagram of the site flow.
+
+## Development
+
+```bash
+pnpm test
+pnpm lint
+pnpm format
+pnpm typecheck
+```
+
+`test` runs the Prettier format check, ESLint and the contrast, invite and site checks in `scripts/`.
+It does not run the type check.
+
+## Deployment
+
+Vercel's GitHub integration deploys every push to `main` to production.
+Pushes to other branches get preview deployments.
+Vercel serves the repository root as static files, with no install or build step.
+`.vercelignore` keeps package files, tooling, `scripts/` and documentation out of the deployment.
+The Vercel CLI is a dev dependency, so run it as `pnpm exec vercel`.
+
+All four pages load Vercel Web Analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
 
-## Search and social previews
+The footer contact link uses the placeholder `hello@example.com`.
+Replace it in all four pages before launch, then run `pnpm exec node scripts/check-site.js`.
 
-Every page has a canonical link, a `robots` tag and Open Graph tags under `https://petalpost-beryl.vercel.app`.
-If the production domain changes, update those URLs, `robots.txt` and `sitemap.xml`, then run `corepack pnpm exec node scripts/check-site.js` to find any copy you missed.
+If the production domain changes, update the canonical and Open Graph URLs in the pages, `robots.txt` and `sitemap.xml`.
+Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.
 
 `og-image.png` is the 1200 by 630 link preview.
-To regenerate it, serve the repository root, open `scripts/og-card.html` and click "Save og-image.png".
+To regenerate it, run `pnpm dev`, open `http://localhost:3000/scripts/og-card.html` and click "Save og-image.png".
 Move the downloaded file to the repository root and commit it.
 
-The footer contact link uses the placeholder `hello@example.com`.
-Replace it in all three pages before launch, then run `corepack pnpm exec node scripts/check-site.js`.
+## Contributing
+
+1. Branch from `main`.
+2. Make the change and add tests to the checks in `scripts/`.
+3. Run `pnpm test` and `pnpm typecheck`.
+4. Describe what the branch changes and why.
+
+Agents: [AGENTS.md](AGENTS.md).
