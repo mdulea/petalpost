@@ -66,7 +66,7 @@ A lost management link cannot be recovered.
 
 - `index.html` is the landing page, `editor.html` is the editor and the guest view, and `manage.html` is the host's management page.
 - `birthday-invitations.html` and the five other `*-invitations.html` pages show one occasion's templates and advice. `pnpm pages` generates them; do not edit them by hand.
-- `invitation-wording.html` and `when-to-send-invitations.html` are the guides, and `about.html`, `privacy.html` and `404.html` are the remaining pages.
+- `invitation-wording.html` and `when-to-send-invitations.html` are the guides, and `about.html`, `privacy.html`, `terms.html` and `404.html` are the remaining pages.
 - `js/` holds the page scripts:
   - `templates.js` is the template catalog and the `renderInvite` renderer.
   - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.

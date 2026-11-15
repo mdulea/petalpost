@@ -1,5 +1,5 @@
 // Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, invitation, management,
-// privacy, About, guide or occasion page scrolls sideways, a form control leaves its panel,
+// privacy, terms, About, guide or occasion page scrolls sideways, a form control leaves its panel,
 // single-line inputs differ in height, fields sharing a row differ in top or height, the spacing between stacked
 // fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
 // size, or the Preview button covers a control that has keyboard focus.
@@ -158,13 +158,15 @@ test('the Preview button never covers the focused control', async ({ page }) => 
   expect(failures).toEqual([]);
 });
 
-test('the landing page, the guest view and the privacy page fit every viewport', async ({ page }) => {
+test('the landing page, the guest view, the privacy page and the terms page fit every viewport', async ({ page }) => {
   await page.goto('/');
   await checkAllViewports(page);
   await page.goto('editor.html?t=birthday');
   await page.goto(await page.locator('#previewGuest').getAttribute('href'));
   await checkAllViewports(page);
   await page.goto('privacy.html');
+  await checkAllViewports(page);
+  await page.goto('terms.html');
   await checkAllViewports(page);
 });
 
