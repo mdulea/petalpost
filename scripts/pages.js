@@ -6,15 +6,12 @@
 // Run: pnpm pages, which writes the files.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { format, resolveConfig } from 'prettier';
-import { editorUrl, makeInviteData } from '../js/invite.js';
+import { CONTACT, editorUrl, makeInviteData } from '../js/invite.js';
 import { CATEGORIES, POPULAR_TEMPLATES, TEMPLATES, renderInvite } from '../js/templates.js';
 import { OCCASIONS } from './occasions.js';
 
 const root = new URL('..', import.meta.url);
 const read = (file) => readFileSync(new URL(file, root), 'utf8');
-
-// The footer contact address on every page. The README Deployment section says when to replace it.
-export const CONTACT = 'contact@petalpost.ro';
 
 // Every absolute URL derives from the index.html canonical, so changing the production origin starts there.
 export const ORIGIN = new URL(read('index.html').match(/<link rel="canonical" href="([^"]+)"/)[1]).origin;

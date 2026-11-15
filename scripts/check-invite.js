@@ -1,5 +1,5 @@
 // Fails when share links, invitation links of published events, invite records, storage writes, the stored
-// published event identity, template switching, template ids or the calendar file break.
+// published event identity, template switching, template ids, the calendar file or the report link break.
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -565,3 +565,27 @@ check(
     .find((l) => l.startsWith('LOCATION')),
   `LOCATION:Willow Park Pavilion\\, ${'🎂'.repeat(45)}`,
 );
+
+test('the report link mails the contact address with the invitation link and the elements of a DSA notice', () => {
+  const link = ctx.reportLink('https://www.petalpost.ro/editor.html?view=1&e=AAAAAAAAAAAAAAAAAAAAAA');
+  const url = new URL(link);
+  const body = url.searchParams.get('body');
+  assert.deepEqual(
+    {
+      scheme: url.protocol,
+      to: url.pathname,
+      subject: url.searchParams.get('subject'),
+      link: body.includes('https://www.petalpost.ro/editor.html?view=1&e=AAAAAAAAAAAAAAAAAAAAAA'),
+      elements: ['Why this content is illegal', 'Your name:', 'Your email address:', 'good faith'].map((word) =>
+        body.includes(word),
+      ),
+    },
+    {
+      scheme: 'mailto:',
+      to: ctx.CONTACT,
+      subject: 'Report of an invitation',
+      link: true,
+      elements: [true, true, true, true],
+    },
+  );
+});

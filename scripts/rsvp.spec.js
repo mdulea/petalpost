@@ -7,7 +7,7 @@
 // publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
-// analytics gets page addresses without the fragment; no page breaks the Content-Security-Policy or throws.
+// analytics gets page addresses without the fragment; the report link of a published invitation names the invitation link and never a guest's edit secret; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
@@ -373,4 +373,22 @@ test('analytics receives page addresses without the private part after the #', a
   }, manage);
   expect(sent).toEqual({ type: 'pageview', url: manage.split('#')[0] });
   expect(host.problems).toEqual([]);
+});
+
+test("the report link names the invitation link and never the guest's edit secret", async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const { invitation } = await publish(host.page, 'Zoe turns 30');
+  const guest = await newBrowser(browser);
+  await guest.page.goto(invitation);
+  await reply(guest.page, { name: 'Sam' });
+  // The reply put the edit link, with its secret after #r=, in the address bar.
+  expect(guest.page.url()).toContain('#r=');
+  const href = await guest.page.locator('#reportLink').getAttribute('href');
+  const body = new URL(href).searchParams.get('body');
+  expect({ to: new URL(href).pathname, names: body.includes(invitation), secret: /#r=|r=/.test(body) }).toEqual({
+    to: 'contact@petalpost.ro',
+    names: true,
+    secret: false,
+  });
+  expect([...host.problems, ...guest.problems]).toEqual([]);
 });
