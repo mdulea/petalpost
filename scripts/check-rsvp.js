@@ -4,7 +4,8 @@
 // reach only their own event or reply; reply totals; deletion with its replies; no secret, hash or reply id in any
 // response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
-// one reply; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
+// one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
+// date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
 // failure; private link round trips.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
 // checks, which read the stored keys in a database of their own.
@@ -451,6 +452,50 @@ test('a new day deletes the earlier counts and keys the same IP address differen
   await client('203.0.113.7').publish(host(), party);
   const keys = await quotaKeys(db);
   assert.deepEqual({ rows: keys.length, rekeyed: keys[0].client !== yesterday.client }, { rows: 1, rekeyed: true });
+});
+
+// The retention job deletes an invitation, with its replies, 91 days after the later of its event date and its
+// last change. dayOffset(n) is the UTC date n days from today.
+const dayOffset = (days) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+
+test('the retention job deletes an invitation and its replies 91 days after the later of the event date and the last change', async () => {
+  const db = await openDatabase();
+  after(() => db.close());
+  const { client, raw } = await setup(db);
+  const browser = client();
+  // idle is how many days ago the invitation was last changed.
+  const cases = {
+    'event 91 days ago': { date: dayOffset(-91), idle: 91, deleted: true },
+    'event 90 days ago': { date: dayOffset(-90), idle: 90, deleted: false },
+    'event tomorrow': { date: dayOffset(1), idle: 200, deleted: false },
+    'no date, changed 91 days ago': { date: '', idle: 91, deleted: true },
+    'no date, changed 90 days ago': { date: '', idle: 90, deleted: false },
+    'event 200 days ago, changed today': { date: dayOffset(-200), idle: 0, deleted: false },
+  };
+  const creds = {};
+  for (const [label, { date, idle }] of Object.entries(cases)) {
+    creds[label] = host();
+    await browser.publish(creds[label], { t: 'birthday', d: makeInviteData(getTemplate('birthday'), { date }) });
+    await db.query('update events set updated_at = now() - make_interval(days => $2) where id = $1', [
+      creds[label].id,
+      idle,
+    ]);
+    await browser.saveReply(creds[label].id, guest(), sam);
+  }
+
+  const run = await raw('/api/retention');
+  const gone = {};
+  for (const label of Object.keys(cases)) gone[label] = (await browser.loadEvent(creds[label].id)).status === 404;
+  const replies = (await db.query('select count(*)::int as n from responses', [])).rows[0].n;
+  assert.deepEqual(
+    { status: run.status, body: await run.json(), gone, replies },
+    {
+      status: 200,
+      body: { deleted: 2 },
+      gone: Object.fromEntries(Object.entries(cases).map(([label, { deleted }]) => [label, deleted])),
+      replies: 4,
+    },
+  );
 });
 
 test('the 201st reply to an invitation gets 429, and existing replies stay editable', async () => {

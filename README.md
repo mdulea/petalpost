@@ -146,6 +146,8 @@ The Development, Preview and Production environments all connect to the same Neo
 Until a separate Neon branch for development is verified, treat every Neon connection string as production data.
 Local development and every test use PGlite, so they never need a Neon connection string.
 
+Vercel Cron calls `/api/retention` daily at 03:17 UTC, as `vercel.json` schedules. That route deletes each invitation and its replies 90 days after the later of the event date and the last change, and a Vercel Hobby project allows one such run per day. Cron runs only on production deployments. The route needs no secret, because it deletes only what the next scheduled run deletes. `RETENTION_DAYS` in `server/api.js` sets the period, and `privacy.html` states it.
+
 Apply schema changes with `pnpm migrate`, which applies the unapplied files in `migrations/` in name order and needs the direct connection string in `DATABASE_URL_UNPOOLED`:
 
 ```bash
