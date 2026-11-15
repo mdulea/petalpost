@@ -58,6 +58,7 @@ const footer = () => `
         <a href="/editor.html">Make an invite</a>
         <a href="/about.html">About</a>
         <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
         <a href="mailto:${CONTACT}">Contact</a>
       </div>
     </nav>
