@@ -1,7 +1,8 @@
-// Fails when a template's text colors, or any accent swatch as rendered on it, drop below WCAG AA (4.5:1) on its card background.
+// Fails when a template's text colors, or any accent swatch as rendered on it, drop below WCAG AA (4.5:1) on its card background, or the site's --rose-deep text drops below 4.5:1 on --rose-soft.
 // Run: node scripts/check-contrast.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import * as ctx from '../js/templates.js';
 
 const lum = (hex) => {
@@ -29,3 +30,9 @@ for (const t of ctx.TEMPLATES) {
     assert.deepEqual(low, []);
   });
 }
+
+test('--rose-deep text reaches 4.5:1 on --rose-soft in css/styles.css', () => {
+  const css = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
+  const token = (name) => css.match(new RegExp(`--${name}: (#[0-9a-f]{6});`, 'i'))[1];
+  assert.ok(ratio(token('rose-deep'), token('rose-soft')) >= 4.5);
+});
