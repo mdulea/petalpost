@@ -2,7 +2,7 @@
 
 - always: fonts + code self-hosted; pages load nothing external except Vercel's `/_vercel/insights/script.js`
 - forbidden: edit `vendor/` (byte-for-byte as published); commit `.env.local` or other `.env.*`
-- ask first: changing production domain `https://petalpost.ro`
+- ask first: changing production domain `https://www.petalpost.ro`
 - NEVER skip/disable/delete failing checks to pass
 
 ## Docs
