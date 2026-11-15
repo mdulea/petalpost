@@ -11,7 +11,7 @@ A host can also publish the invitation to collect replies.
 Guests reply from the invitation link, and the host sees the replies and totals on a private management page.
 The pages are static HTML, CSS and JavaScript.
 API functions on the same origin store published invitations and replies in Neon Postgres.
-It runs at `https://petalpost.ro`.
+It runs at `https://www.petalpost.ro`.
 
 ## Quick start
 
@@ -177,7 +177,7 @@ Verify `petalpost.ro` as a Domain property with a DNS TXT record instead, which 
 
 ### Domain
 
-Production is `https://petalpost.ro`. In the Vercel project's Domains settings, `petalpost.ro` is the primary domain, and `www.petalpost.ro` and `petalpost-beryl.vercel.app` redirect to it with a 301, so Google sees one origin.
+Production is `https://www.petalpost.ro`. In the Vercel project's Domains settings, `www.petalpost.ro` is the primary domain, and `petalpost.ro` and `petalpost-beryl.vercel.app` redirect to it, so Google sees one origin.
 
 `og-image.png` is the 1200 by 630 link preview.
 To regenerate it:
