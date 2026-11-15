@@ -16,7 +16,7 @@ export const OCCASIONS = {
           'Guests look for three things first: whose birthday it is, when and where. Put the name in the title, such as "Mia turns seven", so the card answers the first question at a glance.',
         ],
         list: [
-          '<strong>Who and which birthday.</strong> A milestone age is worth saying out loud. For an adult who would rather not, "Join us to celebrate Sam" works.',
+          '<strong>Who and which birthday.</strong> Name a milestone age. For an adult who would rather not, "Join us to celebrate Sam" works.',
           '<strong>Date, start time and end time.</strong> For children, an end time tells parents when to come back.',
           '<strong>Venue and address.</strong> The invite link adds a map button for the address you type.',
           '<strong>What to expect.</strong> A line about food, games, a theme or a dress code saves you a dozen questions.',
@@ -52,7 +52,7 @@ export const OCCASIONS = {
     sections: [
       {
         heading: 'What a wedding invitation says',
-        intro: ['Traditional wording follows a fixed order, and guests are used to reading it that way:'],
+        intro: ['Traditional wording follows a fixed order that guests expect:'],
         list: [
           '<strong>The hosts.</strong> Whoever is hosting invites the guests: the couple, their parents, or both families together.',
           '<strong>The request line.</strong> "Request the pleasure of your company" is the classic phrase. "Invite you to celebrate" is lighter.',
@@ -124,7 +124,7 @@ export const OCCASIONS = {
     sections: [
       {
         heading: 'What to put on a brunch invitation',
-        intro: ['Brunch is relaxed, so the invite can be too. It still needs the essentials:'],
+        intro: ['A brunch invite can be casual, but it still needs the essentials:'],
         list: [
           '<strong>The reason, if there is one.</strong> A birthday, a bridal brunch, Mother\'s Day or simply "because it\'s Sunday".',
           '<strong>A start time.</strong> Late morning, between 10:00 and 11:30, is the classic window.',
