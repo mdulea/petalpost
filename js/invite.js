@@ -285,7 +285,7 @@ export const slug = (text) =>
 function icsEscape(text) {
   return String(text || '')
     .replace(/\\/g, '\\\\')
-    .replace(/\n/g, '\\n')
+    .replace(/\r\n?|\n/g, '\\n')
     .replace(/([,;])/g, '\\$1');
 }
 

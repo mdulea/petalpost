@@ -531,6 +531,16 @@ check(
   lines({ title: 'Tea; cake, games', date: '2026-12-12' }).find((l) => l.startsWith('SUMMARY')),
   'SUMMARY:Tea\\; cake\\, games',
 );
+check(
+  'a lone carriage return in the title cannot end a calendar line',
+  ctx.buildIcs({ title: 'Tea\rATTENDEE:evil', date: '2026-12-12' }, now).replaceAll('\r\n', '').includes('\r'),
+  false,
+);
+check(
+  'a carriage return and line feed in the venue become one escaped break',
+  lines({ title: 'Tea', venue: 'Hall\r\nDoor', date: '2026-12-12' }).find((l) => l.startsWith('LOCATION')),
+  'LOCATION:Hall\\nDoor',
+);
 check('an event without a date has no calendar file', ctx.buildIcs({ title: 'Tea' }, now), null);
 check(
   'every template sample has a calendar file',
