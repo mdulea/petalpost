@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #fbf5ec;
   --surface: #fffdf8;
   --surface-2: #f6eee2;
@@ -12,7 +13,7 @@
   --sage-hover: #4b6744;
   --sage-soft: #e5ecdd;
   --rose: #d98e88;
-  --rose-deep: #a9524c;
+  --rose-deep: #9a4741;
   --rose-soft: #f9e6e2;
   --rose-line: #f0cec8;
   --gold: #e0b45c;
@@ -94,6 +95,22 @@ p {
   outline: 3px solid var(--sage-deep);
   outline-offset: 3px;
   border-radius: 8px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -64px;
+  z-index: 100;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--sage-deep);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 16px;
 }
 
 .visually-hidden {
@@ -246,11 +263,11 @@ p {
   background: var(--rose-deep);
   color: #fff;
   box-shadow:
-    0 4px 0 #84403b,
+    0 4px 0 #783733,
     var(--shadow);
 }
 .btn-rose:hover {
-  background: #974842;
+  background: #893f3a;
   transform: translateY(-1px);
 }
 .btn-small {
@@ -320,7 +337,7 @@ p {
   font-size: 18px;
 }
 .features span {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -764,7 +781,7 @@ p {
   border: 1px solid var(--rose-line);
   color: var(--rose-deep);
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* How it works */

@@ -122,8 +122,9 @@ function occasionPage(category) {
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     ${header()}
-    <main>
+    <main id="main">
       <section class="section" aria-labelledby="occasion-title">
         <div class="section-head">
           <div>
