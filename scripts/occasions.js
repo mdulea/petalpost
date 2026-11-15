@@ -85,7 +85,7 @@ export const OCCASIONS = {
     file: 'baby-shower-invitations.html',
     heading: 'Baby shower invitations',
     description:
-      'Hand-drawn baby shower invitation templates with clouds, ducklings, bunnies and teddy bears. Add the details and share a link.',
+      'Hand-drawn baby shower invitation templates with clouds, rubber ducks, bunnies and teddy bears. Add the details and share a link.',
     lead: 'Sleepy clouds, rubber ducks, bunnies and a little bear. Add the parents-to-be, the date and the registry, and send it with a link.',
     sections: [
       {
