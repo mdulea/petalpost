@@ -162,7 +162,7 @@ Every page loads Vercel Web Analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
 
 The contact address is `contact@petalpost.ro`.
-To change it, replace `CONTACT` in `scripts/pages.js` and the address in the body of `about.html`, run `pnpm pages`, then run `pnpm exec node scripts/check-site.js`.
+To change it, replace `CONTACT` in `js/invite.js`, which also addresses the report link, and the address in the body of `about.html`, run `pnpm pages`, then run `pnpm exec node scripts/check-site.js`.
 
 If the production domain changes, update the canonical and Open Graph URLs in the hand-written pages, `robots.txt` and `sitemap.xml`, then run `pnpm pages`, which takes the origin from the `index.html` canonical.
 Then run `pnpm exec node scripts/check-site.js` to find any copy you missed.

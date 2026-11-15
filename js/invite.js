@@ -93,6 +93,27 @@ export function readPublished(value) {
 // The invitation link of a published event opens the guest view, which loads the event by its public id.
 export const eventLink = (base, id) => `${base}?view=1&e=${id}`;
 
+// The single contact address of the site, for users and authorities. scripts/pages.js puts it in every footer.
+export const CONTACT = 'contact@petalpost.ro';
+
+// A mailto link that reports a published invitation under DSA Art. 16(2): the exact address of the content, the
+// reason it is illegal, the reporter's name and email address, and a statement of good faith. url is the invitation
+// link from eventLink, never the page address, which can carry a guest's private edit secret after the #.
+export function reportLink(url) {
+  const body = [
+    `Invitation: ${url}`,
+    '',
+    'Why this content is illegal, with the law or rule it breaks:',
+    '',
+    '',
+    'Your name:',
+    'Your email address:',
+    '',
+    'I am reporting this in good faith and believe that the information above is accurate and complete.',
+  ].join('\n');
+  return `mailto:${CONTACT}?subject=${encodeURIComponent('Report of an invitation')}&body=${encodeURIComponent(body)}`;
+}
+
 // A photo is a JPEG or PNG data URL, or null for none.
 const isPhoto = (url) => url === null || PHOTO_URL.test(url);
 

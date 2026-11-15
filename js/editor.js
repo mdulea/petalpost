@@ -11,6 +11,7 @@ import {
   makeInviteData,
   mapLink,
   openInvite,
+  reportLink,
   resetInvite,
   saveDraft,
   savePublishedEvent,
@@ -444,6 +445,10 @@ async function openEvent() {
   document.body.classList.remove('invite-hidden');
   render();
   rsvpForm.hidden = false;
+  /** @type {HTMLAnchorElement} */ (document.getElementById('reportLink')).href = reportLink(
+    eventLink(pageBase, state.event),
+  );
+  document.getElementById('reportRow').hidden = false;
   if (!fromLink) return;
   const saved = await client.loadReply(state.event, replyCred);
   // The event exists, so a missing reply was never saved. The empty form sends it as a new reply.
