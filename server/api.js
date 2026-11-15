@@ -10,6 +10,11 @@
 // GET /api/events/{id}/responses           management secret; {t, d, version, responses, totals}
 // PUT /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, version?}
 // GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, version}
+// GET /api/retention                       public; deletes expired events and their responses; {deleted}
+//
+// An event expires RETENTION_DAYS days after the later of its event date and its last change; an event without a
+// date counts only from its last change. Vercel Cron calls /api/retention daily (vercel.json). The route takes no
+// secret, because it deletes only what the next scheduled run deletes and repeating it changes nothing.
 //
 // A PUT without version creates the record: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
@@ -18,6 +23,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { readPublished } from '../js/invite.js';
 import { ID_PATTERN, makeReply, REPLY_LIMITS, SECRET_PATTERN, tally } from '../js/rsvp.js';
 
+const RETENTION_DAYS = 90;
 const DAILY_EVENTS = 20;
 const EVENT_RESPONSES = 200;
 const MAX_BODY = 8 * 1024;
@@ -45,6 +51,7 @@ const MESSAGES = {
 };
 
 const ROUTES = [
+  { pattern: /^\/api\/retention$/, methods: { GET: deleteExpired } },
   { pattern: /^\/api\/events\/([^/]+)$/, methods: { GET: getEvent, PUT: putEvent, DELETE: deleteEvent } },
   { pattern: /^\/api\/events\/([^/]+)\/responses$/, methods: { GET: listResponses } },
   { pattern: /^\/api\/events\/([^/]+)\/responses\/([^/]+)$/, methods: { GET: getReply, PUT: putReply } },
@@ -126,6 +133,16 @@ async function getEvent({ db, ids: [id] }) {
   const event = (await db.query('select t, d from events where id = $1', [id])).rows[0];
   if (!event) throw new Refusal(404, MESSAGES.eventMissing);
   return json(200, { t: event.t, d: event.d });
+}
+
+async function deleteExpired({ db }) {
+  const { rows } = await db.query(
+    `delete from events
+     where greatest(nullif(d->>'date', '')::date, (updated_at at time zone 'utc')::date) < ${today} - $1::int
+     returning 1`,
+    [RETENTION_DAYS],
+  );
+  return json(200, { deleted: rows.length });
 }
 
 async function putEvent({ db, request, ids: [id] }) {
