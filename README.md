@@ -119,7 +119,6 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 - `.gitattributes` forces LF line endings. A CRLF checkout makes `pnpm format:check` fail on every file and makes the vendored library hash check fail.
 - pnpm refuses package releases younger than its minimum release age. When you upgrade a dependency, pick a release older than that age.
-- `pnpm-workspace.yaml` denies the esbuild build script. Without that entry, pnpm 12 fails the install with `ERR_PNPM_IGNORED_BUILDS`.
 
 ## Deployment
 
@@ -136,7 +135,6 @@ The install needs `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, an
 They are never site content, because Vercel serves only `dist/` and the functions.
 `.vercelignore` keeps the other scripts, tooling and documentation out of the upload.
 `vercel.json` rewrites every `/api/` path to the function in `api/index.js`.
-The Vercel CLI is a dev dependency, so run it as `pnpm exec vercel`.
 
 `vercel.json` sends a Content-Security-Policy and other security headers on every path.
 `scripts/server.js` reads the headers from `vercel.json`, and `check-site.js` fails when it answers a path differently from production.
