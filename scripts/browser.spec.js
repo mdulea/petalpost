@@ -1,6 +1,6 @@
 // Fails when the landing gallery or its occasion filter, a content page, the editor preview, the draft reload, the guest view, the calendar download, the photo
-// upload, the PNG download or the link preview generator breaks in Chromium, or a page breaks the
-// Content-Security-Policy.
+// upload and its notice, the delivery actions under the preview, the PNG download or the link preview generator breaks in
+// Chromium, or a page breaks the Content-Security-Policy.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
@@ -75,11 +75,22 @@ test('a share link opens the guest view and its calendar file in another browser
   expect(problems).toEqual([]);
 });
 
+// Publish and Download PNG are the only ways to send the invite, and both sit under the preview.
+test('the delivery actions under the preview are Publish and Download PNG', async ({ page }) => {
+  await page.goto('editor.html');
+  await expect(page.locator('#share-panel button:is(#publish, #downloadPng)')).toHaveCount(2);
+  await expect(page.locator('#copyLink')).toHaveCount(0);
+  await expect(page.locator('#form #publish')).toHaveCount(0);
+});
+
+const PHOTO_NOTICE =
+  'Photo added. It stays in this browser, so the invitation link shows the illustration. To send the photo, download the PNG.';
+
 test('a photo upload and the PNG download work', async ({ page }) => {
   const problems = watch(page);
   await page.goto('editor.html');
   await page.setInputFiles('#photoInput', { name: 'pixel.png', mimeType: 'image/png', buffer: PIXEL });
-  await expect(page.locator('#status')).toHaveText('Photo added.');
+  await expect(page.locator('#status')).toHaveText(PHOTO_NOTICE);
   await expect(page.locator('#previewCard .invite-photo')).toBeVisible();
   await page.waitForFunction(() => typeof htmlToImage === 'object');
   const download = page.waitForEvent('download');
