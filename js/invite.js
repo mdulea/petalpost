@@ -1,7 +1,7 @@
 // Invite records, share links and the calendar file. No DOM access, so scripts/check-invite.js runs it in Node.
 
 import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
-import { ACCENTS, getTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
+import { ACCENTS, formatDate, formatTime, getTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
 export const FIELD_LIMITS = {
@@ -90,8 +90,22 @@ export function readPublished(value) {
   return { t: value.t, d };
 }
 
-// The invitation link of a published event opens the guest view, which loads the event by its public id.
-export const eventLink = (base, id) => `${base}?view=1&e=${id}`;
+// The invitation link of a published event opens the guest view at /e/<id>, which serves dynamic link metadata.
+export const eventLink = (origin, id) => `${origin}/e/${id}`;
+
+// Link preview and native share metadata built from an invite's title, date, time and venue.
+// locale fixes date and time formatting on the server so link previews stay consistent across regions.
+export function eventPreviewMeta(data, locale = 'en-US') {
+  const title = (data.title || '').trim() || 'You are invited';
+  const when = [formatDate(data.date, locale), formatTime(data.time, locale)].filter(Boolean).join(' at ');
+  const where = (data.venue || '').trim() || (data.address || '').trim();
+  const details = [when, where].filter(Boolean).join(' · ');
+  return {
+    title,
+    pageTitle: `${title} | Petalpost`,
+    description: details || 'You are invited. Open the invitation to see the details and reply.',
+  };
+}
 
 // The single contact address of the site, for users and authorities. scripts/pages.js puts it in every footer.
 export const CONTACT = 'contact@petalpost.ro';
@@ -147,17 +161,37 @@ function readPublishedEvent(text) {
   return { id, secret, version };
 }
 
-// Load order: a share link wins and carries no photo; otherwise the stored draft or a new invite,
-// switched to the ?t= template. Inputs are the raw search, hash and storage strings; guest is true for ?view=1.
-// event is the public id of a published event for an invitation link ?view=1&e=<id>, which the page loads;
+// Load order: an /e/<id> path always opens the guest view for that published event; otherwise a share link wins and
+// carries no photo; otherwise the stored draft or a new invite, switched to the ?t= template. Inputs are the raw
+// pathname, search, hash and storage strings; guest is true for /e/<id> or ?view=1.
+// event is the public id of a published event for /e/<id> or a legacy ?view=1&e=<id> link, which the page loads;
 // until then the state holds a new invite that the page must not show. publishedEvent is the owner's stored event
 // identity, or null; a guest view gets null and never writes it.
 // broken is true for a guest view without a readable link, such as one a messaging app cut short. It opens a new
 // invite that the page must not show, and never the stored draft or photo, which belong to this browser's owner.
-export function openInvite({ search = '', hash = '', draft = null, photo = null, publishedEvent = null }) {
+export function openInvite({
+  pathname = '',
+  search = '',
+  hash = '',
+  draft = null,
+  photo = null,
+  publishedEvent = null,
+}) {
   const params = new URLSearchParams(search);
-  const guest = params.get('view') === '1';
   const requested = params.get('t');
+  if (pathname.startsWith('/e/')) {
+    const match = pathname.match(/^\/e\/([^/]+)$/);
+    const event = match && ID_PATTERN.test(match[1]) ? match[1] : null;
+    return {
+      ...restoreInvite({ t: requested }),
+      photo: null,
+      guest: true,
+      broken: !event,
+      event,
+      publishedEvent: null,
+    };
+  }
+  const guest = params.get('view') === '1';
   const owned = guest ? null : readPublishedEvent(publishedEvent);
   const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
   if (shared) return { ...shared, photo: null, guest, broken: false, event: null, publishedEvent: owned };

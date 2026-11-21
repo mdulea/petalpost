@@ -1,5 +1,5 @@
-// Fails when share links, invitation links of published events, invite records, storage writes, the stored
-// published event identity, template switching, template ids, the calendar file or the report link break.
+// Fails when share links, invitation links and /e/<id> paths of published events, link preview metadata, invite records,
+// storage writes, the stored published event identity, template switching, template ids, the calendar file or the report link break.
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -331,22 +331,88 @@ const EVENT_ID = 'AAAAAAAAAAAAAAAAAAAAAA';
 const identity = { id: EVENT_ID, secret: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234', version: 3 };
 const stored = JSON.stringify(identity);
 check(
-  'an invitation link opens its event as a guest, without the stored draft, photo or event identity',
+  'an /e/<id> invitation link opens its event as a guest, without the stored draft, photo or event identity',
   ctx.openInvite({
-    search: ctx.eventLink('', EVENT_ID),
+    pathname: ctx.eventLink('', EVENT_ID),
     draft,
     photo: 'data:image/jpeg;base64,x',
     publishedEvent: stored,
   }),
   { ...fresh('birthday'), photo: null, guest: true, broken: false, event: EVENT_ID, publishedEvent: null },
 );
+check(
+  'a legacy ?view=1&e=<id> invitation link still opens its event as a guest',
+  ctx.openInvite({
+    search: `?view=1&e=${EVENT_ID}`,
+    draft,
+    photo: 'data:image/jpeg;base64,x',
+    publishedEvent: stored,
+  }),
+  { ...fresh('birthday'), photo: null, guest: true, broken: false, event: EVENT_ID, publishedEvent: null },
+);
+for (const path of ['/e/', '/e/short', `/e/${EVENT_ID}A`, `/e/${EVENT_ID.slice(1)}+`, `/e/${EVENT_ID}/extra`]) {
+  check(
+    `an /e/ path "${path}" opens as broken without stored owner state`,
+    [ctx.openInvite({ pathname: path, draft, photo: 'data:image/jpeg;base64,x', publishedEvent: stored })].map((s) => [
+      s.guest,
+      s.broken,
+      s.event,
+      s.photo,
+      s.publishedEvent,
+    ])[0],
+    [true, true, null, null, null],
+  );
+}
 for (const id of ['', 'short', `${EVENT_ID}A`, `${EVENT_ID.slice(1)}+`]) {
   check(
-    `an invitation link with event id "${id}" opens as broken`,
+    `a legacy invitation link with event id "${id}" opens as broken`,
     [ctx.openInvite({ search: `?view=1&e=${encodeURIComponent(id)}` })].map((s) => [s.broken, s.event])[0],
     [true, null],
   );
 }
+check(
+  'eventPreviewMeta builds title and description from title, date, time and venue',
+  ctx.eventPreviewMeta(
+    ctx.makeInviteData(birthday, {
+      title: 'Zoe turns 30',
+      date: '2026-12-12',
+      time: '14:00',
+      venue: 'Willow Park Pavilion',
+    }),
+  ),
+  {
+    title: 'Zoe turns 30',
+    pageTitle: 'Zoe turns 30 | Petalpost',
+    description: 'Saturday, December 12, 2026 at 2:00 PM · Willow Park Pavilion',
+  },
+);
+check(
+  'eventPreviewMeta falls back to address when venue is empty, and to generic copy when empty',
+  [
+    ctx.eventPreviewMeta(
+      ctx.makeInviteData(birthday, {
+        title: 'Zoe turns 30',
+        date: '2026-12-12',
+        time: '',
+        venue: '',
+        address: '24 Willow Lane',
+      }),
+    ),
+    ctx.eventPreviewMeta(ctx.makeInviteData(birthday, { title: '', date: '', time: '', venue: '', address: '' })),
+  ],
+  [
+    {
+      title: 'Zoe turns 30',
+      pageTitle: 'Zoe turns 30 | Petalpost',
+      description: 'Saturday, December 12, 2026 · 24 Willow Lane',
+    },
+    {
+      title: 'You are invited',
+      pageTitle: 'You are invited | Petalpost',
+      description: 'You are invited. Open the invitation to see the details and reply.',
+    },
+  ],
+);
 check(
   'the owner reopens the stored event identity',
   ctx.openInvite({ draft, publishedEvent: stored }).publishedEvent,
@@ -577,7 +643,7 @@ check(
 );
 
 test('the report link mails the contact address with the invitation link and the elements of a DSA notice', () => {
-  const link = ctx.reportLink('https://www.petalpost.ro/editor.html?view=1&e=AAAAAAAAAAAAAAAAAAAAAA');
+  const link = ctx.reportLink('https://www.petalpost.ro/e/AAAAAAAAAAAAAAAAAAAAAA');
   const url = new URL(link);
   const body = url.searchParams.get('body');
   assert.deepEqual(
@@ -585,7 +651,7 @@ test('the report link mails the contact address with the invitation link and the
       scheme: url.protocol,
       to: url.pathname,
       subject: url.searchParams.get('subject'),
-      link: body.includes('https://www.petalpost.ro/editor.html?view=1&e=AAAAAAAAAAAAAAAAAAAAAA'),
+      link: body.includes('https://www.petalpost.ro/e/AAAAAAAAAAAAAAAAAAAAAA'),
       elements: ['Why this content is illegal', 'Your name:', 'Your email address:', 'good faith'].map((word) =>
         body.includes(word),
       ),

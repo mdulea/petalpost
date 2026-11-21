@@ -5,7 +5,7 @@ import './icons.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { eventLink, makeInviteData } from './invite.js';
-import { createClient, editorPage, readCredential } from './rsvp.js';
+import { createClient, readCredential } from './rsvp.js';
 
 const client = createClient();
 const cred = readCredential(location.hash, '');
@@ -66,7 +66,7 @@ function showEvent({ t, d, responses, totals }) {
       ),
     );
   document.getElementById('noReplies').hidden = responses.length > 0;
-  eventLinkInput.value = eventLink(editorPage(location.origin), cred.id);
+  eventLinkInput.value = eventLink(location.origin, cred.id);
 }
 
 async function load() {

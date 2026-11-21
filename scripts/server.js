@@ -1,7 +1,7 @@
 // The local server for pnpm dev and the browser checks, in place of Vercel. It serves the site files that buildSite
 // copies, with the vercel.json headers on every path and its redirects, / as index.html, no clean URLs, no directory
 // listing and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
-// /api paths go to createApi over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
+// /api paths go to createApi and /e paths go to createEventPage over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
 // Run: node scripts/server.js --port <n> [--memory]
 import { readFile, stat } from 'node:fs/promises';
@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { PGlite } from '@electric-sql/pglite';
 import { createApi } from '../server/api.js';
+import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
 import { isSiteFile } from './build.js';
 
@@ -71,6 +72,7 @@ export async function startServer({ port, memory = false }) {
   const db = memory ? new PGlite() : new PGlite(join(root, '.pglite'));
   await migrate(db);
   const api = createApi(db);
+  const eventPage = createEventPage(db);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -78,13 +80,14 @@ export async function startServer({ port, memory = false }) {
     for (const rule of RULES.filter((r) => r.pattern.test(url.pathname))) {
       for (const { key, value } of rule.headers) headers[key] = value;
     }
-    if (url.pathname.startsWith('/api/')) {
-      const response = await api(await toRequest(req, url));
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/e/')) {
+      const handler = url.pathname.startsWith('/e/') ? eventPage : api;
+      const response = await handler(await toRequest(req, url));
       response.headers.forEach((value, key) => {
         headers[key] = value;
       });
       res.writeHead(response.status, headers);
-      res.end(Buffer.from(await response.arrayBuffer()));
+      res.end(req.method === 'HEAD' ? undefined : Buffer.from(await response.arrayBuffer()));
       return;
     }
     // Vercel keeps the query string on a redirect.
