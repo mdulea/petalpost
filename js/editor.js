@@ -8,6 +8,7 @@ import {
   buildIcs,
   changePhoto,
   eventLink,
+  eventPreviewMeta,
   makeInviteData,
   mapLink,
   openInvite,
@@ -46,7 +47,12 @@ try {
   storage = null;
 }
 
-const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage) });
+const state = openInvite({
+  pathname: location.pathname,
+  search: location.search,
+  hash: location.hash,
+  ...storedInvite(storage),
+});
 
 const pageBase = editorPage(location.origin);
 const shareUrl = () => shareLink(pageBase, state);
@@ -247,6 +253,49 @@ async function copyLink(url, done) {
   }
 }
 
+const canShareLink = typeof navigator.share === 'function';
+const canShareFile = (() => {
+  if (!canShareLink || typeof navigator.canShare !== 'function') return false;
+  try {
+    return navigator.canShare({ files: [new File([], 'invite.png', { type: 'image/png' })] });
+  } catch {
+    return false;
+  }
+})();
+
+// Shares a link through the device share sheet, falling back to clipboard copy on non-abort failure.
+async function shareLinkNative(url, onShared, onCopied) {
+  const meta = eventPreviewMeta(state.d);
+  try {
+    await navigator.share({ title: meta.title, text: meta.description, url });
+    onShared();
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    await copyLink(url, onCopied);
+  }
+}
+
+// Decodes a data URL in memory so building a PNG File never triggers fetch against the connect-src CSP.
+function dataUrlToFile(dataUrl, filename) {
+  const [header, encoded] = dataUrl.split(',');
+  const type = header.match(/data:([^;]+)/)?.[1] ?? 'image/png';
+  const binary = atob(encoded);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new File([bytes], filename, { type });
+}
+
+function downloadDataUrl(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataUrl;
+  link.click();
+}
+
+async function renderPng() {
+  await document.fonts.ready;
+  const card = /** @type {HTMLElement} */ (previewCard.querySelector('.invite'));
+  return htmlToImage.toPng(card, { pixelRatio: 1500 / card.offsetWidth });
+}
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
   if (typeof htmlToImage !== 'object') {
@@ -256,17 +305,46 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
   button.disabled = true;
   setStatus('Preparing the image.', { keep: true });
   try {
-    await document.fonts.ready;
-    const card = /** @type {HTMLElement} */ (previewCard.querySelector('.invite'));
-    const link = document.createElement('a');
-    link.download = `${slug(state.d.title)}.png`;
-    link.href = await htmlToImage.toPng(card, { pixelRatio: 1500 / card.offsetWidth });
-    link.click();
+    downloadDataUrl(await renderPng(), `${slug(state.d.title)}.png`);
     setStatus('Invite downloaded.');
   } catch {
     setStatus('The download failed. Try again, or take a screenshot of the preview.');
   } finally {
     button.disabled = false;
+  }
+});
+
+const sharePngButton = /** @type {HTMLButtonElement} */ (document.getElementById('sharePng'));
+sharePngButton.hidden = !canShareFile;
+sharePngButton.addEventListener('click', async () => {
+  if (typeof htmlToImage !== 'object') {
+    setStatus('The image tool is still loading. Try again in a moment.');
+    return;
+  }
+  sharePngButton.disabled = true;
+  setStatus('Preparing the image.', { keep: true });
+  let dataUrl;
+  try {
+    dataUrl = await renderPng();
+  } catch {
+    setStatus('The download failed. Try again, or take a screenshot of the preview.');
+    sharePngButton.disabled = false;
+    return;
+  }
+  const filename = `${slug(state.d.title)}.png`;
+  try {
+    const file = dataUrlToFile(dataUrl, filename);
+    await navigator.share({ files: [file], title: eventPreviewMeta(state.d).title });
+    setStatus('Invite shared.');
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      setStatus('');
+    } else {
+      downloadDataUrl(dataUrl, filename);
+      setStatus('Invite downloaded.');
+    }
+  } finally {
+    sharePngButton.disabled = false;
   }
 });
 
@@ -298,7 +376,7 @@ function showPublished() {
   const live = Boolean(cred && cred.version !== null);
   document.getElementById('published').hidden = !live;
   publishButton.lastChild.textContent = live ? 'Publish changes' : 'Publish';
-  eventLinkInput.value = live ? eventLink(pageBase, cred.id) : '';
+  eventLinkInput.value = live ? eventLink(location.origin, cred.id) : '';
   manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret) : '';
 }
 
@@ -342,6 +420,19 @@ document.getElementById('copyEventLink').addEventListener('click', () =>
     publishStatus.textContent = 'Invitation link copied. Paste it into a message to your guests.';
   }),
 );
+const shareEventLinkButton = /** @type {HTMLButtonElement} */ (document.getElementById('shareEventLink'));
+shareEventLinkButton.hidden = !canShareLink;
+shareEventLinkButton.addEventListener('click', () =>
+  shareLinkNative(
+    eventLinkInput.value,
+    () => {
+      publishStatus.textContent = 'Invitation link shared.';
+    },
+    () => {
+      publishStatus.textContent = 'Invitation link copied. Paste it into a message to your guests.';
+    },
+  ),
+);
 document.getElementById('copyManageLink').addEventListener('click', () =>
   copyLink(manageLinkInput.value, () => {
     publishStatus.textContent = 'Management link copied. Keep it somewhere private.';
@@ -381,7 +472,7 @@ function fillReply(reply) {
   syncPartySize();
 }
 
-const replyLink = () => responseLink(pageBase, state.event, replyCred.id, replyCred.secret);
+const replyLink = () => responseLink(location.origin, state.event, replyCred.id, replyCred.secret);
 
 function showReplyLink() {
   replyLinkInput.value = replyLink();
@@ -449,7 +540,7 @@ async function openEvent() {
   render();
   rsvpForm.hidden = false;
   /** @type {HTMLAnchorElement} */ (document.getElementById('reportLink')).href = reportLink(
-    eventLink(pageBase, state.event),
+    eventLink(location.origin, state.event),
   );
   document.getElementById('reportRow').hidden = false;
   if (!fromLink) return;

@@ -1481,7 +1481,12 @@ textarea.input {
 }
 .copy-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+.copy-row .input {
+  flex: 1 1 160px;
+  min-width: 0;
 }
 .copy-row .btn {
   flex: none;
@@ -1489,6 +1494,19 @@ textarea.input {
 .published > .field-label {
   display: block;
   margin-bottom: 6px;
+}
+.reply-cta {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.reply-cta p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .rsvp {

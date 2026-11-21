@@ -4,7 +4,10 @@
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install --prod --frozen-lockfile",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/e/(.*)", "destination": "/api" }
+  ],
   "crons": [{ "path": "/api/retention", "schedule": "17 3 * * *" }],
   "redirects": [{ "source": "/index.html", "destination": "/", "statusCode": 301 }],
   "headers": [
