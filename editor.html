@@ -6,7 +6,7 @@
     <title>Petalpost | Make your invite</title>
     <meta
       name="description"
-      content="Choose a template, add your photo, names, date and address, then download a PNG or share your invitation with a link."
+      content="Choose a template, add your photo, names, date and address, then publish it to collect replies or download a PNG."
     />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://www.petalpost.ro/editor.html" />
@@ -15,7 +15,7 @@
     <meta property="og:title" content="Petalpost | Make your invite" />
     <meta
       property="og:description"
-      content="Choose a template, add your photo, names, date and address, then download a PNG or share your invitation with a link."
+      content="Choose a template, add your photo, names, date and address, then publish it to collect replies or download a PNG."
     />
     <meta property="og:url" content="https://www.petalpost.ro/editor.html" />
     <meta property="og:image" content="https://www.petalpost.ro/og-image.png" />
@@ -59,8 +59,8 @@
           <p>Changes save in this browser as you type.</p>
           <p class="editor-intro owner-only">
             Choose a design, add your photo and fill in the names, date, time, venue, address and a short note. Pick an
-            accent color, then download the invite as an image, copy a link to share, or publish it to collect replies.
-            Need ideas? See the <a href="invitation-wording.html">invitation wording guide</a> and
+            accent color, then publish the invite to collect replies or download it as an image. Need ideas? See the
+            <a href="invitation-wording.html">invitation wording guide</a> and
             <a href="when-to-send-invitations.html">when to send invitations</a>.
           </p>
         </div>
@@ -165,40 +165,6 @@
           </h2>
           <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="h-color"></div>
         </section>
-
-        <section class="panel" id="publish-panel" aria-labelledby="h-publish">
-          <h2 id="h-publish">
-            <svg class="icon"><use href="#i-send" /></svg>Replies
-          </h2>
-          <p class="hint">
-            Publish to collect replies. Petalpost then stores the text, template and color, and guests reply from the
-            invitation link. Your photo stays in this browser. After you change the invite, publish again to update it.
-          </p>
-          <button class="btn btn-primary btn-small" type="button" id="publish">
-            <svg class="icon"><use href="#i-send" /></svg>Publish
-          </button>
-          <p class="status" id="publishStatus" role="status"></p>
-          <div class="published" id="published" hidden>
-            <p class="warning">
-              Save the management link somewhere private. Anyone with it can see the replies and delete the invitation.
-              Petalpost cannot recover a lost management link.
-            </p>
-            <div class="field">
-              <label for="eventLink">Invitation link for your guests</label>
-              <div class="copy-row">
-                <input class="input" id="eventLink" readonly />
-                <button class="btn btn-ghost btn-small" type="button" id="copyEventLink">Copy</button>
-              </div>
-            </div>
-            <div class="field">
-              <label for="manageLink">Management link, private</label>
-              <div class="copy-row">
-                <input class="input" id="manageLink" readonly />
-                <button class="btn btn-ghost btn-small" type="button" id="copyManageLink">Copy</button>
-              </div>
-            </div>
-          </div>
-        </section>
       </form>
 
       <div class="preview-col" id="preview">
@@ -206,8 +172,8 @@
           <div class="preview-card" id="previewCard"></div>
         </div>
         <div class="actions" id="share-panel">
-          <button class="btn btn-primary owner-only" type="button" id="copyLink">
-            <svg class="icon"><use href="#i-link" /></svg>Copy share link
+          <button class="btn btn-primary owner-only" type="button" id="publish">
+            <svg class="icon"><use href="#i-send" /></svg>Publish
           </button>
           <button class="btn btn-ghost owner-only" type="button" id="downloadPng">
             <svg class="icon"><use href="#i-download" /></svg>Download PNG
@@ -224,6 +190,31 @@
           <a class="btn btn-ghost guest-only" id="openMap" target="_blank" rel="noopener"
             ><svg class="icon"><use href="#i-pin" /></svg>Open map</a
           >
+        </div>
+        <p class="hint share-note owner-only">
+          Publish stores the text, template and color, and guests reply from the invitation link. The photo stays in
+          this browser. To send it, download the PNG. After you change the invite, publish again to update it.
+        </p>
+        <p class="status owner-only" id="publishStatus" role="status"></p>
+        <div class="published owner-only" id="published" hidden>
+          <p class="warning">
+            Save the management link somewhere private. Anyone with it can see the replies and delete the invitation.
+            Petalpost cannot recover a lost management link.
+          </p>
+          <div class="field">
+            <label for="eventLink">Invitation link for your guests</label>
+            <div class="copy-row">
+              <input class="input" id="eventLink" readonly />
+              <button class="btn btn-ghost btn-small" type="button" id="copyEventLink">Copy</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="manageLink">Management link, private</label>
+            <div class="copy-row">
+              <input class="input" id="manageLink" readonly />
+              <button class="btn btn-ghost btn-small" type="button" id="copyManageLink">Copy</button>
+            </div>
+          </div>
         </div>
         <form class="panel rsvp" id="rsvpForm" autocomplete="off" novalidate hidden>
           <h2 id="h-rsvp">
@@ -261,9 +252,6 @@
         </form>
         <p class="hint" id="reportRow" hidden>
           Is this invitation illegal? <a id="reportLink" href="#">Report this invitation</a>
-        </p>
-        <p class="hint share-note owner-only">
-          Share links carry the text, template and color. To send your photo too, download the PNG.
         </p>
         <p class="status" id="status" role="status"></p>
       </div>
