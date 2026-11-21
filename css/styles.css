@@ -1252,6 +1252,16 @@ div.banner-art {
 .input::-webkit-date-and-time-value {
   text-align: left;
 }
+/* iOS gives native date and time controls a minimum width wider than half the field row on a 440px phone, so the
+   time field overlapped the date field and the panel edge. Without native appearance they take the column width.
+   The selector matches only iOS WebKit, so desktop browsers keep their picker icons. */
+@supports (-webkit-touch-callout: none) {
+  .input[type='date'],
+  .input[type='time'] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
 textarea.input {
   height: auto;
   min-height: 84px;
