@@ -37,9 +37,8 @@ export function tally(responses) {
 export const editorPage = (origin) => `${origin}/editor.html`;
 
 // Private links keep the secret in the fragment, which the browser never sends to a server.
-// base is the editor page URL; readCredential(hash, 'r=') reads the response edit link back.
-export const responseLink = (base, eventId, responseId, secret) =>
-  `${base}?view=1&e=${eventId}#r=${responseId}.${secret}`;
+// readCredential(hash, 'r=') reads the response edit link back.
+export const responseLink = (origin, eventId, responseId, secret) => `${origin}/e/${eventId}#r=${responseId}.${secret}`;
 // readCredential(hash, '') reads the management link back.
 export const manageLink = (origin, id, secret) => `${origin}/manage.html#${id}.${secret}`;
 

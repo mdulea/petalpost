@@ -1,13 +1,13 @@
-// Fails when publishing, guest replies or the management page break in Chromium against the real API of
-// scripts/server.js. Checks: an invitation published in one browser opens in another; a guest's reply, its edit
-// link and an edit that keeps one reply; the management totals and reply list; the invitation link and a guessed
+// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the post-RSVP prompt or the management page break in Chromium against the real API of
+// scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
+// link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
 // the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
 // after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer;
 // publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
-// analytics gets page addresses without the fragment; the report link of a published invitation names the invitation link and never a guest's edit secret; no page breaks the Content-Security-Policy or throws.
+// analytics gets page addresses without the fragment; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
@@ -33,7 +33,7 @@ async function publish(page, title) {
   await page.goto('editor.html?t=birthday');
   await page.fill('#title', title);
   await page.click('#publish');
-  await expect(page.locator('#eventLink')).toHaveValue(/\?view=1&e=/);
+  await expect(page.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
   return {
     invitation: await page.locator('#eventLink').inputValue(),
     manage: await page.locator('#manageLink').inputValue(),
@@ -100,7 +100,7 @@ test('the invitation link and a guessed secret cannot open the management page',
   const sam = await newBrowser(browser);
   await sam.page.goto(invitation);
   await reply(sam.page, { name: 'Sam' });
-  const eventId = new URL(invitation).searchParams.get('e');
+  const eventId = new URL(invitation).pathname.split('/').pop();
   const guessed = manage.replace(/\.[^.]+$/, `.${'x'.repeat(43)}`);
 
   // A browser of its own for each link: a link that differs only after the # would not reload the page.
@@ -262,7 +262,7 @@ test('a tab opened before the first publish publishes to the same invitation', a
   const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
 
   await earlyTab.click('#publish');
-  await expect(earlyTab.locator('#eventLink')).toHaveValue(/\?view=1&e=/);
+  await expect(earlyTab.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
   await host.page.reload();
   expect({
     early: [await earlyTab.locator('#eventLink').inputValue(), await earlyTab.locator('#manageLink').inputValue()],
@@ -358,7 +358,7 @@ test('a publish whose confirmation is lost keeps its event identity, and the ret
   await host.page.reload();
   await host.page.click('#publish');
   await expect(host.page.locator('#publishStatus')).toHaveText('Published. Send the invitation link to your guests.');
-  const id = new URL(await host.page.locator('#eventLink').inputValue()).searchParams.get('e');
+  const id = new URL(await host.page.locator('#eventLink').inputValue()).pathname.split('/').pop();
   expect(new Set(created)).toEqual(new Set([`/api/events/${id}`]));
   expect(host.problems).toEqual([]);
 });
@@ -391,4 +391,144 @@ test("the report link names the invitation link and never the guest's edit secre
     secret: false,
   });
   expect([...host.problems, ...guest.problems]).toEqual([]);
+});
+
+test('published /e/{id} serves dynamic OG tags and legacy ?view=1&e= links still open', async ({
+  browser,
+  request,
+}) => {
+  const host = await newBrowser(browser);
+  await host.page.goto('editor.html?t=birthday');
+  await host.page.fill('#title', 'Zoe turns 30');
+  await host.page.fill('#date', '2026-12-12');
+  await host.page.fill('#time', '14:00');
+  await host.page.fill('#venue', 'Willow Park');
+  await host.page.click('#publish');
+  await expect(host.page.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
+  const invitation = await host.page.locator('#eventLink').inputValue();
+  const eventId = new URL(invitation).pathname.split('/').pop();
+
+  const raw = await request.get(invitation);
+  const html = await raw.text();
+  expect(raw.status()).toBe(200);
+  expect(html).toContain('<meta property="og:title" content="Zoe turns 30 | Petalpost" />');
+  expect(html).toContain(
+    '<meta property="og:description" content="Saturday, December 12, 2026 at 2:00 PM · Willow Park" />',
+  );
+  expect(html).toContain('<meta name="robots" content="noindex, nofollow" />');
+
+  const legacyGuest = await newBrowser(browser);
+  await legacyGuest.page.goto(`editor.html?view=1&e=${eventId}`);
+  await expect(legacyGuest.page.locator('h1')).toHaveText('Zoe turns 30');
+  await expect(legacyGuest.page.locator('#rsvpForm')).toBeVisible();
+  expect([...host.problems, ...legacyGuest.problems]).toEqual([]);
+});
+
+test('after saving an RSVP, a modest prompt invites the guest to browse free templates', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const { invitation } = await publish(host.page, 'Zoe turns 30');
+  const guest = await newBrowser(browser);
+  await guest.page.goto(invitation);
+  await expect(guest.page.locator('#replyCta')).toBeHidden();
+  await reply(guest.page, { name: 'Sam', partySize: 2 });
+  await expect(guest.page.locator('#replyCta')).toBeVisible();
+  const ctaLink = guest.page.locator('#replyCta a');
+  await expect(ctaLink).toHaveAttribute('href', '/#templates');
+  await ctaLink.click();
+  await expect(guest.page).toHaveURL(/\/#templates$/);
+  await expect(guest.page.locator('#gallery .card').first()).toBeVisible();
+  expect([...host.problems, ...guest.problems]).toEqual([]);
+});
+
+test('native navigator.share shares invitation links and PNG files, ignores abort and falls back to copy', async ({
+  browser,
+}) => {
+  const noShare = await newBrowser(browser);
+  await noShare.page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
+  });
+  await noShare.page.goto('editor.html?t=birthday');
+  await expect(noShare.page.locator('#shareLink')).toHaveCount(0);
+  await expect(noShare.page.locator('#shareEventLink')).toBeHidden();
+  await expect(noShare.page.locator('#sharePng')).toBeHidden();
+
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    const calls = [];
+    const copied = [];
+    let nextError = null;
+    /** @type {any} */ (window).__shareTest = {
+      calls,
+      copied,
+      failNext(name) {
+        nextError = name;
+      },
+    };
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: (data) => Boolean(data?.files?.length),
+    });
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async (data) => {
+        if (nextError) {
+          const err = new DOMException('Share stopped', nextError);
+          nextError = null;
+          throw err;
+        }
+        calls.push({
+          title: data.title,
+          text: data.text,
+          url: data.url,
+          files: data.files?.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+        });
+      },
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text) => {
+          copied.push(text);
+        },
+      },
+    });
+  });
+  const page = await context.newPage();
+  const problems = watch(page);
+  const { invitation } = await publish(page, 'Zoe turns 30');
+
+  await expect(page.locator('#shareEventLink')).toBeVisible();
+  await expect(page.locator('#shareLink')).toHaveCount(0);
+  await expect(page.locator('#sharePng')).toBeVisible();
+
+  const initialStatus = await page.locator('#publishStatus').textContent();
+  await page.evaluate(() => /** @type {any} */ (window).__shareTest.failNext('AbortError'));
+  await page.click('#shareEventLink');
+  await expect(page.locator('#publishStatus')).toHaveText(initialStatus);
+
+  await page.evaluate(() => /** @type {any} */ (window).__shareTest.failNext('NotAllowedError'));
+  await page.click('#shareEventLink');
+  await expect(page.locator('#publishStatus')).toHaveText(
+    'Invitation link copied. Paste it into a message to your guests.',
+  );
+
+  await page.click('#shareEventLink');
+  await expect(page.locator('#publishStatus')).toHaveText('Invitation link shared.');
+
+  await page.waitForFunction(() => typeof htmlToImage === 'object');
+  await page.click('#sharePng');
+  await expect(page.locator('#status')).toHaveText('Invite shared.');
+
+  const recorded = await page.evaluate(() => ({
+    calls: /** @type {any} */ (window).__shareTest.calls,
+    copied: /** @type {any} */ (window).__shareTest.copied,
+  }));
+  expect(recorded.calls[0]).toMatchObject({ title: 'Zoe turns 30', url: invitation });
+  expect(recorded.calls[1].title).toBe('Zoe turns 30');
+  expect(recorded.calls[1].files[0].name).toBe('zoe-turns-30.png');
+  expect(recorded.calls[1].files[0].type).toBe('image/png');
+  expect(recorded.calls[1].files[0].size).toBeGreaterThan(10000);
+  expect(recorded.copied).toEqual([invitation]);
+  expect([...noShare.problems, ...problems]).toEqual([]);
 });

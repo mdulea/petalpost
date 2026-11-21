@@ -875,14 +875,14 @@ export function getTemplate(id) {
   return TEMPLATES.find((t) => t.id === id) || TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE);
 }
 
-function escapeHtml(value) {
+export function escapeHtml(value) {
   return String(value ?? '').replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
   );
 }
 
-function formatDate(iso, locale) {
+export function formatDate(iso, locale) {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(locale, {
@@ -893,7 +893,7 @@ function formatDate(iso, locale) {
   });
 }
 
-function formatTime(hhmm, locale) {
+export function formatTime(hhmm, locale) {
   if (!hhmm) return '';
   const [h, m] = hhmm.split(':').map(Number);
   return new Date(2000, 0, 1, h, m).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });

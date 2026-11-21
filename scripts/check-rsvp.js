@@ -1,4 +1,4 @@
-// Fails when guest replies, private links, the API client or the RSVP API break. Checks: reply and link fragment
+// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply and link fragment
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
 // reach only their own event or reply; reply totals; deletion with its replies; no secret, hash or reply id in any
@@ -6,7 +6,7 @@
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
-// failure; private link round trips.
+// failure; private link round trips; dynamic /e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
 // checks, which read the stored keys in a database of their own.
 // Run: node scripts/check-rsvp.js
@@ -16,17 +16,9 @@ import { after, test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 import { getTemplate } from '../js/templates.js';
 import { eventLink, makeInviteData } from '../js/invite.js';
-import {
-  createClient,
-  editorPage,
-  makeReply,
-  manageLink,
-  newId,
-  newSecret,
-  readCredential,
-  responseLink,
-} from '../js/rsvp.js';
+import { createClient, makeReply, manageLink, newId, newSecret, readCredential, responseLink } from '../js/rsvp.js';
 import { createApi } from '../server/api.js';
+import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
 
 const ID = 'AAAAAAAAAAAAAAAAAAAAAA';
@@ -565,19 +557,76 @@ test('a network failure resolves with status 0 and a message', async () => {
 
 test('private links read back to the credential they carry', () => {
   const [eventId, id, secret] = [newId(), newId(), newSecret()];
-  const page = editorPage('https://petalpost.example');
-  const reply = responseLink(page, eventId, id, secret);
-  const manage = manageLink('https://petalpost.example', eventId, secret);
+  const origin = 'https://petalpost.example';
+  const reply = responseLink(origin, eventId, id, secret);
+  const manage = manageLink(origin, eventId, secret);
   assert.deepEqual(
     {
       reply: [reply.split('#')[0], readCredential(reply.slice(reply.indexOf('#')), 'r=')],
       manage: [manage.split('#')[0], readCredential(manage.slice(manage.indexOf('#')), '')],
-      event: eventLink(page, eventId),
+      event: eventLink(origin, eventId),
     },
     {
-      reply: [`https://petalpost.example/editor.html?view=1&e=${eventId}`, { id, secret }],
+      reply: [`https://petalpost.example/e/${eventId}`, { id, secret }],
       manage: ['https://petalpost.example/manage.html', { id: eventId, secret }],
-      event: `https://petalpost.example/editor.html?view=1&e=${eventId}`,
+      event: `https://petalpost.example/e/${eventId}`,
     },
   );
+});
+
+test('the /e/{id} route renders dynamic OG tags, escapes special text and handles HEAD, 404, 405 and 503', async () => {
+  const db = await (shared ??= openDatabase());
+  const { client } = await setup(db);
+  const eventPage = createEventPage(db);
+  const cred = host();
+  const special = {
+    t: 'birthday',
+    d: makeInviteData(getTemplate('birthday'), {
+      title: 'A & "B" <3> $& $1',
+      date: '2026-12-12',
+      time: '14:00',
+      venue: 'O\'Brien & "Friends"',
+    }),
+  };
+  await client().publish(cred, special);
+
+  const ok = await eventPage(new Request(`https://petalpost.test/e/${cred.id}`));
+  const html = await ok.text();
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('content-type'), 'text/html; charset=utf-8');
+  assert.equal(ok.headers.get('cache-control'), 'no-store');
+  assert.match(html, /<title>A &amp; &quot;B&quot; &lt;3&gt; \$&amp; \$1 \| Petalpost<\/title>/);
+  assert.match(
+    html,
+    /<meta property="og:title" content="A &amp; &quot;B&quot; &lt;3&gt; \$&amp; \$1 \| Petalpost" \/>/,
+  );
+  assert.match(
+    html,
+    /<meta property="og:description" content="Saturday, December 12, 2026 at 2:00 PM · O&#39;Brien &amp; &quot;Friends&quot;" \/>/,
+  );
+  assert.match(html, new RegExp(`<meta property="og:url" content="https://www\\.petalpost\\.ro/e/${cred.id}" />`));
+  assert.match(html, /<meta name="robots" content="noindex, nofollow" \/>/);
+  assert.doesNotMatch(html, /<link rel="canonical"/);
+
+  const head = await eventPage(new Request(`https://petalpost.test/e/${cred.id}`, { method: 'HEAD' }));
+  assert.deepEqual([head.status, head.headers.get('cache-control'), await head.text()], [200, 'no-store', '']);
+
+  const missing = await eventPage(new Request(`https://petalpost.test/e/${newId()}`));
+  const missingHtml = await missing.text();
+  assert.equal(missing.status, 404);
+  assert.match(missingHtml, /<title>This invitation does not exist \| Petalpost<\/title>/);
+  assert.match(missingHtml, /<meta name="robots" content="noindex, nofollow" \/>/);
+
+  const badId = await eventPage(new Request('https://petalpost.test/e/not-valid'));
+  assert.equal(badId.status, 404);
+
+  const post = await eventPage(new Request(`https://petalpost.test/e/${cred.id}`, { method: 'POST' }));
+  assert.deepEqual([post.status, post.headers.get('allow')], [405, 'GET, HEAD']);
+
+  const closedDb = await openDatabase();
+  await closedDb.close();
+  const down = await createEventPage(closedDb)(new Request(`https://petalpost.test/e/${cred.id}`));
+  assert.equal(down.status, 503);
+  assert.equal(down.headers.get('cache-control'), 'no-store');
+  assert.match(await down.text(), /<title>The invitation could not be loaded \| Petalpost<\/title>/);
 });
