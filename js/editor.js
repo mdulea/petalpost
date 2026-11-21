@@ -193,8 +193,17 @@ async function loadPhoto(file) {
   }
   commit();
   if (file === null) setStatus('');
-  else if (result === 'saved') setStatus('Photo added.');
-  else setStatus('The photo is too large to keep after a reload. Download the PNG before you leave.', { keep: true });
+  else if (result === 'saved') {
+    setStatus(
+      'Photo added. It stays in this browser, so the invitation link shows the illustration. To send the photo, download the PNG.',
+      { keep: true },
+    );
+  } else {
+    setStatus(
+      'Photo added, but it is too large to keep after a reload. The invitation link shows the illustration, so download the PNG to send the photo.',
+      { keep: true },
+    );
+  }
 }
 
 const dropzone = document.getElementById('dropzone');
@@ -237,12 +246,6 @@ async function copyLink(url, done) {
     window.prompt('Copy this link:', url);
   }
 }
-
-document
-  .getElementById('copyLink')
-  .addEventListener('click', () =>
-    copyLink(shareUrl(), () => setStatus('Link copied. Paste it into a message to your guests.')),
-  );
 
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);

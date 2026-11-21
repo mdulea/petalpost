@@ -6,8 +6,7 @@ This README tells developers how to install, run, test, deploy and contribute to
 ## Overview
 
 A visitor chooses a template and adds a photo, names, a date and an address.
-The editor then downloads the invitation as a PNG or copies a share link.
-A host can also publish the invitation to collect replies.
+The editor then downloads the invitation as a PNG or publishes it to collect replies.
 Guests reply from the invitation link, and the host sees the replies and totals on a private management page.
 The pages are static HTML, CSS and JavaScript.
 API functions on the same origin store published invitations and replies in Neon Postgres.
@@ -51,14 +50,13 @@ With `pnpm dev` running:
 
 1. Open `http://localhost:3000` and choose a template.
 2. In the editor, add a photo, names, a date and an address, and pick an accent color.
-3. Click "Download PNG" to save the invitation as an image, or "Copy share link" to send it as a link.
-
+3. Click "Download PNG" to save the invitation as an image with the photo.
 4. Click "Publish" to store the invitation and get an invitation link and a management link.
 5. Open the invitation link in another browser and send a reply.
 6. Open the management link to see the replies and totals, or to delete the invitation.
 
-A share link carries the text, the template and the color, but not the photo.
-Publishing stores the same fields on the server, and the photo stays in the browser too.
+Publishing stores the text, the template and the color on the server. The photo stays in the browser, so only the PNG carries it.
+"Guest view" opens a share link that carries the same fields after the `#`, without the photo. Share links sent before the editor dropped "Copy share link" still open.
 The editor keeps the draft, the photo and the published invitation's management secret in the browser's local storage, so a reload restores them.
 A lost management link cannot be recovered.
 
