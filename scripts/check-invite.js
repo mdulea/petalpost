@@ -1,6 +1,6 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, invite records, storage writes, the stored published event identity, template switching,
-// template ids, Romanian localization and 24-hour time formatting, the calendar file or the report link break.
+// template ids, Romanian localization coverage and 24-hour time formatting, the calendar file or the report link break.
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -742,7 +742,14 @@ test('the report link mails the contact address with the invitation link and the
   );
 });
 
-// Romanian localization: sample limits, 24-hour time formatting, locale-scoped storage, diacritic slugs and Romanian DSA notice.
+// Romanian localization: copy coverage, sample limits, 24-hour time formatting, locale-scoped storage, diacritic slugs and Romanian DSA notice.
+check(
+  'every bilingual template has Romanian localization copy',
+  ctx.TEMPLATES.filter((t) => (!t.locales || (t.locales.includes('en') && t.locales.includes('ro'))) && !t.ro).map(
+    (t) => t.id,
+  ),
+  [],
+);
 check(
   'every Romanian template sample fits its limits',
   ctx.templatesFor('ro').flatMap((t) =>
