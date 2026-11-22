@@ -1,13 +1,18 @@
-// Entry module of manage.html, the host's page for one published event. The management link
+// Entry module of manage.html and ro/manage.html, the host's page for one published event. The management link
 // manage.html#<id>.<secret> is the only credential; the page shows the invitation, the reply totals and list,
 // and the invitation link, and deletes the event on request.
 import './icons.js';
+import { UI, localeOf, pageLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { eventLink, makeInviteData } from './invite.js';
 import { createClient, editorPage, readCredential } from './rsvp.js';
 
-const client = createClient();
+const lang = pageLang();
+const locale = lang === 'ro' ? localeOf('ro') : undefined;
+const copy = UI[lang].manage;
+
+const client = createClient(fetch, { lang });
 const cred = readCredential(location.hash, '');
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
@@ -20,8 +25,6 @@ function showOnly(heading, message) {
   statusEl.textContent = message;
   content.hidden = true;
 }
-
-const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // Guest names are untrusted text, so every value enters the page as textContent.
 function item(className, ...parts) {
@@ -36,23 +39,28 @@ function item(className, ...parts) {
 }
 
 function showEvent({ t, d, responses, totals }) {
-  const template = getTemplate(t);
-  const data = makeInviteData(template, d);
-  const heading = data.title || 'Your invitation';
+  const template = getTemplate(t, lang);
+  const data = makeInviteData(template, d, lang);
+  const heading = data.title || copy.defaultHeading;
   document.getElementById('manageHeading').textContent = heading;
   document.title = `${heading} | Petalpost`;
   content.hidden = false;
-  mountInvites(document.getElementById('managePreview'), renderInvite(template, data));
+  mountInvites(document.getElementById('managePreview'), renderInvite(template, data, { locale }));
   const total = (n, one, many) => item('total', ['strong', String(n)], ['span', n === 1 ? one : many]);
   document
     .getElementById('totals')
     .replaceChildren(
-      total(totals.responses, 'reply', 'replies'),
-      total(totals.yes, 'yes', 'yes'),
-      total(totals.no, 'no', 'no'),
-      total(totals.attending, 'person attending', 'people attending'),
+      total(totals.responses, copy.replyOne, copy.replyMany),
+      total(totals.yes, copy.yesOne, copy.yesMany),
+      total(totals.no, copy.noOne, copy.noMany),
+      total(totals.attending, copy.attendingOne, copy.attendingMany),
     );
-  const when = (iso) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const when = (iso) =>
+    new Date(iso).toLocaleString(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      ...(lang === 'ro' ? { hour12: false } : {}),
+    });
   document
     .getElementById('responseList')
     .replaceChildren(
@@ -60,25 +68,25 @@ function showEvent({ t, d, responses, totals }) {
         item(
           'reply',
           ['strong', r.name],
-          ['span', r.attending ? `Yes, ${count(r.partySize, 'person', 'people')}` : 'No'],
-          ['span', `${r.updatedAt === r.createdAt ? 'Replied' : 'Changed'} ${when(r.updatedAt)}`],
+          ['span', r.attending ? copy.yesCount(r.partySize) : copy.no],
+          ['span', `${r.updatedAt === r.createdAt ? copy.replied : copy.changed} ${when(r.updatedAt)}`],
         ),
       ),
     );
   document.getElementById('noReplies').hidden = responses.length > 0;
-  eventLinkInput.value = eventLink(editorPage(location.origin), cred.id);
+  eventLinkInput.value = eventLink(editorPage(location.origin, lang), cred.id);
 }
 
 async function load() {
-  statusEl.textContent = 'Loading the replies.';
+  statusEl.textContent = copy.loading;
   const result = await client.loadResponses(cred);
   if (result.ok) {
     showEvent(result.data);
     statusEl.textContent = '';
   } else if (result.status === 404) {
-    showOnly('This invitation does not exist', result.message);
+    showOnly(copy.missingHeading, result.message);
   } else if (content.hidden) {
-    showOnly('The invitation could not be loaded', result.message);
+    showOnly(copy.loadFailedHeading, result.message);
   } else {
     statusEl.textContent = result.message;
   }
@@ -89,25 +97,21 @@ document.getElementById('refresh').addEventListener('click', load);
 document.getElementById('copyEventLink').addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(eventLinkInput.value);
-    statusEl.textContent = 'Invitation link copied. Paste it into a message to your guests.';
+    statusEl.textContent = copy.eventLinkCopied;
   } catch {
-    window.prompt('Copy this link:', eventLinkInput.value);
+    window.prompt(copy.copyPrompt, eventLinkInput.value);
   }
 });
 
 document.getElementById('deleteEvent').addEventListener('click', async (e) => {
-  if (!window.confirm('Delete this invitation and all its replies? This cannot be undone.')) return;
+  if (!window.confirm(copy.deleteConfirm)) return;
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
   button.disabled = true;
   const result = await client.deleteEvent(cred);
   button.disabled = false;
-  if (result.ok) showOnly('Invitation deleted', 'The invitation and all its replies are deleted from Petalpost.');
+  if (result.ok) showOnly(copy.deletedHeading, copy.deletedMessage);
   else statusEl.textContent = result.message;
 });
 
 if (cred) load();
-else
-  showOnly(
-    'This management link is incomplete',
-    'This management link is incomplete. Open the whole link from where you saved it.',
-  );
+else showOnly(copy.incompleteHeading, copy.incompleteMessage);

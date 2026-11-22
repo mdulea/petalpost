@@ -1,4 +1,6 @@
 // Template catalog and the invite renderer shared by the landing page and the editor.
+import { UI, normalizeLang } from './i18n.js';
+import { RO_TEMPLATE_COPY } from './templates-ro.js';
 
 const sparkle = (x, y, r, fill) =>
   `<path d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z" fill="${fill}"/>`;
@@ -836,17 +838,295 @@ export const TEMPLATES = [
       <path d="M104 118q-12 4-6 -8" stroke="#232835" stroke-width="4" fill="none" stroke-linecap="round"/>
     `),
   },
+  {
+    id: 'botez-porumbel',
+    name: 'Porumbel alb',
+    category: 'Botez',
+    locales: ['ro'],
+    tagline: 'Porumbel alb, ramură de măslin și cer senin.',
+    frame: 'arch',
+    titleFont: 'serif',
+    colors: { bg: '#F1F5F8', ink: '#2F4054', accent: '#4A658A', soft: '#DEE8F2' },
+    defaults: {
+      eyebrow: 'Cu bucurie vă invităm la',
+      title: 'Botezul lui Matei',
+      hosts: 'părinții Andreea & Vlad, nașii Ioana & Radu',
+      date: '2027-05-15',
+      time: '11:00',
+      venue: 'Biserica Sf. Elefterie',
+      address: 'Strada Sf. Elefterie 1, București',
+      message: 'După slujbă vă așteptăm la petrecere la Salonul Grădina Dorobanți, de la ora 13:30.',
+      rsvp: 'Confirmări până pe 1 mai',
+    },
+    art: svg(`
+      <g fill="#FFFFFF" opacity=".9">
+        <circle cx="48" cy="126" r="14"/><circle cx="68" cy="120" r="18"/><circle cx="90" cy="126" r="14"/>
+        <circle cx="122" cy="132" r="13"/><circle cx="142" cy="126" r="17"/><circle cx="160" cy="132" r="13"/>
+      </g>
+      <path d="M58 84Q76 52 104 68Q126 42 152 62Q132 82 114 88Q94 102 68 96Z" fill="#FFFFFF" stroke="#B7CADC" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M98 72Q114 38 144 46Q126 66 112 78Z" fill="#F8FBFD" stroke="#B7CADC" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="72" cy="80" r="11" fill="#FFFFFF" stroke="#B7CADC" stroke-width="1.5"/>
+      <path d="M62 80l-9 3 9 3Z" fill="#E0B45C"/>
+      <circle cx="69" cy="78" r="1.8" fill="#2F4054"/>
+      <path d="M56 84Q40 94 28 84" stroke="#7C9A74" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      ${leaf(44, 88, -30, '#8FA886')}${leaf(35, 84, 40, '#A9C29D')}${leaf(27, 83, -20, '#8FA886')}
+      ${sparkle(160, 34, 6, '#E0B45C')}${sparkle(36, 40, 4.5, '#E0B45C')}${sparkle(104, 28, 3.5, '#FFFFFF')}${sparkle(170, 96, 4, '#E0B45C')}
+    `),
+  },
+  {
+    id: 'botez-ingeras',
+    name: 'Nori și stele',
+    category: 'Botez',
+    locales: ['ro'],
+    tagline: 'Stele aurii și nori pufoși de botez.',
+    frame: 'circle',
+    titleFont: 'display',
+    colors: { bg: '#FBF6EC', ink: '#54422C', accent: '#8A5E1A', soft: '#F3E7CE' },
+    defaults: {
+      eyebrow: 'Vă invităm să ne fiți alături la',
+      title: 'Botezul Sofiei',
+      hosts: 'cu drag, din partea familiei Ionescu',
+      date: '2027-06-12',
+      time: '12:00',
+      venue: 'Biserica Sf. Nicolae',
+      address: 'Strada Bisericii Ortodoxe 12, Cluj-Napoca',
+      message: 'Petrecerea continuă de la ora 14:30 la Restaurantul Căsuța din Parc.',
+      rsvp: 'Confirmă până pe 1 iunie',
+    },
+    art: svg(`
+      <path d="M66 14V44M100 14V34M136 14V52" stroke="#D4B57A" stroke-width="1.3"/>
+      ${sparkle(66, 50, 8, '#E6BE68')}${sparkle(100, 40, 6, '#E6BE68')}${sparkle(136, 58, 7, '#E6BE68')}
+      <circle cx="100" cy="84" r="14" fill="none" stroke="#E0B45C" stroke-width="2.2"/>
+      <path d="M100 74V94M93 82H107" stroke="#D49E3F" stroke-width="2.6" stroke-linecap="round"/>
+      <g fill="#FFFFFF">
+        <circle cx="56" cy="118" r="18"/><circle cx="82" cy="110" r="22"/><circle cx="114" cy="112" r="21"/><circle cx="142" cy="118" r="17"/>
+        <rect x="44" y="116" width="110" height="20" rx="10"/>
+      </g>
+      ${sparkle(32, 74, 4, '#E0B45C')}${sparkle(168, 86, 4.5, '#E0B45C')}${sparkle(42, 144, 3, '#D4B57A')}${sparkle(158, 144, 3, '#D4B57A')}
+    `),
+  },
+  {
+    id: 'botez-lumanare',
+    name: 'Lumânare cu flori',
+    category: 'Botez',
+    locales: ['ro'],
+    tagline: 'Lumânare de botez cu panglică și trandafiri.',
+    frame: 'rect',
+    titleFont: 'serif',
+    colors: { bg: '#FAF0EE', ink: '#57383B', accent: '#934B54', soft: '#F2DCDF' },
+    defaults: {
+      eyebrow: 'Sărbătorim creștinarea micuței noastre',
+      title: 'Botezul Mariei',
+      hosts: 'părinții Elena & Andrei',
+      date: '2027-04-18',
+      time: '11:30',
+      venue: 'Biserica Sf. Gheorghe',
+      address: 'Strada Republicii 22, Brașov',
+      message: 'Vă așteptăm apoi la masa festivă la Salonul Belvedere, de la ora 14:00.',
+      rsvp: 'Confirmări până pe 4 aprilie',
+    },
+    art: svg(`
+      <ellipse cx="100" cy="40" rx="14" ry="18" fill="#FBE5A8" opacity=".55"/>
+      <ellipse cx="100" cy="40" rx="6" ry="11" fill="#F2A65A"/>
+      <ellipse cx="100" cy="43" rx="3" ry="6" fill="#FFF7D6"/>
+      <rect x="86" y="56" width="28" height="86" rx="6" fill="#FFFDF9" stroke="#E2C3C5" stroke-width="1.6"/>
+      <path d="M86 92H114V104H86Z" fill="#E8A9A0"/>
+      <path d="M96 104l-12 24M104 104l12 24" stroke="#E8A9A0" stroke-width="4" stroke-linecap="round"/>
+      ${leaf(72, 90, -40, '#93AE87')}${leaf(128, 92, 40, '#93AE87')}${leaf(76, 108, 30, '#A9C29D')}${leaf(124, 108, -30, '#A9C29D')}
+      ${rose(84, 96, 11, '#F2C3C2', '#C98589')}${rose(116, 96, 11, '#F2C3C2', '#C98589')}${rose(100, 94, 13, '#E8A3A6', '#B86A70')}
+      ${sparkle(40, 44, 5, '#E0B45C')}${sparkle(162, 52, 4.5, '#E0B45C')}${sparkle(48, 128, 3.5, '#C98589')}${sparkle(154, 126, 3.5, '#C98589')}
+    `),
+  },
+  {
+    id: 'botez-leagan',
+    name: 'Primul zâmbet',
+    category: 'Botez',
+    locales: ['ro'],
+    tagline: 'Leagăn de lemn, flori și steluțe.',
+    frame: 'blob',
+    titleFont: 'display',
+    colors: { bg: '#EFF4EE', ink: '#334535', accent: '#496B48', soft: '#DCE8DA' },
+    defaults: {
+      eyebrow: 'Vă chemăm cu drag la',
+      title: 'Botezul lui Luca',
+      hosts: 'împreună cu nașii Mara & Mihai',
+      date: '2027-07-10',
+      time: '10:30',
+      venue: 'Catedrala Mitropolitană',
+      address: 'Bulevardul Regele Ferdinand I, Timișoara',
+      message: 'Continuăm bucuria cu masa de botez la Grădina de Vară, de la ora 13:00.',
+      rsvp: 'Confirmă până pe 25 iunie',
+    },
+    art: svg(`
+      <path d="M100 18V36M78 36H122M78 36V50M100 36V54M122 36V50" stroke="#9FBF96" stroke-width="1.6"/>
+      ${sparkle(78, 54, 5, '#E0B45C')}${sparkle(100, 58, 6, '#E8A9A0')}${sparkle(122, 54, 5, '#E0B45C')}
+      <path d="M56 88H144V112Q144 126 128 126H72Q56 126 56 112Z" fill="#FFFDF7" stroke="#C59B76" stroke-width="2.4"/>
+      <path d="M76 88V126M100 88V126M124 88V126" stroke="#C59B76" stroke-width="1.8"/>
+      <path d="M58 106Q100 116 142 106V114Q142 125 128 125H72Q58 125 58 114Z" fill="#DCE8DA"/>
+      <path d="M46 128Q100 148 154 128" fill="none" stroke="#B68A62" stroke-width="3.6" stroke-linecap="round"/>
+      ${daisy(34, 134, '#FFFFFF', '#E0B45C')}${daisy(166, 132, '#FFFFFF', '#E0B45C')}
+      ${leaf(44, 140, -30, '#8FA886')}${leaf(156, 138, 30, '#8FA886')}
+    `),
+  },
+  {
+    id: 'cununie-verighete',
+    name: 'Verighete de aur',
+    category: 'Cununie',
+    locales: ['ro'],
+    tagline: 'Verighete, sigiliu de ceară și eucalipt.',
+    frame: 'arch',
+    titleFont: 'serif',
+    colors: { bg: '#F7F3E8', ink: '#434937', accent: '#526E4B', soft: '#E8E3D0' },
+    defaults: {
+      eyebrow: 'Vă invităm la cununia noastră civilă',
+      title: 'Diana & Alexandru',
+      hosts: 'spun „Da!” în fața celor dragi',
+      date: '2027-05-22',
+      time: '13:00',
+      venue: 'Casa Căsătoriilor Sector 1',
+      address: 'Bulevardul Mareșal Averescu 17, București',
+      message: 'După ceremonie toastăm împreună la Terasa Kiseleff, de la ora 15:00.',
+      rsvp: 'Confirmări până pe 8 mai',
+    },
+    art: svg(`
+      <rect x="46" y="72" width="108" height="68" rx="6" fill="#FFFDF8" stroke="#D2C3A3" stroke-width="1.8"/>
+      <path d="M48 74l52 38 52-38" fill="none" stroke="#D2C3A3" stroke-width="1.8" stroke-linejoin="round"/>
+      <circle cx="100" cy="112" r="12" fill="#D98E88"/>
+      <path d="M100 109c-1.8-2.4-5.4-1.4-5.4 1.2 0 2.4 5.4 5.4 5.4 5.4s5.4-3 5.4-5.4c0-2.6-3.6-3.6-5.4-1.2z" fill="#FFF5F3"/>
+      <circle cx="88" cy="54" r="19" fill="none" stroke="#D4AE62" stroke-width="5"/>
+      <circle cx="112" cy="54" r="19" fill="none" stroke="#C49A48" stroke-width="5"/>
+      ${leaf(44, 62, -45, '#8FA886')}${leaf(38, 78, -25, '#A9C29D')}${leaf(156, 62, 45, '#8FA886')}${leaf(162, 78, 25, '#A9C29D')}
+      ${sparkle(100, 22, 5, '#D4AE62')}${sparkle(60, 36, 3.5, '#D4AE62')}${sparkle(140, 36, 3.5, '#D4AE62')}
+    `),
+  },
+  {
+    id: 'cununie-sampanie',
+    name: 'Toast de cununie',
+    category: 'Cununie',
+    locales: ['ro'],
+    tagline: 'Cupe de șampanie și bule aurii.',
+    frame: 'circle',
+    titleFont: 'serif',
+    colors: { bg: '#FAF4EB', ink: '#543E29', accent: '#8B5B20', soft: '#F1E3CE' },
+    defaults: {
+      eyebrow: 'Spunem „Da!”',
+      title: 'Irina & Ștefan',
+      hosts: 'vă așteaptă la cununia civilă',
+      date: '2027-06-26',
+      time: '14:00',
+      venue: 'Primăria Municipiului Sibiu',
+      address: 'Piața Mare 2, Sibiu',
+      message: 'Sărbătorim cu șampanie și masă festivă la Restaurantul Grădina Veche.',
+      rsvp: 'Confirmă până pe 12 iunie',
+    },
+    art: svg(`
+      <g transform="rotate(-14 82 96)">
+        <path d="M68 48H92L88 86Q80 96 72 86Z" fill="#FFFDF8" stroke="#C9A26B" stroke-width="1.8"/>
+        <path d="M70 64H90L87 84Q80 92 73 84Z" fill="#F5D88E"/>
+        <path d="M80 92V128M68 128H92" stroke="#C9A26B" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+      <g transform="rotate(14 118 96)">
+        <path d="M108 48H132L128 86Q120 96 112 86Z" fill="#FFFDF8" stroke="#C9A26B" stroke-width="1.8"/>
+        <path d="M110 64H130L127 84Q120 92 113 84Z" fill="#F5D88E"/>
+        <path d="M120 92V128M108 128H132" stroke="#C9A26B" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+      <circle cx="98" cy="34" r="3" fill="#E6BE68"/><circle cx="106" cy="24" r="2.2" fill="#E6BE68"/><circle cx="92" cy="22" r="2" fill="#E8A9A0"/>
+      ${sparkle(100, 44, 6, '#E0B45C')}${sparkle(42, 60, 4.5, '#E0B45C')}${sparkle(160, 60, 4.5, '#E0B45C')}
+      ${daisy(44, 134, '#FFFFFF', '#E0B45C')}${daisy(156, 134, '#FFFFFF', '#E0B45C')}
+    `),
+  },
+  {
+    id: 'cununie-bujori',
+    name: 'Bujori de mai',
+    category: 'Cununie',
+    locales: ['ro'],
+    tagline: 'Bujori roz legați cu panglică.',
+    frame: 'blob',
+    titleFont: 'serif',
+    colors: { bg: '#FCF0F1', ink: '#5A393D', accent: '#944C57', soft: '#F5DCE0' },
+    defaults: {
+      eyebrow: 'Vă invităm cu drag la cununie',
+      title: 'Bianca & Tudor',
+      hosts: 'alături de familie și prieteni apropiați',
+      date: '2027-05-09',
+      time: '12:30',
+      venue: 'Starea Civilă Cluj-Napoca',
+      address: 'Strada Moților 5, Cluj-Napoca',
+      message: 'Vă așteptăm apoi la prânz și șampanie la Bistro Grădina Botanică.',
+      rsvp: 'Confirmă până pe 25 aprilie',
+    },
+    art: svg(`
+      <path d="M100 100V146M96 108L82 142M104 108L118 142" stroke="#7F9A72" stroke-width="2.2" stroke-linecap="round"/>
+      ${leaf(62, 102, -40, '#8FA886')}${leaf(138, 102, 40, '#8FA886')}${leaf(68, 72, -60, '#A9C29D')}${leaf(132, 72, 60, '#A9C29D')}
+      ${rose(76, 86, 17, '#F5C4CC', '#C97A88')}${rose(124, 86, 17, '#F5C4CC', '#C97A88')}${rose(100, 68, 21, '#EC9FAA', '#B86272')}
+      <ellipse cx="90" cy="122" rx="10" ry="5" transform="rotate(-18 90 122)" fill="none" stroke="#D98E88" stroke-width="3.2"/>
+      <ellipse cx="110" cy="122" rx="10" ry="5" transform="rotate(18 110 122)" fill="none" stroke="#D98E88" stroke-width="3.2"/>
+      ${sparkle(42, 42, 4.5, '#E0B45C')}${sparkle(158, 42, 4.5, '#E0B45C')}${sparkle(100, 26, 4, '#D98E88')}
+    `),
+  },
+  {
+    id: 'cununie-seara',
+    name: 'Seară de gală',
+    category: 'Cununie',
+    locales: ['ro'],
+    tagline: 'Arcadă aurie pe fond verde smarald.',
+    frame: 'rect',
+    titleFont: 'serif',
+    dark: true,
+    colors: { bg: '#243430', ink: '#F4EFE2', accent: '#E2BE74', soft: '#30443F' },
+    defaults: {
+      eyebrow: 'Cununie civilă și cină festivă',
+      title: 'Mara & Cristian',
+      hosts: 'vă invită să sărbătorim împreună',
+      date: '2027-09-18',
+      time: '16:00',
+      venue: 'Palatul Culturii',
+      address: 'Piața Ștefan cel Mare și Sfânt 1, Iași',
+      message: 'Cununia în grădina palatului, urmată de cină și muzică live de la ora 18:30.',
+      rsvp: 'Confirmări până pe 1 septembrie',
+    },
+    art: svg(`
+      <path d="M54 142V76Q54 32 100 32Q146 32 146 76V142" fill="none" stroke="#E2BE74" stroke-width="2.4"/>
+      <path d="M64 142V78Q64 42 100 42Q136 42 136 78V142" fill="none" stroke="#E2BE74" stroke-width="1" opacity=".6"/>
+      ${leaf(56, 120, -45, '#7FA68C')}${leaf(54, 96, -30, '#96B8A1')}${leaf(144, 120, 45, '#7FA68C')}${leaf(146, 96, 30, '#96B8A1')}
+      <circle cx="90" cy="96" r="14" fill="none" stroke="#E2BE74" stroke-width="3.6"/>
+      <circle cx="110" cy="96" r="14" fill="none" stroke="#D1A95A" stroke-width="3.6"/>
+      ${sparkle(100, 62, 6, '#E2BE74')}${sparkle(32, 42, 4, '#F4EFE2')}${sparkle(168, 46, 4.5, '#E2BE74')}${sparkle(166, 124, 3, '#F4EFE2')}
+    `),
+  },
 ];
 
-// Later templates in a category inherit unset sample text from the category's first template.
+// Later templates in a category inherit unset sample text from the category's first template, in each language.
 const categoryDefaults = {};
+const roCategoryDefaults = {};
 TEMPLATES.forEach((t) => {
   if (!categoryDefaults[t.category]) categoryDefaults[t.category] = t.defaults;
   else t.defaults = { ...categoryDefaults[t.category], ...t.defaults };
+
+  const ro = RO_TEMPLATE_COPY[t.id];
+  if (ro) {
+    const merged = roCategoryDefaults[t.category] ? { ...roCategoryDefaults[t.category], ...ro.defaults } : ro.defaults;
+    if (!roCategoryDefaults[t.category]) roCategoryDefaults[t.category] = merged;
+    t.ro = { ...ro, defaults: merged };
+  }
 });
 
-// Occasions in the order their first template appears; the landing filters and the editor picker tabs list them.
-export const CATEGORIES = Object.keys(categoryDefaults);
+const EN_CATEGORIES = [
+  ...new Set(TEMPLATES.filter((t) => !t.locales || t.locales.includes('en')).map((t) => t.category)),
+];
+const RO_CATEGORIES = [
+  'Wedding',
+  'Cununie',
+  'Botez',
+  'Birthday',
+  'Housewarming',
+  'Graduation',
+  'Baby shower',
+  'Brunch',
+];
+
+// Occasions in the order their first template appears on English pages.
+export const CATEGORIES = EN_CATEGORIES;
 
 // Accent swatches. Templates marked dark render each swatch's light variant so text stays readable.
 export const ACCENTS = [
@@ -861,6 +1141,7 @@ export const ACCENTS = [
 // The landing hero and the social preview card fan out these three contrasting occasions.
 // css/styles.css positions exactly three .fan children with :nth-child; check-invite.js asserts the count.
 export const HERO_TEMPLATES = ['birthday', 'wedding', 'baby'];
+export const RO_HERO_TEMPLATES = ['wedding', 'botez-porumbel', 'birthday'];
 
 // The landing banner beside the call to action shows this template.
 export const BANNER_TEMPLATE = 'housewarming';
@@ -870,9 +1151,54 @@ export const DEFAULT_TEMPLATE = 'birthday';
 
 // The landing gallery badges these templates as popular.
 export const POPULAR_TEMPLATES = ['birthday', 'wedding'];
+export const RO_POPULAR_TEMPLATES = ['wedding', 'botez-porumbel', 'cununie-verighete', 'birthday'];
 
-export function getTemplate(id) {
-  return TEMPLATES.find((t) => t.id === id) || TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE);
+/** @param {string} [lang] */
+export const categoriesFor = (lang = 'en') => (normalizeLang(lang) === 'ro' ? RO_CATEGORIES : EN_CATEGORIES);
+
+/** @param {string} [lang] */
+export const heroTemplatesFor = (lang = 'en') => (normalizeLang(lang) === 'ro' ? RO_HERO_TEMPLATES : HERO_TEMPLATES);
+
+/** @param {string} [lang] */
+export const popularTemplatesFor = (lang = 'en') =>
+  normalizeLang(lang) === 'ro' ? RO_POPULAR_TEMPLATES : POPULAR_TEMPLATES;
+
+/**
+ * Returns a template with its localized display name, tagline and sample defaults for lang.
+ * @param {(typeof TEMPLATES)[number]} template
+ * @param {string} [lang]
+ */
+export function localizeTemplate(template, lang = 'en') {
+  if (normalizeLang(lang) !== 'ro' || !template.ro) return template;
+  return { ...template, name: template.ro.name, tagline: template.ro.tagline, defaults: template.ro.defaults };
+}
+
+/**
+ * Templates available on the given locale's landing page and editor picker.
+ * Romanian leads with one representative template per local occasion before listing the rest.
+ * @param {string} [lang]
+ */
+export function templatesFor(lang = 'en') {
+  const code = normalizeLang(lang);
+  if (code === 'en') return TEMPLATES.filter((t) => !t.locales || t.locales.includes('en'));
+  const byCategory = new Map(RO_CATEGORIES.map((c) => [c, []]));
+  for (const t of TEMPLATES) {
+    if (!t.locales || t.locales.includes('ro')) byCategory.get(t.category)?.push(localizeTemplate(t, 'ro'));
+  }
+  const ordered = [];
+  const maxLen = Math.max(...[...byCategory.values()].map((list) => list.length));
+  for (let i = 0; i < maxLen; i += 1) {
+    for (const c of RO_CATEGORIES) {
+      const item = byCategory.get(c)[i];
+      if (item) ordered.push(item);
+    }
+  }
+  return ordered;
+}
+
+export function getTemplate(id, lang = 'en') {
+  const found = TEMPLATES.find((t) => t.id === id) || TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE);
+  return localizeTemplate(found, lang);
 }
 
 function escapeHtml(value) {
@@ -896,7 +1222,11 @@ function formatDate(iso, locale) {
 function formatTime(hhmm, locale) {
   if (!hhmm) return '';
   const [h, m] = hhmm.split(':').map(Number);
-  return new Date(2000, 0, 1, h, m).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  const isRo = typeof locale === 'string' && locale.toLowerCase().startsWith('ro');
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(
+    locale,
+    isRo ? { hour: '2-digit', minute: '2-digit', hour12: false } : { hour: 'numeric', minute: '2-digit' },
+  );
 }
 
 // The card colors as rendered: a known accent swatch replaces the template accent.
@@ -923,11 +1253,16 @@ export const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
  */
 export function renderInvite(template, d, { href, label, inline, decorative, locale } = {}) {
   const c = inviteColors(template, d.accent);
+  const isRo = typeof locale === 'string' && locale.toLowerCase().startsWith('ro');
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;
   const art = PHOTO_URL.test(d.photo)
-    ? `<div class="invite-photo" role="img" aria-label="Event photo" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY)}%"></div>`
+    ? `<div class="invite-photo" role="img" aria-label="${UI[isRo ? 'ro' : 'en'].photoAlt}" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY)}%"></div>`
     : template.art;
-  const when = [formatDate(d.date, locale), formatTime(d.time, locale)].filter(Boolean).join(' at ');
+  const dateText = formatDate(d.date, locale);
+  const timeText = formatTime(d.time, locale);
+  const when = isRo
+    ? [dateText, timeText ? `ora ${timeText}` : ''].filter(Boolean).join(', ')
+    : [dateText, timeText].filter(Boolean).join(' at ');
   const tag = href ? 'a' : inline ? 'span' : 'div';
   const attrs =
     (href ? ` href="${escapeHtml(href)}"` : '') +

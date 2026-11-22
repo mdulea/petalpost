@@ -1,7 +1,8 @@
 // Invite records, share links and the calendar file. No DOM access, so scripts/check-invite.js runs it in Node.
 
+import { UI, normalizeLang } from './i18n.js';
 import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
-import { ACCENTS, getTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
+import { ACCENTS, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
 export const FIELD_LIMITS = {
@@ -25,9 +26,9 @@ const FIELD_FORMATS = {
 };
 
 // The only constructor for invite data: template sample text, then valid fields from source, cut to their limits.
-export function makeInviteData(template, source) {
+export function makeInviteData(template, source, lang = 'en') {
   const s = { ...source };
-  const d = { ...template.defaults };
+  const d = { ...localizeTemplate(template, lang).defaults };
   FIELDS.forEach((f) => {
     if (typeof s[f] !== 'string' || (FIELD_FORMATS[f] && !FIELD_FORMATS[f](s[f]))) return;
     d[f] = FIELD_LIMITS[f] ? s[f].slice(0, FIELD_LIMITS[f]) : s[f];
@@ -39,34 +40,34 @@ export function makeInviteData(template, source) {
 }
 
 // Editor input for one field, through the same rules as makeInviteData. Returns false for an unknown name.
-export function updateInvite(state, name, value) {
+export function updateInvite(state, name, value, lang = 'en') {
   if (!EDITABLE.includes(name)) return false;
-  state.d = makeInviteData(getTemplate(state.t), { ...state.d, [name]: value });
+  state.d = makeInviteData(getTemplate(state.t, lang), { ...state.d, [name]: value }, lang);
   return true;
 }
 
 // Text goes back to the template sample, the accent to the template default; the photo position stays.
-export function resetInvite(state) {
-  state.d = makeInviteData(getTemplate(state.t), { photoY: state.d.photoY });
+export function resetInvite(state, lang = 'en') {
+  state.d = makeInviteData(getTemplate(state.t, lang), { photoY: state.d.photoY }, lang);
 }
 
 // Fields still holding the old template's sample text take the new template's text; edited and cleared fields stay.
-export function switchTemplate(state, id) {
-  const from = getTemplate(state.t);
-  const to = getTemplate(id);
+export function switchTemplate(state, id, lang = 'en') {
+  const from = getTemplate(state.t, lang);
+  const to = getTemplate(id, lang);
   const kept = { ...state.d };
   FIELDS.forEach((f) => {
     if (kept[f] === from.defaults[f]) delete kept[f];
   });
-  state.d = makeInviteData(to, kept);
+  state.d = makeInviteData(to, kept, lang);
   state.t = to.id;
 }
 
 // Untrusted {t, d} from a share link or the stored draft becomes a record, or null.
-function restoreInvite(value) {
+function restoreInvite(value, lang = 'en') {
   if (!value || typeof value !== 'object') return null;
-  const template = getTemplate(value.t);
-  return { t: template.id, d: makeInviteData(template, value.d) };
+  const template = getTemplate(value.t, lang);
+  return { t: template.id, d: makeInviteData(template, value.d, lang) };
 }
 
 // Untrusted {t, d} for a published event becomes {t, d}, or null. Unlike makeInviteData it repairs nothing:
@@ -99,26 +100,17 @@ export const CONTACT = 'contact@petalpost.ro';
 // A mailto link that reports a published invitation under DSA Art. 16(2): the exact address of the content, the
 // reason it is illegal, the reporter's name and email address, and a statement of good faith. url is the invitation
 // link from eventLink, never the page address, which can carry a guest's private edit secret after the #.
-export function reportLink(url) {
-  const body = [
-    `Invitation: ${url}`,
-    '',
-    'Why this content is illegal, with the law or rule it breaks:',
-    '',
-    '',
-    'Your name:',
-    'Your email address:',
-    '',
-    'I am reporting this in good faith and believe that the information above is accurate and complete.',
-  ].join('\n');
-  return `mailto:${CONTACT}?subject=${encodeURIComponent('Report of an invitation')}&body=${encodeURIComponent(body)}`;
+export function reportLink(url, lang = 'en') {
+  const copy = UI[normalizeLang(lang)].report;
+  return `mailto:${CONTACT}?subject=${encodeURIComponent(copy.subject)}&body=${encodeURIComponent(copy.body(url))}`;
 }
 
 // A photo is a JPEG or PNG data URL, or null for none.
 const isPhoto = (url) => url === null || PHOTO_URL.test(url);
 
 // Editor URLs: ?t= opens a template for the owner, ?view=1 opens the guest view. openInvite parses both.
-export const editorUrl = (id) => `editor.html?t=${encodeURIComponent(id)}`;
+export const editorUrl = (id, lang = 'en') =>
+  `${normalizeLang(lang) === 'ro' ? '/ro/editor.html' : 'editor.html'}?t=${encodeURIComponent(id)}`;
 
 // Share links open the guest view; the photo position stays with the owner's draft.
 export function shareLink(base, record) {
@@ -156,19 +148,20 @@ function readPublishedEvent(text) {
 // identity, or null; a guest view gets null and never writes it.
 // broken is true for a guest view without a readable link, such as one a messaging app cut short. It opens a new
 // invite that the page must not show, and never the stored draft or photo, which belong to this browser's owner.
-export function openInvite({ search = '', hash = '', draft = null, photo = null, publishedEvent = null }) {
+export function openInvite({ search = '', hash = '', draft = null, photo = null, publishedEvent = null, lang = 'en' }) {
+  const code = normalizeLang(lang);
   const params = new URLSearchParams(search);
   const guest = params.get('view') === '1';
   const requested = params.get('t');
   const owned = guest ? null : readPublishedEvent(publishedEvent);
   const hasShareHash = hash.startsWith('#d=');
-  const shared = hasShareHash ? restoreInvite(decodeState(hash.slice(3))) : null;
+  const shared = hasShareHash ? restoreInvite(decodeState(hash.slice(3)), code) : null;
   if (shared)
     return { ...shared, photo: null, guest, sample: false, broken: false, event: null, publishedEvent: owned };
   if (guest) {
     if (hasShareHash) {
       return {
-        ...restoreInvite({ t: requested }),
+        ...restoreInvite({ t: requested }, code),
         photo: null,
         guest,
         sample: false,
@@ -179,7 +172,7 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null,
     }
     if (params.get('sample') === '1') {
       return {
-        ...restoreInvite({ t: requested }),
+        ...restoreInvite({ t: requested }, code),
         photo: null,
         guest,
         sample: true,
@@ -190,7 +183,7 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null,
     }
     const event = ID_PATTERN.test(params.get('e') ?? '') ? params.get('e') : null;
     return {
-      ...restoreInvite({ t: requested }),
+      ...restoreInvite({ t: requested }, code),
       photo: null,
       guest,
       sample: false,
@@ -206,7 +199,7 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null,
     saved = null;
   }
   const state = {
-    ...(restoreInvite(saved) || restoreInvite({ t: requested })),
+    ...(restoreInvite(saved, code) || restoreInvite({ t: requested }, code)),
     photo: isPhoto(photo) ? photo : null,
     guest,
     sample: false,
@@ -214,15 +207,14 @@ export function openInvite({ search = '', hash = '', draft = null, photo = null,
     event: null,
     publishedEvent: owned,
   };
-  if (requested && requested !== state.t) switchTemplate(state, requested);
+  if (requested && requested !== state.t) switchTemplate(state, requested, code);
   return state;
 }
 
 // Storage keeps the owner's draft, photo and published event identity for a reload. storage has the localStorage
 // shape; a blocked or full storage throws, and the reads and writes below treat that as no value or a refused write.
-const DRAFT_KEY = 'petalpost:draft';
-const PHOTO_KEY = 'petalpost:photo';
-const EVENT_KEY = 'petalpost:event';
+// Romanian drafts stay under a separate namespace so switching locales never loads English sample text as a draft.
+const storageKey = (name, lang = 'en') => (normalizeLang(lang) === 'ro' ? `petalpost:ro:${name}` : `petalpost:${name}`);
 
 function readStorage(storage, key) {
   try {
@@ -243,26 +235,27 @@ function writeStorage(storage, key, value) {
 }
 
 // The stored draft, photo and event identity strings, as openInvite takes them.
-export const storedInvite = (storage) => ({
-  draft: readStorage(storage, DRAFT_KEY),
-  photo: readStorage(storage, PHOTO_KEY),
-  publishedEvent: readStorage(storage, EVENT_KEY),
+export const storedInvite = (storage, lang = 'en') => ({
+  draft: readStorage(storage, storageKey('draft', lang)),
+  photo: readStorage(storage, storageKey('photo', lang)),
+  publishedEvent: readStorage(storage, storageKey('event', lang)),
 });
 
 // The stored event identity alone, or null. A publish reads it again, because another tab may have stored one
 // since this page opened.
-export const storedPublishedEvent = (storage) => readPublishedEvent(readStorage(storage, EVENT_KEY));
+export const storedPublishedEvent = (storage, lang = 'en') =>
+  readPublishedEvent(readStorage(storage, storageKey('event', lang)));
 
 // The guest view never writes: a share link opens on the owner's origin and would overwrite the owner's draft.
-export function saveDraft(state, storage) {
-  if (!state.guest) writeStorage(storage, DRAFT_KEY, draftOf(state));
+export function saveDraft(state, storage, lang = 'en') {
+  if (!state.guest) writeStorage(storage, storageKey('draft', lang), draftOf(state));
 }
 
 // Writes state.publishedEvent, or removes the stored identity when it is null. The guest view never writes.
 // Returns false when storage refused the write.
-export function savePublishedEvent(state, storage) {
+export function savePublishedEvent(state, storage, lang = 'en') {
   if (state.guest) return false;
-  return writeStorage(storage, EVENT_KEY, state.publishedEvent && JSON.stringify(state.publishedEvent));
+  return writeStorage(storage, storageKey('event', lang), state.publishedEvent && JSON.stringify(state.publishedEvent));
 }
 
 const photoChanges = new WeakMap();
@@ -271,7 +264,7 @@ const photoChanges = new WeakMap();
 // The latest request wins, even when decoding completes out of order; older requests return 'superseded'.
 // Returns 'refused' and keeps the current photo for anything else, such as the "data:," export of an empty canvas.
 // Returns 'unsaved' when the photo does not fit in storage: it shows now and the stored one is removed. Otherwise 'saved'.
-export async function changePhoto(state, source, storage) {
+export async function changePhoto(state, source, storage, lang = 'en') {
   const request = {};
   photoChanges.set(state, request);
   let url;
@@ -283,8 +276,9 @@ export async function changePhoto(state, source, storage) {
   if (photoChanges.get(state) !== request) return 'superseded';
   if (!isPhoto(url)) return 'refused';
   state.photo = url;
-  if (state.guest || writeStorage(storage, PHOTO_KEY, url)) return 'saved';
-  writeStorage(storage, PHOTO_KEY, null);
+  const key = storageKey('photo', lang);
+  if (state.guest || writeStorage(storage, key, url)) return 'saved';
+  writeStorage(storage, key, null);
   return 'unsaved';
 }
 
@@ -313,6 +307,8 @@ export const mapLink = (data) =>
 
 export const slug = (text) =>
   (text || 'invite')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '') || 'invite';

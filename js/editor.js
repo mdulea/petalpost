@@ -1,5 +1,6 @@
 import './icons.js';
-import { ACCENTS, CATEGORIES, TEMPLATES, getTemplate, renderInvite } from './templates.js';
+import { UI, accentLabel, categoryLabel, localeOf, pageLang } from './i18n.js';
+import { ACCENTS, categoriesFor, getTemplate, renderInvite, templatesFor } from './templates.js';
 import { mountInvites } from './mount.js';
 import {
   EDITABLE,
@@ -34,6 +35,12 @@ import {
   responseLink,
 } from './rsvp.js';
 
+const lang = pageLang();
+const locale = lang === 'ro' ? localeOf('ro') : undefined;
+const copy = UI[lang].editor;
+const catalog = templatesFor(lang);
+const categories = categoriesFor(lang);
+
 const form = /** @type {HTMLFormElement} */ (document.getElementById('form'));
 const previewCard = document.getElementById('previewCard');
 const statusEl = document.getElementById('status');
@@ -46,11 +53,11 @@ try {
   storage = null;
 }
 
-const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage) });
+const state = openInvite({ search: location.search, hash: location.hash, ...storedInvite(storage, lang), lang });
 
-const pageBase = editorPage(location.origin);
+const pageBase = editorPage(location.origin, lang);
 const shareUrl = () => shareLink(pageBase, state);
-const client = createClient();
+const client = createClient(fetch, { lang });
 
 /** @type {ReturnType<typeof setTimeout>} */
 let statusTimer;
@@ -67,11 +74,11 @@ function setStatus(text, { keep = false } = {}) {
 let saveTimer;
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveDraft(state, storage), 250);
+  saveTimer = setTimeout(() => saveDraft(state, storage, lang), 250);
 }
 
 function render() {
-  mountInvites(previewCard, renderInvite(getTemplate(state.t), { ...state.d, photo: state.photo }));
+  mountInvites(previewCard, renderInvite(getTemplate(state.t, lang), { ...state.d, photo: state.photo }, { locale }));
   form.classList.toggle('has-photo', Boolean(state.photo));
   /** @type {HTMLAnchorElement} */ (document.getElementById('previewGuest')).href = shareUrl();
   const map = /** @type {HTMLAnchorElement} */ (document.getElementById('openMap'));
@@ -98,22 +105,24 @@ FIELDS.forEach((f) => {
 
 // The picker shows one occasion at a time; the tab follows the selected template.
 const pickerTabs = document.getElementById('pickerTabs');
-pickerTabs.innerHTML = CATEGORIES.map(
-  (c) => `<button class="filter" type="button" data-category="${c}">${c}</button>`,
-).join('');
+pickerTabs.innerHTML = categories
+  .map((c) => `<button class="filter" type="button" data-category="${c}">${categoryLabel(c, lang)}</button>`)
+  .join('');
 
 function renderPicker(category) {
+  const active = categories.includes(category) ? category : categories[0];
   pickerTabs
     .querySelectorAll('.filter')
-    .forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.category === category)));
+    .forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.category === active)));
   mountInvites(
     document.getElementById('picker'),
-    TEMPLATES.filter((t) => t.category === category)
+    catalog
+      .filter((t) => t.category === active)
       .map(
         (t) => `
     <label class="picker-item">
       <input type="radio" name="template" value="${t.id}" ${t.id === state.t ? 'checked' : ''}>
-      ${renderInvite(t, makeInviteData(t), { inline: true, decorative: true })}
+      ${renderInvite(t, makeInviteData(t, undefined, lang), { inline: true, decorative: true, locale })}
       <span class="picker-name">${t.name}</span>
     </label>`,
       )
@@ -129,20 +138,21 @@ pickerTabs.addEventListener('click', (e) => {
 // Accent swatches.
 
 document.getElementById('swatches').innerHTML =
-  `<label class="swatch swatch-default" title="Template default"><input type="radio" name="accent" value="" aria-label="Template default"></label>` +
-  ACCENTS.map(
-    (a) => `
-    <label class="swatch" style="background:${a.hex}" title="${a.name}">
-      <input type="radio" name="accent" value="${a.hex}" aria-label="${a.name}">
-    </label>`,
-  ).join('');
+  `<label class="swatch swatch-default" title="${copy.defaultSwatch}"><input type="radio" name="accent" value="" aria-label="${copy.defaultSwatch}"></label>` +
+  ACCENTS.map((a) => {
+    const label = accentLabel(a.hex, lang);
+    return `
+    <label class="swatch" style="background:${a.hex}" title="${label}">
+      <input type="radio" name="accent" value="${a.hex}" aria-label="${label}">
+    </label>`;
+  }).join('');
 
 form.addEventListener('input', (e) => {
   const { name, value } = /** @type {HTMLInputElement} */ (e.target);
   if (name === 'template') {
-    switchTemplate(state, value);
+    switchTemplate(state, value, lang);
     fillForm();
-  } else if (!updateInvite(state, name, value)) {
+  } else if (!updateInvite(state, name, value, lang)) {
     return;
   }
   commit();
@@ -182,19 +192,19 @@ async function decodePhoto(file) {
 
 async function loadPhoto(file) {
   if (file !== null && (!file || !file.type.startsWith('image/'))) {
-    setStatus('Choose an image file, such as JPG, PNG or HEIC exported to JPG.');
+    setStatus(copy.chooseImage);
     return;
   }
-  const result = await changePhoto(state, file === null ? null : decodePhoto(file), storage);
+  const result = await changePhoto(state, file === null ? null : decodePhoto(file), storage, lang);
   if (result === 'superseded') return;
   if (result === 'refused') {
-    setStatus('That image could not be read. Try a JPG or PNG.');
+    setStatus(copy.imageRefused);
     return;
   }
   commit();
   if (file === null) setStatus('');
-  else if (result === 'saved') setStatus('Photo added.');
-  else setStatus('The photo is too large to keep after a reload. Download the PNG before you leave.', { keep: true });
+  else if (result === 'saved') setStatus(copy.photoAdded);
+  else setStatus(copy.photoTooLarge, { keep: true });
 }
 
 const dropzone = document.getElementById('dropzone');
@@ -221,11 +231,11 @@ dropzone.addEventListener('drop', (e) => {
 document.getElementById('removePhoto').addEventListener('click', () => loadPhoto(null));
 
 document.getElementById('reset').addEventListener('click', () => {
-  if (!window.confirm('Replace all your text with the template sample?')) return;
-  resetInvite(state);
+  if (!window.confirm(copy.resetConfirm)) return;
+  resetInvite(state, lang);
   fillForm();
   commit();
-  setStatus('Text reset to the template sample.');
+  setStatus(copy.resetDone);
 });
 
 // Copies the link and then calls done, or shows the link in a prompt where the clipboard is blocked.
@@ -234,24 +244,22 @@ async function copyLink(url, done) {
     await navigator.clipboard.writeText(url);
     done();
   } catch {
-    window.prompt('Copy this link:', url);
+    window.prompt(copy.copyPrompt, url);
   }
 }
 
 document
   .getElementById('copyLink')
-  .addEventListener('click', () =>
-    copyLink(shareUrl(), () => setStatus('Link copied. Paste it into a message to your guests.')),
-  );
+  .addEventListener('click', () => copyLink(shareUrl(), () => setStatus(copy.shareCopied)));
 
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
   if (typeof htmlToImage !== 'object') {
-    setStatus('The image tool is still loading. Try again in a moment.');
+    setStatus(copy.imageToolLoading);
     return;
   }
   button.disabled = true;
-  setStatus('Preparing the image.', { keep: true });
+  setStatus(copy.preparingImage, { keep: true });
   try {
     await document.fonts.ready;
     const card = /** @type {HTMLElement} */ (previewCard.querySelector('.invite'));
@@ -259,9 +267,9 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
     link.download = `${slug(state.d.title)}.png`;
     link.href = await htmlToImage.toPng(card, { pixelRatio: 1500 / card.offsetWidth });
     link.click();
-    setStatus('Invite downloaded.');
+    setStatus(copy.downloaded);
   } catch {
-    setStatus('The download failed. Try again, or take a screenshot of the preview.');
+    setStatus(copy.downloadFailed);
   } finally {
     button.disabled = false;
   }
@@ -271,7 +279,7 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
 document.getElementById('addCalendar').addEventListener('click', () => {
   const ics = buildIcs(state.d, new Date());
   if (!ics) {
-    setStatus('This invite has no valid date yet.');
+    setStatus(copy.noDate);
     return;
   }
   const link = document.createElement('a');
@@ -294,41 +302,34 @@ function showPublished() {
   const cred = state.publishedEvent;
   const live = Boolean(cred && cred.version !== null);
   document.getElementById('published').hidden = !live;
-  publishButton.lastChild.textContent = live ? 'Publish changes' : 'Publish';
+  publishButton.lastChild.textContent = live ? copy.publishChanges : copy.publish;
   eventLinkInput.value = live ? eventLink(pageBase, cred.id) : '';
-  manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret) : '';
+  manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret, lang) : '';
 }
 
 // Stores the identity, or forgets it for null. Returns false when this browser cannot keep it.
 function rememberEvent(cred) {
   state.publishedEvent = cred;
-  const kept = savePublishedEvent(state, storage);
+  const kept = savePublishedEvent(state, storage, lang);
   showPublished();
   return kept;
 }
 
 publishButton.addEventListener('click', async () => {
-  state.publishedEvent ??= storedPublishedEvent(storage);
+  state.publishedEvent ??= storedPublishedEvent(storage, lang);
   if (!state.publishedEvent) rememberEvent({ id: newId(), secret: newSecret(), version: null });
   const cred = state.publishedEvent;
   publishButton.disabled = true;
-  publishStatus.textContent = 'Publishing.';
+  publishStatus.textContent = copy.publishing;
   const result = await client.publish(cred, state);
   publishButton.disabled = false;
   if (result.ok || result.status === 409) {
     const kept = rememberEvent({ ...cred, version: result.data.version });
-    const done =
-      cred.version === null
-        ? 'Published. Send the invitation link to your guests.'
-        : 'Published. Guests see the changes when they open the invitation link.';
-    publishStatus.textContent = [
-      result.ok ? done : result.message,
-      kept ? '' : 'This browser cannot keep the invitation, so save the management link now.',
-    ].join(' ');
+    const done = cred.version === null ? copy.publishedFirst : copy.publishedUpdated;
+    publishStatus.textContent = [result.ok ? done : result.message, kept ? '' : copy.storageRefused].join(' ');
   } else if (result.status === 404 && cred.version !== null) {
     rememberEvent(null);
-    publishStatus.textContent =
-      'This invitation was deleted with its replies. Publish again to make a new invitation link.';
+    publishStatus.textContent = copy.deletedOnServer;
   } else {
     publishStatus.textContent = result.message;
   }
@@ -336,12 +337,12 @@ publishButton.addEventListener('click', async () => {
 
 document.getElementById('copyEventLink').addEventListener('click', () =>
   copyLink(eventLinkInput.value, () => {
-    publishStatus.textContent = 'Invitation link copied. Paste it into a message to your guests.';
+    publishStatus.textContent = copy.eventLinkCopied;
   }),
 );
 document.getElementById('copyManageLink').addEventListener('click', () =>
   copyLink(manageLinkInput.value, () => {
-    publishStatus.textContent = 'Management link copied. Keep it somewhere private.';
+    publishStatus.textContent = copy.manageLinkCopied;
   }),
 );
 
@@ -396,24 +397,23 @@ rsvpForm.addEventListener('submit', async (e) => {
     partySize: attending ? Number(partySizeInput.value) : 0,
   });
   if (!reply) {
-    rsvpStatus.textContent = `Enter your name, and a party size from 1 to ${REPLY_LIMITS.partySize} when you come.`;
+    rsvpStatus.textContent = copy.replyInvalid(REPLY_LIMITS.partySize);
     return;
   }
   if (state.sample) {
-    rsvpStatus.textContent =
-      'Sample reply checked locally. Nothing was sent. Use Make your own to collect real replies and track headcount.';
+    rsvpStatus.textContent = copy.sampleReply;
     return;
   }
   // The edit link replaces the address before the request, so a reload or bookmark opens the reply if it was saved.
   history.replaceState(null, '', replyLink());
   sendReply.disabled = true;
-  rsvpStatus.textContent = 'Sending your reply.';
+  rsvpStatus.textContent = copy.sendingReply;
   const result = await client.saveReply(state.event, replyCred, reply);
   sendReply.disabled = false;
   if (result.ok) {
     replyCred.version = result.data.version;
     showReplyLink();
-    rsvpStatus.textContent = 'Your reply is saved. The host can see it now.';
+    rsvpStatus.textContent = copy.replySaved;
     return;
   }
   if (result.status === 409) {
@@ -425,7 +425,7 @@ rsvpForm.addEventListener('submit', async (e) => {
 
 document.getElementById('copyReplyLink').addEventListener('click', () =>
   copyLink(replyLinkInput.value, () => {
-    rsvpStatus.textContent = 'Edit link copied. Keep it to change your reply later.';
+    rsvpStatus.textContent = copy.replyLinkCopied;
   }),
 );
 
@@ -439,19 +439,20 @@ function setHeading(heading) {
 async function openEvent() {
   const result = await client.loadEvent(state.event);
   if (!result.ok) {
-    setHeading(result.status === 404 ? 'This invitation does not exist' : 'The invitation could not be loaded');
+    setHeading(result.status === 404 ? copy.missingHeading : copy.loadFailedHeading);
     setStatus(result.message, { keep: true });
     return;
   }
-  const template = getTemplate(result.data.t);
+  const template = getTemplate(result.data.t, lang);
   state.t = template.id;
-  state.d = makeInviteData(template, result.data.d);
-  setHeading(state.d.title || 'You are invited');
+  state.d = makeInviteData(template, result.data.d, lang);
+  setHeading(state.d.title || copy.defaultGuestHeading);
   document.body.classList.remove('invite-hidden');
   render();
   rsvpForm.hidden = false;
   /** @type {HTMLAnchorElement} */ (document.getElementById('reportLink')).href = reportLink(
     eventLink(pageBase, state.event),
+    lang,
   );
   document.getElementById('reportRow').hidden = false;
   if (!fromLink) return;
@@ -465,7 +466,7 @@ async function openEvent() {
   replyCred.version = saved.data.version;
   fillReply(saved.data);
   showReplyLink();
-  rsvpStatus.textContent = 'Your saved reply is shown. Change it and send it again.';
+  rsvpStatus.textContent = copy.savedReplyShown;
 }
 
 // A broken link shows only the message and the link to make an invite; an invite without a title gets a generic one.
@@ -473,23 +474,23 @@ if (state.guest) {
   document.body.classList.add('view-mode');
   document.body.classList.toggle('invite-hidden', state.broken || Boolean(state.event));
   if (state.broken) {
-    setHeading('This invite link is incomplete');
-    setStatus('This invite link is incomplete. Ask the host to send the whole link again.', { keep: true });
+    setHeading(copy.brokenHeading);
+    setStatus(copy.brokenMessage, { keep: true });
   } else if (state.event) {
-    setHeading('Opening the invitation');
+    setHeading(copy.openingHeading);
     openEvent();
   } else if (state.sample) {
-    setHeading(state.d.title || 'You are invited');
+    setHeading(state.d.title || copy.defaultGuestHeading);
     const sampleNotice = document.getElementById('sampleNotice');
-    sampleNotice.textContent = 'Sample invitation. Replies submitted here are not saved.';
+    sampleNotice.textContent = copy.sampleNotice;
     sampleNotice.hidden = false;
     rsvpForm.hidden = false;
   } else {
-    setHeading(state.d.title || 'You are invited');
+    setHeading(state.d.title || copy.defaultGuestHeading);
   }
 }
 
 showPublished();
 fillForm();
-renderPicker(getTemplate(state.t).category);
+renderPicker(getTemplate(state.t, lang).category);
 render();

@@ -1,5 +1,5 @@
 // Fails when share links, sample guest mode, invitation links of published events, invite records, storage writes, the stored
-// published event identity, template switching, template ids, the calendar file or the report link break.
+// published event identity, template switching, template ids, Romanian localization and 24-hour time formatting, the calendar file or the report link break.
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -664,5 +664,75 @@ test('the report link mails the contact address with the invitation link and the
       link: true,
       elements: [true, true, true, true],
     },
+  );
+});
+
+// Romanian localization: sample limits, 24-hour time formatting, locale-scoped storage, diacritic slugs and Romanian DSA notice.
+check(
+  'every Romanian template sample fits its limits',
+  ctx.templatesFor('ro').flatMap((t) =>
+    Object.entries(ctx.FIELD_LIMITS)
+      .filter(([f, max]) => max && (t.defaults[f] || '').length > max)
+      .map(([f]) => `${t.id}.${f}`),
+  ),
+  [],
+);
+check(
+  'Romanian hero and popular templates exist and there are three hero templates',
+  [
+    ctx.RO_HERO_TEMPLATES.length,
+    ctx.RO_HERO_TEMPLATES.map((id) => ctx.getTemplate(id, 'ro').id),
+    ctx.RO_POPULAR_TEMPLATES.filter((id) => !ids.includes(id)),
+  ],
+  [3, ctx.RO_HERO_TEMPLATES, []],
+);
+check(
+  'renderInvite formats Romanian dates and 24-hour times with ora',
+  (() => {
+    const html = ctx.renderInvite(
+      ctx.getTemplate('botez-porumbel', 'ro'),
+      ctx.makeInviteData(ctx.getTemplate('botez-porumbel', 'ro'), { date: '2027-05-15', time: '14:30' }, 'ro'),
+      { locale: 'ro-RO' },
+    );
+    return [html.includes('ora 14:30'), /\b(AM|PM)\b/.test(html)];
+  })(),
+  [true, false],
+);
+check(
+  'slug strips Romanian diacritics cleanly',
+  ctx.slug('Botezul lui Matei — Nuntă și Cununie'),
+  'botezul-lui-matei-nunta-si-cununie',
+);
+check(
+  'editorUrl targets /ro/editor.html for Romanian',
+  ctx.editorUrl('botez-porumbel', 'ro'),
+  '/ro/editor.html?t=botez-porumbel',
+);
+test('Romanian drafts stay isolated from English drafts in storage', () => {
+  const map = new Map();
+  const store = {
+    getItem: (k) => map.get(k) ?? null,
+    setItem: (k, v) => map.set(k, v),
+    removeItem: (k) => map.delete(k),
+  };
+  const en = ctx.openInvite({ search: '?t=birthday', lang: 'en' });
+  const ro = ctx.openInvite({ search: '?t=botez-porumbel', lang: 'ro' });
+  ctx.saveDraft(en, store, 'en');
+  ctx.saveDraft(ro, store, 'ro');
+  assert.equal(ctx.openInvite({ ...ctx.storedInvite(store, 'en'), lang: 'en' }).d.title, 'Mia turns seven');
+  assert.equal(ctx.openInvite({ ...ctx.storedInvite(store, 'ro'), lang: 'ro' }).d.title, 'Botezul lui Matei');
+});
+test('Romanian report link uses Romanian subject and DSA elements', () => {
+  const link = ctx.reportLink('https://www.petalpost.ro/ro/editor.html?view=1&e=AAAAAAAAAAAAAAAAAAAAAA', 'ro');
+  const url = new URL(link);
+  const body = url.searchParams.get('body');
+  assert.deepEqual(
+    {
+      subject: url.searchParams.get('subject'),
+      elements: ['De ce acest conținut este ilegal', 'Numele tău:', 'Adresa ta de email:', 'bună-credință'].map(
+        (word) => body.includes(word),
+      ),
+    },
+    { subject: 'Raportare invitație', elements: [true, true, true, true] },
   );
 });

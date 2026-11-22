@@ -42,7 +42,7 @@ const LOCAL_TOOLS = ['scripts/og-card.html', 'scripts/og-card.js'];
 async function staticFile(pathname) {
   let path;
   try {
-    path = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
+    path = decodeURIComponent(pathname.endsWith('/') ? `${pathname}index.html` : pathname);
   } catch {
     return null;
   }

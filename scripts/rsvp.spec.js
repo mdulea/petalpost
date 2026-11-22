@@ -392,3 +392,33 @@ test("the report link names the invitation link and never the guest's edit secre
   });
   expect([...host.problems, ...guest.problems]).toEqual([]);
 });
+
+test('Romanian publishing, guest RSVP and management keep links and copy in Romanian', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  await host.page.goto('/ro/editor.html?t=botez-porumbel');
+  await host.page.fill('#title', 'Botezul lui Matei');
+  await host.page.click('#publish');
+  await expect(host.page.locator('#eventLink')).toHaveValue(/\/ro\/editor\.html\?view=1&e=/);
+  await expect(host.page.locator('#manageLink')).toHaveValue(/\/ro\/manage\.html#/);
+  const invitation = await host.page.locator('#eventLink').inputValue();
+  const manage = await host.page.locator('#manageLink').inputValue();
+
+  const guest = await newBrowser(browser);
+  await guest.page.goto(invitation);
+  await expect(guest.page.locator('h1')).toHaveText('Botezul lui Matei');
+  await guest.page.fill('#guestName', 'Andrei');
+  await guest.page.fill('#partySize', '2');
+  await guest.page.click('#sendReply');
+  await expect(guest.page.locator('#rsvpStatus')).toHaveText('Răspunsul tău a fost salvat. Gazda îl poate vedea acum.');
+
+  await host.page.goto(manage);
+  expect(await managed(host.page)).toEqual({
+    totals: expect.stringMatching(/1\s+răspuns[\s\S]*1\s+confirmare[\s\S]*0\s+refuzuri[\s\S]*2\s+persoane confirmate/i),
+    replies: [expect.stringMatching(/Andrei[\s\S]*Da, 2 persoane/)],
+  });
+
+  const stranger = await newBrowser(browser);
+  await stranger.page.goto(manage.replace(/\.[^.]+$/, `.${'x'.repeat(43)}`));
+  await expect(stranger.page.locator('#manageStatus')).toHaveText('Acest link nu oferă acces la această invitație.');
+  expect([...host.problems, ...guest.problems, ...stranger.problems]).toEqual([]);
+});

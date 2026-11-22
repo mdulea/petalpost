@@ -137,9 +137,10 @@ p {
 
 .site-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px 16px;
   max-width: 1440px;
   margin: 0 auto;
   padding: 20px var(--gutter);
@@ -160,6 +161,7 @@ p {
 
 .nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -183,6 +185,11 @@ p {
     border-color 0.2s,
     background-color 0.2s;
 }
+.pill-lang {
+  min-width: 44px;
+  justify-content: center;
+  padding: 0 12px;
+}
 .pill:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
@@ -204,7 +211,7 @@ p {
 }
 
 @media (max-width: 720px) {
-  .nav .pill:not(.pill-cta) {
+  .nav .pill:not(.pill-cta):not(.pill-lang) {
     display: none;
   }
   .brand {

@@ -1,5 +1,6 @@
 // Guest replies, private links and the RSVP API client. It has no DOM access, because the browser and
 // server/api.js share it and scripts/check-rsvp.js runs it in Node.
+import { UI, normalizeLang } from './i18n.js';
 
 export const REPLY_LIMITS = { name: 80, partySize: 10 };
 
@@ -34,14 +35,16 @@ export function tally(responses) {
 }
 
 // The editor page URL on the site origin. Share, invitation and response edit links start from it.
-export const editorPage = (origin) => `${origin}/editor.html`;
+export const editorPage = (origin, lang = 'en') =>
+  normalizeLang(lang) === 'ro' ? `${origin}/ro/editor.html` : `${origin}/editor.html`;
 
 // Private links keep the secret in the fragment, which the browser never sends to a server.
 // base is the editor page URL; readCredential(hash, 'r=') reads the response edit link back.
 export const responseLink = (base, eventId, responseId, secret) =>
   `${base}?view=1&e=${eventId}#r=${responseId}.${secret}`;
 // readCredential(hash, '') reads the management link back.
-export const manageLink = (origin, id, secret) => `${origin}/manage.html#${id}.${secret}`;
+export const manageLink = (origin, id, secret, lang = 'en') =>
+  `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#${id}.${secret}`;
 
 // A private link fragment #<prefix><id>.<secret> gives {id, secret}, or null when it is incomplete or malformed.
 // The prefix is '' for management links and 'r=' for response edit links.
@@ -65,23 +68,24 @@ function randomToken(size) {
 export const newId = () => randomToken(16);
 export const newSecret = () => randomToken(32);
 
-const OFFLINE = 'Petalpost could not be reached. Check your connection and try again.';
-const UNEXPECTED = 'Something went wrong on the server. Try again in a minute.';
-
 // The API client. fetchFn has the fetch shape and receives relative /api paths.
 // Every method resolves {ok, status, data, message} and never throws: data is the parsed JSON body or null,
 // message is null on success and text to show the user on failure, and status is 0 when the network failed.
 // Credentials are {id, secret, version}; version is null before the first successful write.
-export function createClient(fetchFn = fetch) {
+export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
+  const code = normalizeLang(lang);
+  const copy = UI[code].rsvp;
+
   async function call(method, path, secret, body) {
     const headers = {};
+    if (code !== 'en') headers['accept-language'] = code;
     if (secret) headers.authorization = `Bearer ${secret}`;
     if (body) headers['content-type'] = 'application/json';
     let response;
     try {
       response = await fetchFn(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
     } catch {
-      return { ok: false, status: 0, data: null, message: OFFLINE };
+      return { ok: false, status: 0, data: null, message: copy.offline };
     }
     let data = null;
     try {
@@ -90,7 +94,7 @@ export function createClient(fetchFn = fetch) {
       data = null;
     }
     if (response.ok) return { ok: true, status: response.status, data, message: null };
-    const message = typeof data?.error === 'string' ? data.error : UNEXPECTED;
+    const message = typeof data?.error === 'string' ? data.error : copy.unexpected;
     return { ok: false, status: response.status, data, message };
   }
 

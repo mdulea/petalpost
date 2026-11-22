@@ -6,7 +6,7 @@
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
-// failure; private link round trips.
+// failure; private link round trips; Romanian link helpers and localized API error messages via Accept-Language.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
 // checks, which read the stored keys in a database of their own.
 // Run: node scripts/check-rsvp.js
@@ -573,11 +573,35 @@ test('private links read back to the credential they carry', () => {
       reply: [reply.split('#')[0], readCredential(reply.slice(reply.indexOf('#')), 'r=')],
       manage: [manage.split('#')[0], readCredential(manage.slice(manage.indexOf('#')), '')],
       event: eventLink(page, eventId),
+      roEditor: editorPage('https://petalpost.example', 'ro'),
+      roManage: manageLink('https://petalpost.example', eventId, secret, 'ro').split('#')[0],
     },
     {
       reply: [`https://petalpost.example/editor.html?view=1&e=${eventId}`, { id, secret }],
       manage: ['https://petalpost.example/manage.html', { id: eventId, secret }],
       event: `https://petalpost.example/editor.html?view=1&e=${eventId}`,
+      roEditor: 'https://petalpost.example/ro/editor.html',
+      roManage: 'https://petalpost.example/ro/manage.html',
+    },
+  );
+});
+
+test('a Romanian client receives Romanian API and network error messages', async () => {
+  const { raw } = await setup();
+  const roClient = createClient(
+    (path, init = {}) => raw(path, { ...init, headers: { ...init.headers, 'x-real-ip': newId() } }),
+    { lang: 'ro' },
+  );
+  const missing = await roClient.loadEvent(newId());
+  const offline = createClient(() => Promise.reject(new TypeError('Failed to fetch')), { lang: 'ro' });
+  const down = await offline.loadEvent(newId());
+  assert.deepEqual(
+    { missingStatus: missing.status, missing: missing.message, downStatus: down.status, down: down.message },
+    {
+      missingStatus: 404,
+      missing: 'Această invitație nu există. Este posibil să fi fost ștearsă.',
+      downStatus: 0,
+      down: 'Petalpost nu a putut fi contactat. Verifică conexiunea și încearcă din nou.',
     },
   );
 });

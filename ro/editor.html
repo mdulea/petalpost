@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Petalpost | Creează invitația ta</title>
+    <meta
+      name="description"
+      content="Alege un model, adaugă fotografia, numele, data și adresa, apoi descarcă imaginea PNG sau trimite invitația printr-un link cu confirmări."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.petalpost.ro/ro/editor.html" />
+    <!-- generated:hreflang -->
+    <link rel="alternate" hreflang="en" href="https://www.petalpost.ro/editor.html" />
+    <link rel="alternate" hreflang="ro" href="https://www.petalpost.ro/ro/editor.html" />
+    <link rel="alternate" hreflang="x-default" href="https://www.petalpost.ro/editor.html" />
+    <!-- /generated:hreflang -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Petalpost" />
+    <meta property="og:locale" content="ro_RO" />
+    <meta property="og:title" content="Petalpost | Creează invitația ta" />
+    <meta
+      property="og:description"
+      content="Alege un model, adaugă fotografia, numele, data și adresa, apoi descarcă imaginea PNG sau trimite invitația printr-un link cu confirmări."
+    />
+    <meta property="og:url" content="https://www.petalpost.ro/ro/editor.html" />
+    <meta property="og:image" content="https://www.petalpost.ro/ro/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Petalpost: trei invitații ilustrate alături de mesajul Ziua ta, invitația ta."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="/vendor/html-to-image.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Sari la conținut</a>
+    <header class="site-header">
+      <a class="brand" href="/ro/" aria-label="Petalpost acasă">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2" />
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round" />
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74" />
+        </svg>
+        Petalpost
+      </a>
+      <nav class="nav" aria-label="Navigare principală">
+        <a class="pill owner-only" href="/ro/#templates"
+          ><svg class="icon"><use href="#i-layout" /></svg>Toate modelele</a
+        >
+        <a class="pill pill-lang" href="/editor.html" hreflang="en" lang="en" aria-label="English">EN</a>
+        <a class="pill pill-cta guest-only" href="/ro/editor.html"
+          ><svg class="icon"><use href="#i-pen" /></svg>Creează invitația ta</a
+        >
+      </nav>
+    </header>
+
+    <main class="editor" id="main">
+      <div class="editor-head">
+        <div>
+          <h1>Personalizează invitația</h1>
+          <p>Modificările se salvează automat în acest browser pe măsură ce scrii.</p>
+          <p class="editor-intro owner-only">
+            Alege un model, adaugă fotografia ta și completează numele, data, ora, locația, adresa și o notă scurtă.
+            Alege o culoare de accent, apoi descarcă invitația ca imagine, copiază un link de partajare sau public-o
+            pentru a colecta confirmări. Ai nevoie de idei? Vezi
+            <a href="/ro/text-invitatii.html">ghidul de texte pentru invitații</a> și
+            <a href="/ro/cand-sa-trimiti-invitatiile.html">când să trimiți invitațiile</a>.
+          </p>
+        </div>
+      </div>
+
+      <form class="editor-form" id="form" autocomplete="off" novalidate>
+        <section class="panel" id="templates-panel" aria-labelledby="h-template">
+          <h2 id="h-template">
+            <svg class="icon"><use href="#i-layout" /></svg>Model
+          </h2>
+          <div
+            class="filters picker-tabs"
+            id="pickerTabs"
+            role="group"
+            aria-label="Arată modelele pentru o ocazie"
+          ></div>
+          <div class="picker" id="picker" role="radiogroup" aria-labelledby="h-template"></div>
+        </section>
+
+        <section class="panel" id="photo-panel" aria-labelledby="h-photo">
+          <h2 id="h-photo">
+            <svg class="icon"><use href="#i-image" /></svg>Fotografie
+          </h2>
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="photoInput" accept="image/*" />
+            <svg class="icon"><use href="#i-upload" /></svg>
+            <strong>Încarcă o fotografie</strong>
+            <span class="hint">Trage o imagine aici sau atinge pentru a alege. Va înlocui ilustrația.</span>
+          </label>
+          <div class="photo-tools">
+            <div class="field">
+              <label for="photoY">Poziția fotografiei</label>
+              <input class="range" type="range" id="photoY" name="photoY" min="0" max="100" value="50" />
+            </div>
+            <button class="btn btn-ghost btn-small" type="button" id="removePhoto">
+              <svg class="icon"><use href="#i-trash" /></svg>Folosește ilustrația
+            </button>
+          </div>
+        </section>
+
+        <section class="panel" id="details-panel" aria-labelledby="h-details">
+          <h2 id="h-details">
+            <svg class="icon"><use href="#i-pen" /></svg>Detalii
+          </h2>
+          <div class="field">
+            <label for="eyebrow">Rând de introducere</label>
+            <input class="input" id="eyebrow" name="eyebrow" />
+          </div>
+          <div class="field">
+            <label for="title">Titlul evenimentului sau numele</label>
+            <input class="input" id="title" name="title" />
+          </div>
+          <div class="field">
+            <label for="hosts">Gazde / din partea cui</label>
+            <input class="input" id="hosts" name="hosts" />
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-when">
+          <h2 id="h-when">
+            <svg class="icon"><use href="#i-calendar" /></svg>Când și unde
+          </h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="date">Data</label>
+              <input class="input" type="date" id="date" name="date" />
+            </div>
+            <div class="field">
+              <label for="time">Ora (24h)</label>
+              <input class="input" type="time" id="time" name="time" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="venue">Locație</label>
+            <input class="input" id="venue" name="venue" />
+          </div>
+          <div class="field">
+            <label for="address">Adresă</label>
+            <input class="input" id="address" name="address" />
+            <span class="hint">Invitații primesc un buton de hartă pentru această adresă.</span>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-note">
+          <h2 id="h-note">
+            <svg class="icon"><use href="#i-heart" /></svg>Mesaj și confirmare
+          </h2>
+          <div class="field">
+            <label for="message">Mesaj scurt</label>
+            <textarea class="input" id="message" name="message"></textarea>
+            <span class="hint">Pe card apar cel mult două rânduri.</span>
+          </div>
+          <div class="field">
+            <label for="rsvp">Cum confirmă invitații</label>
+            <input class="input" id="rsvp" name="rsvp" />
+          </div>
+        </section>
+
+        <section class="panel" id="color-panel" aria-labelledby="h-color">
+          <h2 id="h-color">
+            <svg class="icon"><use href="#i-palette" /></svg>Culoare de accent
+          </h2>
+          <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="h-color"></div>
+        </section>
+
+        <section class="panel" id="publish-panel" aria-labelledby="h-publish">
+          <h2 id="h-publish">
+            <svg class="icon"><use href="#i-send" /></svg>Confirmări (RSVP)
+          </h2>
+          <p class="hint">
+            Publică invitația pentru a strânge confirmări. Petalpost salvează textul, modelul și culoarea, iar invitații
+            răspund direct din link. Fotografia rămâne doar în browserul tău. După orice modificare, apasă din nou
+            Publică pentru a actualiza.
+          </p>
+          <button class="btn btn-primary btn-small" type="button" id="publish">
+            <svg class="icon"><use href="#i-send" /></svg>Publică
+          </button>
+          <p class="status" id="publishStatus" role="status"></p>
+          <div class="published" id="published" hidden>
+            <p class="warning">
+              Salvează linkul de administrare într-un loc privat. Oricine îl are poate vedea confirmările și șterge
+              invitația. Petalpost nu poate recupera un link de administrare pierdut.
+            </p>
+            <div class="field">
+              <label for="eventLink">Linkul invitației pentru invitați</label>
+              <div class="copy-row">
+                <input class="input" id="eventLink" readonly />
+                <button class="btn btn-ghost btn-small" type="button" id="copyEventLink">Copiază</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="manageLink">Link de administrare, privat</label>
+              <div class="copy-row">
+                <input class="input" id="manageLink" readonly />
+                <button class="btn btn-ghost btn-small" type="button" id="copyManageLink">Copiază</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </form>
+
+      <div class="preview-col" id="preview">
+        <p class="sample-notice" id="sampleNotice" hidden></p>
+        <div class="preview-stage">
+          <div class="preview-card" id="previewCard"></div>
+        </div>
+        <div class="actions" id="share-panel">
+          <button class="btn btn-primary owner-only" type="button" id="copyLink">
+            <svg class="icon"><use href="#i-link" /></svg>Copiază linkul
+          </button>
+          <button class="btn btn-ghost owner-only" type="button" id="downloadPng">
+            <svg class="icon"><use href="#i-download" /></svg>Descarcă PNG
+          </button>
+          <a class="btn btn-ghost owner-only" href="#" id="previewGuest" target="_blank" rel="noopener"
+            ><svg class="icon"><use href="#i-eye" /></svg>Vedere invitat</a
+          >
+          <button class="btn btn-ghost btn-small owner-only" type="button" id="reset">
+            <svg class="icon"><use href="#i-reset" /></svg>Resetează textul
+          </button>
+          <button class="btn btn-primary guest-only" type="button" id="addCalendar">
+            <svg class="icon"><use href="#i-calendar" /></svg>Adaugă în calendar
+          </button>
+          <a class="btn btn-ghost guest-only" id="openMap" target="_blank" rel="noopener"
+            ><svg class="icon"><use href="#i-pin" /></svg>Deschide harta</a
+          >
+        </div>
+        <form class="panel rsvp" id="rsvpForm" autocomplete="off" novalidate hidden>
+          <h2 id="h-rsvp">
+            <svg class="icon"><use href="#i-send" /></svg>Confirmă participarea
+          </h2>
+          <div class="field">
+            <label for="guestName">Numele tău</label>
+            <input class="input" id="guestName" name="name" autocomplete="name" />
+          </div>
+          <div class="field" role="radiogroup" aria-labelledby="h-attending">
+            <span class="field-label" id="h-attending">Vei participa?</span>
+            <div class="choices">
+              <label class="choice"><input type="radio" name="attending" value="yes" checked />Da, voi veni</label>
+              <label class="choice"><input type="radio" name="attending" value="no" />Nu pot ajunge</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="partySize">Număr de persoane, inclusiv tu</label>
+            <input class="input" type="number" id="partySize" name="partySize" min="1" value="1" />
+          </div>
+          <button class="btn btn-primary" type="submit" id="sendReply">
+            <svg class="icon"><use href="#i-send" /></svg>Trimite răspunsul
+          </button>
+          <p class="status" id="rsvpStatus" role="status"></p>
+          <div class="published" id="replySaved" hidden>
+            <p class="warning">
+              Păstrează acest link privat dacă vrei să modifici răspunsul mai târziu. Oricine îl are îți poate schimba
+              răspunsul.
+            </p>
+            <label class="field-label" for="replyLink">Linkul tău de modificare</label>
+            <div class="copy-row">
+              <input class="input" id="replyLink" readonly />
+              <button class="btn btn-ghost btn-small" type="button" id="copyReplyLink">Copiază</button>
+            </div>
+          </div>
+        </form>
+        <p class="hint" id="reportRow" hidden>
+          Această invitație conține conținut ilegal? <a id="reportLink" href="#">Raportează invitația</a>
+        </p>
+        <p class="hint share-note owner-only">
+          Linkul de partajare păstrează textul, modelul și culoarea. Pentru a trimite și fotografia, descarcă PNG.
+        </p>
+        <p class="status" id="status" role="status"></p>
+      </div>
+
+      <a class="btn btn-primary jump-preview" href="#preview"
+        ><svg class="icon"><use href="#i-eye" /></svg>Previzualizare</a
+      >
+    </main>
+
+    <!-- generated:footer -->
+    <footer class="site-footer">
+      <p class="footer-tagline">Petalpost. Făcut pentru oamenii pe care îi aduni cu drag.</p>
+      <nav class="footer-nav" aria-label="Subsol">
+        <div class="footer-group">
+          <p class="footer-title">Ocazii</p>
+          <a href="/ro/invitatii-nunta.html">Invitații de nuntă</a
+          ><a href="/ro/invitatii-cununie.html">Invitații de cununie civilă</a
+          ><a href="/ro/invitatii-botez.html">Invitații de botez</a
+          ><a href="/ro/invitatii-zi-de-nastere.html">Invitații de zi de naștere</a
+          ><a href="/ro/invitatii-casa-noua.html">Invitații de casă nouă</a
+          ><a href="/ro/invitatii-absolvire.html">Invitații de absolvire</a
+          ><a href="/ro/invitatii-baby-shower.html">Invitații de baby shower</a
+          ><a href="/ro/invitatii-brunch.html">Invitații de brunch</a>
+        </div>
+        <div class="footer-group">
+          <p class="footer-title">Ghiduri</p>
+          <a href="/ro/text-invitatii.html">Texte pentru invitații</a>
+          <a href="/ro/cand-sa-trimiti-invitatiile.html">Când să trimiți invitațiile</a>
+        </div>
+        <div class="footer-group">
+          <p class="footer-title">Petalpost</p>
+          <a href="/ro/">Acasă</a>
+          <a href="/ro/editor.html">Creează invitație</a>
+          <a href="/ro/despre.html">Despre</a>
+          <a href="/ro/confidentialitate.html">Confidențialitate</a>
+          <a href="/ro/termeni.html">Termeni</a>
+          <a href="mailto:contact@petalpost.ro">Contact</a>
+          <a href="/" hreflang="en" lang="en">English</a>
+        </div>
+      </nav>
+    </footer>
+    <!-- /generated:footer -->
+
+    <script type="module" src="/js/editor.js"></script>
+    <script src="/js/analytics.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
+</html>
