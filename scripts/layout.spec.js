@@ -1,6 +1,6 @@
 // Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, sample guest, invitation, management,
 // privacy, terms, About, guide or occasion page scrolls sideways, a form control leaves its panel,
-// single-line inputs differ in height, fields sharing a row differ in top or height, the spacing between stacked
+// single-line inputs differ in height, fields sharing a row differ in top, height or overlap horizontally, the spacing between stacked
 // fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
 // size, or the Preview button covers a control that has keyboard focus.
 // Target sizes: 44px where the primary pointer is touch, which is iOS's minimum, and 24px elsewhere, which is
@@ -74,10 +74,17 @@ function layoutProblems(slack) {
   }
 
   for (const row of [...document.querySelectorAll('.field-row')].filter(visible)) {
-    const [first, ...rest] = [...row.querySelectorAll('.input')].map((c) => c.getBoundingClientRect());
+    const boxes = [...row.querySelectorAll('.input')].map((c) => c.getBoundingClientRect());
+    const [first, ...rest] = boxes;
     for (const c of rest) {
       if (!near(c.left, first.left) && !near(c.top, first.top))
         problems.push(`${name(row)} row controls differ in top`);
+    }
+    const byLeft = [...boxes].sort((a, b) => a.left - b.left);
+    for (let i = 1; i < byLeft.length; i += 1) {
+      if (near(byLeft[i].top, byLeft[i - 1].top) && byLeft[i].left < byLeft[i - 1].right - slack) {
+        problems.push(`${name(row)} row controls overlap horizontally`);
+      }
     }
   }
 

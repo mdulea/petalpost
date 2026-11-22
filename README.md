@@ -65,6 +65,7 @@ A lost management link cannot be recovered.
 - `index.html` is the landing page, `editor.html` is the editor and the guest view, and `manage.html` is the host's management page.
 - `birthday-invitations.html` and the five other `*-invitations.html` pages show one occasion's templates and advice. `pnpm pages` generates them; do not edit them by hand.
 - `invitation-wording.html` and `when-to-send-invitations.html` are the guides, and `about.html`, `privacy.html`, `terms.html` and `404.html` are the remaining pages.
+- `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, `ro/404.html`, the generated `ro/invitatii-*.html` occasion pages, the guides `ro/text-invitatii.html` and `ro/cand-sa-trimiti-invitatiile.html`, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
 - `js/` holds the page scripts:
   - `templates.js` is the template catalog and the `renderInvite` renderer.
   - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
@@ -75,12 +76,12 @@ A lost management link cannot be recovered.
   - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
   - `globals.d.ts` declares the types of the `htmlToImage` and analytics globals.
 - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
-- `api/index.js` is the Vercel Function for every `/api/` path. `server/api.js` routes, validates and stores the requests, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `migrations/`.
+- `api/index.js` is the Vercel Function for `/api/`, `/e/{id}` and `/ro/e/{id}` paths. `server/api.js` routes, validates and stores the requests, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `migrations/`.
 - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
 - `scripts/` holds the local server, the build, the checks and the link preview generator:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `build.js` copies the site files into `dist/`, which Vercel serves.
-  - `pages.js` generates the HTML that search engines must read without running JavaScript: the occasion pages, the landing gallery and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the text of the occasion pages.
+  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the landing galleries and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
@@ -125,14 +126,17 @@ No check holds a deployment back.
 Run `pnpm test`, `pnpm typecheck` and `pnpm test:browser` locally before you push `main`.
 After you enable the workflow, you can add a Vercel Deployment Check on the `checks` job, which holds production until the GitHub checks pass.
 Pushes to other branches get preview deployments.
+The Vercel CLI is not installed locally or as a dependency; invoke it with `pnpm dlx vercel`.
+To remove stale preview deployments after merging branches, list them with `pnpm dlx vercel ls --environment preview` and delete each URL with `pnpm dlx vercel rm <url> --confirm-name`.
+On the Vercel Hobby plan, function invocation metrics older than 30 minutes require Observability Plus on Pro, so CLI metric queries beyond that window return `payment_required`.
 Vercel runs `pnpm install --prod --frozen-lockfile`, then `pnpm build`, and serves `dist/` as static files.
-`scripts/build.js` copies only the site files from an allowlist into `dist/`: the root pages, images, `robots.txt`, `sitemap.xml` and `THIRD_PARTY_NOTICES.txt`, and `css/`, `fonts/`, `vendor/` and the `js/` modules.
+`scripts/build.js` copies only the site files from an allowlist into `dist/`: the root pages, `ro/` pages, images, `robots.txt`, `sitemap.xml` and `THIRD_PARTY_NOTICES.txt`, and `css/`, `fonts/`, `vendor/` and the `js/` modules.
 A new kind of site file needs an entry in that allowlist.
 `check-site.js` fails when a page, or a file a page loads, is missing from the build, and when the build contains package files, server code, migrations, tooling or documentation.
 The install needs `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, and the API functions need `api/`, `server/` and `migrations/`, so `.vercelignore` uploads them.
 They are never site content, because Vercel serves only `dist/` and the functions.
 `.vercelignore` keeps the other scripts, tooling and documentation out of the upload.
-`vercel.json` rewrites every `/api/` path to the function in `api/index.js`.
+`vercel.json` rewrites `/api/`, `/e/{id}` and `/ro/e/{id}` paths to the function in `api/index.js`.
 
 `vercel.json` sends a Content-Security-Policy and other security headers on every path.
 `scripts/server.js` reads the headers from `vercel.json`, and `check-site.js` fails when it answers a path differently from production.
