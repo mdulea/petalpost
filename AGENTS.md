@@ -24,20 +24,21 @@ README.md sections, by need:
 
 ## Testing
 
-- behavior change -> add/update `node:test` checks in `scripts/`; test added to `scripts/check-*.js` -> update header comment listing checks
+- behavior change -> add/update `node:test` checks in `scripts/`; test added to `scripts/check-*.js` or `scripts/*.spec.js` -> update header comment listing checks
 - before finishing: `pnpm test`, `pnpm typecheck`, `pnpm test:browser` all pass
 
 ## Gotchas
 
-- `scripts/server.js` matches Vercel: `vercel.json` headers; clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`; dir listings off; `/api/*` -> PGlite, never Neon; `check-site.js` checks it
+- `scripts/server.js` matches Vercel: `vercel.json` headers; clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`, `/ro/` -> `ro/index.html`; dir listings off; `/api/*`, `/e/{id}`, `/ro/e/{id}` -> PGlite, never Neon; `check-site.js` checks it
 - `DATABASE_URL_UNPOOLED` for `pnpm migrate` -> verified non-production Neon branch first
 - inline scripts blocked by CSP -> page scripts in files; inline `style` attributes allowed for `renderInvite`
 - package store: `.pnpm-store/` inside repo
 - `js/analytics.js` == classic script; ESLint `sourceType: 'script'`
 - new page-level global from classic script -> declare in `js/globals.d.ts` + ESLint globals
 - pushing `main` releases to production -> run [Testing](#testing) checks first
+- Vercel CLI -> `pnpm dlx vercel`; see README Deployment for preview cleanup and Hobby observability limits
 - new non-site file -> `.vercelignore`
-- `*-invitations.html`, landing gallery, page footers == `pnpm pages` output -> edit `scripts/pages.js` or `scripts/occasions.js`, rerun; `check-site.js` fails on drift
+- `*-invitations.html`, `ro/invitatii-*.html`, landing galleries, page footers == `pnpm pages` output -> edit `scripts/pages.js`, `scripts/occasions.js` or `scripts/occasions-ro.js`, rerun; `check-site.js` fails on drift
 
 ## Git and output
 
