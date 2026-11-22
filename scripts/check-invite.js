@@ -1,4 +1,4 @@
-// Fails when share links, invitation links and /e/<id> paths of published events, link preview metadata, invite records,
+// Fails when share links, sample guest mode, invitation links and /e/<id> paths of published events, link preview metadata, invite records,
 // storage writes, the stored published event identity, template switching, template ids, the calendar file or the report link break.
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
@@ -24,6 +24,7 @@ for (const t of ctx.TEMPLATES) {
     ...fresh(t.id),
     photo: null,
     guest: false,
+    sample: false,
     broken: false,
     event: null,
     publishedEvent: null,
@@ -58,6 +59,7 @@ check(
     d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Café piñata', accent: '#52704C' }),
     photo: null,
     guest: false,
+    sample: false,
     broken: false,
     event: null,
     publishedEvent: null,
@@ -68,6 +70,7 @@ for (const bad of ['', '%%%', 'abc', 'bm90IGpzb24']) {
     ...fresh('wedding'),
     photo: null,
     guest: false,
+    sample: false,
     broken: false,
     event: null,
     publishedEvent: null,
@@ -89,6 +92,7 @@ check('a stored draft reopens as the same record', ctx.openInvite({ draft: ctx.d
   ...zoe,
   photo: null,
   guest: false,
+  sample: false,
   broken: false,
   event: null,
   publishedEvent: null,
@@ -116,7 +120,7 @@ for (const hash of [cut, '#d=%%%', '']) {
   check(
     `a guest link with hash "${hash.slice(0, 12)}" opens as broken, without the stored draft or photo`,
     ctx.openInvite({ search: '?view=1', hash, draft, photo: 'data:image/jpeg;base64,x' }),
-    { ...fresh('birthday'), photo: null, guest: true, broken: true, event: null, publishedEvent: null },
+    { ...fresh('birthday'), photo: null, guest: true, sample: false, broken: true, event: null, publishedEvent: null },
   );
 }
 check('a share link opens as not broken', opened.broken, false);
@@ -124,6 +128,7 @@ check('an unreadable draft opens a new invite for ?t=', ctx.openInvite({ hash: '
   ...fresh('baby'),
   photo: null,
   guest: false,
+  sample: false,
   broken: false,
   event: null,
   publishedEvent: null,
@@ -338,7 +343,69 @@ check(
     photo: 'data:image/jpeg;base64,x',
     publishedEvent: stored,
   }),
-  { ...fresh('birthday'), photo: null, guest: true, broken: false, event: EVENT_ID, publishedEvent: null },
+  {
+    ...fresh('birthday'),
+    photo: null,
+    guest: true,
+    sample: false,
+    broken: false,
+    event: EVENT_ID,
+    publishedEvent: null,
+  },
+);
+// Sample guest mode: ?view=1&sample=1 renders the requested or default template without owner state or server events.
+check(
+  'sample guest mode loads the default template and ignores stored owner state and event id',
+  ctx.openInvite({
+    search: `?view=1&sample=1&e=${EVENT_ID}`,
+    draft,
+    photo: 'data:image/jpeg;base64,x',
+    publishedEvent: stored,
+  }),
+  { ...fresh('birthday'), photo: null, guest: true, sample: true, broken: false, event: null, publishedEvent: null },
+);
+check(
+  'sample guest mode accepts an optional ?t= template override',
+  ctx.openInvite({ search: '?view=1&sample=1&t=wedding' }),
+  { ...fresh('wedding'), photo: null, guest: true, sample: true, broken: false, event: null, publishedEvent: null },
+);
+check(
+  'sample guest mode falls back to the default template for an unknown ?t=',
+  ctx.openInvite({ search: '?view=1&sample=1&t=unknown-template' }),
+  { ...fresh('birthday'), photo: null, guest: true, sample: true, broken: false, event: null, publishedEvent: null },
+);
+check(
+  'a valid #d= share link wins over sample=1',
+  ctx.openInvite({ search: '?view=1&sample=1', hash: hashOf(zoeLink) }),
+  {
+    ...zoe,
+    d: { ...zoe.d, photoY: 50 },
+    photo: null,
+    guest: true,
+    sample: false,
+    broken: false,
+    event: null,
+    publishedEvent: null,
+  },
+);
+check(
+  'a malformed #d= share link with sample=1 and e= opens as broken',
+  ctx.openInvite({ search: `?view=1&sample=1&e=${EVENT_ID}`, hash: cut }),
+  { ...fresh('birthday'), photo: null, guest: true, sample: false, broken: true, event: null, publishedEvent: null },
+);
+check(
+  'sample=1 is ignored outside guest view',
+  ctx.openInvite({ search: '?sample=1', draft, photo: 'data:image/jpeg;base64,x', publishedEvent: stored }),
+  {
+    t: 'birthday',
+    d: ctx.makeInviteData(ctx.getTemplate('birthday'), { title: 'Zoe turns 30' }),
+    photo: 'data:image/jpeg;base64,x',
+    guest: false,
+    sample: false,
+    broken: false,
+    event: null,
+    publishedEvent: identity,
+  },
 );
 check(
   'a legacy ?view=1&e=<id> invitation link still opens its event as a guest',
@@ -348,7 +415,15 @@ check(
     photo: 'data:image/jpeg;base64,x',
     publishedEvent: stored,
   }),
-  { ...fresh('birthday'), photo: null, guest: true, broken: false, event: EVENT_ID, publishedEvent: null },
+  {
+    ...fresh('birthday'),
+    photo: null,
+    guest: true,
+    sample: false,
+    broken: false,
+    event: EVENT_ID,
+    publishedEvent: null,
+  },
 );
 for (const path of ['/e/', '/e/short', `/e/${EVENT_ID}A`, `/e/${EVENT_ID.slice(1)}+`, `/e/${EVENT_ID}/extra`]) {
   check(
