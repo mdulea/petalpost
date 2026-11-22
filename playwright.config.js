@@ -16,7 +16,7 @@ export default defineConfig({
   // A port of its own and no reuse: another server on the port, such as an editor preview, fails the run instead of
   // being tested in place of scripts/server.js.
   webServer: {
-    command: 'node scripts/server.js --port 4321 --memory',
+    command: 'node scripts/server.js --port 4321 --memory --daily-events 200',
     url: 'http://localhost:4321/',
     reuseExistingServer: false,
   },
