@@ -532,3 +532,42 @@ test('native navigator.share shares invitation links and PNG files, ignores abor
   expect(recorded.copied).toEqual([invitation]);
   expect([...noShare.problems, ...problems]).toEqual([]);
 });
+
+test('Romanian publishing, guest RSVP and management keep links and copy in Romanian', async ({ browser, request }) => {
+  const host = await newBrowser(browser);
+  await host.page.goto('/ro/editor.html?t=botez-porumbel');
+  await host.page.fill('#title', 'Botezul lui Matei');
+  await host.page.click('#publish');
+  await expect(host.page.locator('#eventLink')).toHaveValue(/\/ro\/e\/[A-Za-z0-9_-]{22}$/);
+  await expect(host.page.locator('#manageLink')).toHaveValue(/\/ro\/manage\.html#/);
+  const invitation = await host.page.locator('#eventLink').inputValue();
+  const manage = await host.page.locator('#manageLink').inputValue();
+
+  const raw = await request.get(invitation);
+  const html = await raw.text();
+  expect(raw.status()).toBe(200);
+  expect(html).toContain('<html lang="ro">');
+  expect(html).toContain('<meta property="og:title" content="Botezul lui Matei | Petalpost" />');
+  expect(html).toContain('ora 11:00');
+  expect(html).toContain('<meta name="robots" content="noindex, nofollow" />');
+
+  const guest = await newBrowser(browser);
+  await guest.page.goto(invitation);
+  await expect(guest.page.locator('h1')).toHaveText('Botezul lui Matei');
+  await guest.page.fill('#guestName', 'Andrei');
+  await guest.page.fill('#partySize', '2');
+  await guest.page.click('#sendReply');
+  await expect(guest.page.locator('#rsvpStatus')).toHaveText('Răspunsul tău a fost salvat. Gazda îl poate vedea acum.');
+  await expect(guest.page.locator('#replyCta a')).toHaveAttribute('href', '/ro/#templates');
+
+  await host.page.goto(manage);
+  expect(await managed(host.page)).toEqual({
+    totals: expect.stringMatching(/1\s+răspuns[\s\S]*1\s+confirmare[\s\S]*0\s+refuzuri[\s\S]*2\s+persoane confirmate/i),
+    replies: [expect.stringMatching(/Andrei[\s\S]*Da, 2 persoane/)],
+  });
+
+  const stranger = await newBrowser(browser);
+  await stranger.page.goto(manage.replace(/\.[^.]+$/, `.${'x'.repeat(43)}`));
+  await expect(stranger.page.locator('#manageStatus')).toHaveText('Acest link nu oferă acces la această invitație.');
+  expect([...host.problems, ...guest.problems, ...stranger.problems]).toEqual([]);
+});

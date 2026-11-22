@@ -4,7 +4,7 @@
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { HERO_TEMPLATES, TEMPLATES } from '../js/templates.js';
+import { HERO_TEMPLATES, RO_HERO_TEMPLATES, templatesFor } from '../js/templates.js';
 
 // Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
 function watch(page) {
@@ -22,10 +22,10 @@ const PIXEL = Buffer.from(
   'base64',
 );
 
-test('the landing page shows every template', async ({ page }) => {
+test('the landing page shows every English template', async ({ page }) => {
   const problems = watch(page);
   await page.goto('/');
-  await expect(page.locator('#gallery .card')).toHaveCount(TEMPLATES.length);
+  await expect(page.locator('#gallery .card')).toHaveCount(templatesFor('en').length);
   expect(problems).toEqual([]);
 });
 
@@ -33,12 +33,31 @@ test('the landing filter shows only the chosen occasion', async ({ page }) => {
   await page.goto('/');
   await page.click('.filter[data-filter="Wedding"]');
   await expect(page.locator('#gallery .card:visible')).toHaveCount(
-    TEMPLATES.filter((t) => t.category === 'Wedding').length,
+    templatesFor('en').filter((t) => t.category === 'Wedding').length,
   );
 });
 
+test('the Romanian landing page shows every Romanian template and filters local occasions', async ({ page }) => {
+  const problems = watch(page);
+  await page.goto('/ro/');
+  await expect(page.locator('#gallery .card')).toHaveCount(templatesFor('ro').length);
+  await page.click('.filter[data-filter="Botez"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(4);
+  await page.click('.filter[data-filter="Cununie"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(4);
+  expect(problems).toEqual([]);
+});
+
 // The occasion pages, guides and About page load js/page.js for the icon sprite and the sample invite fit.
-for (const path of ['birthday-invitations.html', 'invitation-wording.html', 'about.html']) {
+for (const path of [
+  'birthday-invitations.html',
+  'invitation-wording.html',
+  'about.html',
+  'ro/invitatii-botez.html',
+  'ro/invitatii-cununie.html',
+  'ro/text-invitatii.html',
+  'ro/despre.html',
+]) {
   test(`${path} loads its icons without errors`, async ({ page }) => {
     const problems = watch(page);
     await page.goto(path);
@@ -142,9 +161,27 @@ test('the hero sample link opens a client-only sample guest invitation with loca
   expect(problems).toEqual([]);
 });
 
-test('the link preview generator draws the hero templates', async ({ page }) => {
+test('the link preview generator draws the hero templates in English and Romanian', async ({ page }) => {
   const problems = watch(page);
   await page.goto('scripts/og-card.html');
   await expect(page.locator('#fan .invite')).toHaveCount(HERO_TEMPLATES.length);
+  await page.goto('scripts/og-card.html?lang=ro');
+  await expect(page.locator('#fan .invite')).toHaveCount(RO_HERO_TEMPLATES.length);
+  await expect(page.locator('#card h1')).toContainText('Ziua ta');
+  expect(problems).toEqual([]);
+});
+
+test('the Romanian editor uses Romanian samples, 24-hour times and isolated draft storage', async ({ page }) => {
+  const problems = watch(page);
+  await page.goto('/ro/editor.html?t=botez-porumbel');
+  await expect(page.locator('#previewCard .invite-title')).toHaveText('Botezul lui Matei');
+  await expect(page.locator('#previewCard .invite-when')).toContainText('ora 11:00');
+  await page.fill('#title', 'Botezul lui Ștefan');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('petalpost:ro:draft')))
+    .toContain('Botezul lui Ștefan');
+  expect(await page.evaluate(() => localStorage.getItem('petalpost:draft'))).toBeNull();
+  await page.reload();
+  await expect(page.locator('#title')).toHaveValue('Botezul lui Ștefan');
   expect(problems).toEqual([]);
 });

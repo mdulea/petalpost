@@ -9,7 +9,13 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 
 // The allowlist. A new kind of site file needs an entry here, and check-site.js fails until it has one.
 const ROOT_FILE = /^(.+\.(html|png|svg)|robots\.txt|sitemap\.xml|THIRD_PARTY_NOTICES\.txt)$/;
-const DIRECTORIES = { css: () => true, fonts: () => true, vendor: () => true, js: (file) => file.endsWith('.js') };
+const DIRECTORIES = {
+  css: () => true,
+  fonts: () => true,
+  vendor: () => true,
+  js: (file) => file.endsWith('.js'),
+  ro: (file) => /^.+\.(html|png)$/.test(file),
+};
 
 // Whether a path relative to the repository root, with / separators, is a site file that buildSite copies.
 /** @param {string} path */
