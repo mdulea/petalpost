@@ -164,6 +164,8 @@ function readPublishedEvent(text) {
 // Load order: an /e/<id> path always opens the guest view for that published event; otherwise a share link wins and
 // carries no photo; otherwise the stored draft or a new invite, switched to the ?t= template. Inputs are the raw
 // pathname, search, hash and storage strings; guest is true for /e/<id> or ?view=1.
+// sample is true for a client-only sample guest view (?view=1&sample=1 without a #d= hash), which renders the
+// requested or default template and ignores any e parameter and stored owner draft, photo or event identity.
 // event is the public id of a published event for /e/<id> or a legacy ?view=1&e=<id> link, which the page loads;
 // until then the state holds a new invite that the page must not show. publishedEvent is the owner's stored event
 // identity, or null; a guest view gets null and never writes it.
@@ -186,6 +188,7 @@ export function openInvite({
       ...restoreInvite({ t: requested }),
       photo: null,
       guest: true,
+      sample: false,
       broken: !event,
       event,
       publishedEvent: null,
@@ -193,11 +196,43 @@ export function openInvite({
   }
   const guest = params.get('view') === '1';
   const owned = guest ? null : readPublishedEvent(publishedEvent);
-  const shared = hash.startsWith('#d=') ? restoreInvite(decodeState(hash.slice(3))) : null;
-  if (shared) return { ...shared, photo: null, guest, broken: false, event: null, publishedEvent: owned };
+  const hasShareHash = hash.startsWith('#d=');
+  const shared = hasShareHash ? restoreInvite(decodeState(hash.slice(3))) : null;
+  if (shared)
+    return { ...shared, photo: null, guest, sample: false, broken: false, event: null, publishedEvent: owned };
   if (guest) {
+    if (hasShareHash) {
+      return {
+        ...restoreInvite({ t: requested }),
+        photo: null,
+        guest,
+        sample: false,
+        broken: true,
+        event: null,
+        publishedEvent: null,
+      };
+    }
+    if (params.get('sample') === '1') {
+      return {
+        ...restoreInvite({ t: requested }),
+        photo: null,
+        guest,
+        sample: true,
+        broken: false,
+        event: null,
+        publishedEvent: null,
+      };
+    }
     const event = ID_PATTERN.test(params.get('e') ?? '') ? params.get('e') : null;
-    return { ...restoreInvite({ t: requested }), photo: null, guest, broken: !event, event, publishedEvent: null };
+    return {
+      ...restoreInvite({ t: requested }),
+      photo: null,
+      guest,
+      sample: false,
+      broken: !event,
+      event,
+      publishedEvent: null,
+    };
   }
   let saved;
   try {
@@ -209,6 +244,7 @@ export function openInvite({
     ...(restoreInvite(saved) || restoreInvite({ t: requested })),
     photo: isPhoto(photo) ? photo : null,
     guest,
+    sample: false,
     broken: false,
     event: null,
     publishedEvent: owned,

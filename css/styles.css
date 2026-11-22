@@ -1479,6 +1479,18 @@ textarea.input {
   font-weight: 700;
   font-size: 15px;
 }
+.sample-notice {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--rose-line);
+  background: var(--rose-soft);
+  color: var(--rose-deep);
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+}
 .copy-row {
   display: flex;
   flex-wrap: wrap;
