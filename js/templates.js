@@ -5,8 +5,8 @@ import { RO_TEMPLATE_COPY } from './templates-ro.js';
 const sparkle = (x, y, r, fill) =>
   `<path d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z" fill="${fill}"/>`;
 
-const leaf = (x, y, rot, fill) =>
-  `<ellipse cx="${x}" cy="${y}" rx="8" ry="3.6" transform="rotate(${rot} ${x} ${y})" fill="${fill}"/>`;
+const leaf = (x, y, rot, fill, rx = 8, ry = 3.6) =>
+  `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" transform="rotate(${rot} ${x} ${y})" fill="${fill}"/>`;
 
 const daisy = (x, y, petal, center) => {
   let petals = '';
@@ -47,6 +47,16 @@ const key = (rot, fill, hole) => `
     <rect x="103" y="116" width="9" height="4" rx="1" fill="${fill}"/><rect x="103" y="124" width="6" height="4" rx="1" fill="${fill}"/>
     <circle cx="100" cy="80" r="11" fill="${fill}"/><circle cx="100" cy="80" r="4" fill="${hole}"/>
   </g>`;
+
+const coupe = (cx, y) => `
+  <path d="M${cx - 14} ${y}H${cx + 14}Q${cx + 13} ${y + 13} ${cx} ${y + 14}Q${cx - 13} ${y + 13} ${cx - 14} ${y}Z" fill="#FFFDF8" fill-opacity=".18" stroke="#E6C278" stroke-width="1.5"/>
+  <path d="M${cx - 12} ${y + 3.5}H${cx + 12}Q${cx + 11} ${y + 12} ${cx} ${y + 12.8}Q${cx - 11} ${y + 12} ${cx - 12} ${y + 3.5}Z" fill="#E8C06A" fill-opacity=".82"/>
+  <path d="M${cx} ${y + 14}V${y + 27}M${cx - 9} ${y + 27}H${cx + 9}" stroke="#E6C278" stroke-width="1.6" stroke-linecap="round"/>`;
+
+const flame = (x, y) => `
+  <circle cx="${x}" cy="${y + 4}" r="11" fill="#F6D88C" opacity=".2"/>
+  <path d="M${x} ${y - 6}Q${x + 4} ${y + 2} ${x} ${y + 7}Q${x - 4} ${y + 2} ${x} ${y - 6}Z" fill="#EBB253"/>
+  <path d="M${x} ${y - 2}Q${x + 2} ${y + 3} ${x} ${y + 5.8}Q${x - 2} ${y + 3} ${x} ${y - 2}Z" fill="#FFF8DC"/>`;
 
 const svg = (body) =>
   `<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
@@ -452,6 +462,340 @@ export const TEMPLATES = [
       <ellipse cx="110" cy="116" rx="11" ry="6" transform="rotate(20 110 116)" fill="none" stroke="#E8A9A0" stroke-width="3.5"/>
       <path d="M98 119L88 140M102 119L112 140" stroke="#E8A9A0" stroke-width="3.5" stroke-linecap="round"/>
       ${sparkle(36, 40, 5, '#D4AE62')}${sparkle(168, 60, 4, '#D4AE62')}${sparkle(40, 120, 3.5, '#9A86C4')}${sparkle(164, 128, 3.5, '#9A86C4')}
+    `),
+  },
+  {
+    id: 'candlelight-vows',
+    name: 'Candlelight Vows',
+    category: 'Wedding',
+    tagline: 'Ivory tapers, warm brass and greenery.',
+    frame: 'arch',
+    titleFont: 'serif',
+    colors: { bg: '#FAF7F1', ink: '#2C2A27', accent: '#6E5835', soft: '#EFE8DA' },
+    defaults: {
+      eyebrow: 'Together with their families',
+      title: 'Clara & Julian',
+      hosts: 'invite you to an evening wedding',
+      date: '2027-10-16',
+      time: '18:00',
+      venue: 'The Conservatory Hall',
+      address: '88 Elm Street, Boston',
+      message: 'Black tie optional. Cocktails, dinner and dancing to follow.',
+      rsvp: 'Kindly reply by September 1',
+    },
+    art: svg(`
+      <path d="M40 156V70Q40 18 100 18Q160 18 160 70V156" fill="none" stroke="#D5C49E" stroke-width="1.5" opacity=".75"/>
+      <circle cx="84" cy="40" r="18" fill="#F6DF9C" opacity=".35"/>
+      <circle cx="118" cy="54" r="16" fill="#F6DF9C" opacity=".35"/>
+      <path d="M84 30Q89 39 84 45Q79 39 84 30Z" fill="#E8A94B"/>
+      <path d="M84 35Q86.5 40 84 43.5Q81.5 40 84 35Z" fill="#FFF7D6"/>
+      <path d="M118 44Q123 53 118 59Q113 53 118 44Z" fill="#E8A94B"/>
+      <path d="M118 49Q120.5 54 118 57.5Q115.5 54 118 49Z" fill="#FFF7D6"/>
+      <rect x="78.5" y="47" width="11" height="70" rx="2.5" fill="#FFFDF8" stroke="#DDD1BC" stroke-width="1.2"/>
+      <rect x="112.5" y="61" width="11" height="56" rx="2.5" fill="#FFFDF8" stroke="#DDD1BC" stroke-width="1.2"/>
+      <path d="M73 117H95Q93 123 84 123Q75 123 73 117Z" fill="#C9A55A"/>
+      <rect x="82" y="122" width="4" height="16" fill="#B89246"/>
+      <ellipse cx="84" cy="139" rx="14" ry="4" fill="#C9A55A"/>
+      <path d="M107 117H129Q127 123 118 123Q109 123 107 117Z" fill="#C9A55A"/>
+      <rect x="116" y="122" width="4" height="16" fill="#B89246"/>
+      <ellipse cx="118" cy="139" rx="14" ry="4" fill="#C9A55A"/>
+      <path d="M54 144Q78 136 102 142Q126 136 148 144" stroke="#7E9676" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      ${leaf(62, 138, -28, '#8EA786', 7.5, 3)}${leaf(74, 144, 20, '#A7BC9E', 7, 2.8)}
+      ${leaf(138, 138, 28, '#8EA786', 7.5, 3)}${leaf(126, 144, -20, '#A7BC9E', 7, 2.8)}
+      ${leaf(100, 145, -10, '#8EA786', 6.5, 2.8)}
+      ${sparkle(56, 52, 4.5, '#CFA85A')}${sparkle(144, 46, 5, '#CFA85A')}${sparkle(102, 26, 3.5, '#CFA85A')}
+    `),
+  },
+  {
+    id: 'ceremony-arch',
+    name: 'Ceremony Arch',
+    category: 'Wedding',
+    tagline: 'A draped floral arch for the vows.',
+    frame: 'rect',
+    titleFont: 'serif',
+    colors: { bg: '#FBF7F2', ink: '#3F3833', accent: '#7B5249', soft: '#F0E6DC' },
+    defaults: {
+      eyebrow: 'The honor of your presence',
+      title: 'Nadia & Lucas',
+      hosts: 'as they exchange their vows',
+      date: '2027-05-22',
+      time: '16:00',
+      venue: 'Cedar Brook Chapel',
+      address: '412 Meadow Lane, Napa',
+      message: 'Garden ceremony under the arch, followed by cocktails on the lawn.',
+      rsvp: 'Kindly reply by April 10',
+    },
+    art: svg(`
+      <path d="M56 142L84 120H116L144 142Z" fill="#E7D8C9" opacity=".65"/>
+      <path d="M64 138V74Q64 36 100 36Q136 36 136 74V138" fill="none" stroke="#C5A374" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M70 138V76Q70 43 100 43Q130 43 130 76V138" fill="none" stroke="#D9BE96" stroke-width="1.5"/>
+      <path d="M64 72Q85 52 108 42Q125 40 134 64Q113 56 93 61Q76 66 68 128Q58 106 64 72Z" fill="#FFFDF9" opacity=".92"/>
+      <path d="M134 66Q143 98 134 130Q129 104 127 74Z" fill="#FFFDF9" opacity=".82"/>
+      ${leaf(58, 56, -45, '#88A482', 8, 3.4)}${leaf(74, 41, -18, '#9FB897', 8, 3.4)}${leaf(90, 38, 18, '#88A482', 7, 3)}
+      ${leaf(55, 72, -70, '#9FB897', 7, 3)}${leaf(136, 61, 42, '#88A482', 7.5, 3.2)}${leaf(143, 76, 68, '#9FB897', 7, 3)}
+      ${rose(70, 51, 10.5, '#EBB5B0', '#BD7772')}${rose(83, 44, 7.5, '#F9EFE4', '#C9B09A')}${rose(62, 64, 7.2, '#F4D1CB', '#C68983')}
+      ${rose(136, 70, 9.2, '#EBB5B0', '#BD7772')}${rose(129, 59, 6.8, '#F9EFE4', '#C9B09A')}
+      <circle cx="94" cy="130" r="2" fill="#EBB5B0"/><circle cx="107" cy="134" r="1.8" fill="#F4D1CB"/><circle cx="88" cy="136" r="1.6" fill="#FFFDF9"/>
+      ${sparkle(36, 52, 4.2, '#D4AE62')}${sparkle(164, 48, 4.2, '#D4AE62')}${sparkle(100, 82, 3.8, '#D4AE62')}
+    `),
+  },
+  {
+    id: 'tiered-cake',
+    name: 'Tiered Cake',
+    category: 'Wedding',
+    tagline: 'Three frosted tiers, roses and a gold heart.',
+    frame: 'circle',
+    titleFont: 'serif',
+    colors: { bg: '#FCF6F2', ink: '#4C3532', accent: '#8C4C52', soft: '#F5E4DC' },
+    defaults: {
+      eyebrow: 'Celebrate the marriage of',
+      title: 'Hannah & Theo',
+      hosts: 'dinner, cake and dancing',
+      date: '2027-07-17',
+      time: '17:30',
+      venue: 'Glasshouse Pavilion',
+      address: '19 Harbor Road, Newport',
+      message: 'Raise a glass with us after the ceremony for dinner and late-night cake.',
+      rsvp: 'RSVP by June 1',
+    },
+    art: svg(`
+      <rect x="64" y="132" width="72" height="5" rx="2.5" fill="#CFA963"/>
+      <path d="M92 137H108L104 148H96Z" fill="#BE964E"/>
+      <ellipse cx="100" cy="149" rx="20" ry="3.5" fill="#CFA963"/>
+      <rect x="64" y="102" width="72" height="30" rx="4" fill="#FFFDF9" stroke="#E6D5C8" stroke-width="1.4"/>
+      <rect x="74" y="75" width="52" height="27" rx="4" fill="#FFFDF9" stroke="#E6D5C8" stroke-width="1.4"/>
+      <rect x="84" y="51" width="32" height="24" rx="4" fill="#FFFDF9" stroke="#E6D5C8" stroke-width="1.4"/>
+      <path d="M64 110q6 5 12 0q6 5 12 0q6 5 12 0q6 5 12 0q6 5 12 0q6 5 12 0" fill="none" stroke="#E8C6C0" stroke-width="1.5"/>
+      <path d="M74 83q6.5 4.5 13 0q6.5 4.5 13 0q6.5 4.5 13 0q6.5 4.5 13 0" fill="none" stroke="#E8C6C0" stroke-width="1.5"/>
+      <path d="M100 32c-2.6-4-8-2.2-8 2 0 4 8 9 8 9s8-5 8-9c0-4.2-5.4-6-8-2z" fill="none" stroke="#CFA963" stroke-width="2.2"/>
+      <path d="M100 43V51" stroke="#CFA963" stroke-width="1.8"/>
+      ${leaf(82, 74, -35, '#8EA986', 6.5, 2.8)}${leaf(118, 99, 32, '#8EA986', 7, 3)}${leaf(74, 124, -22, '#A5BE9E', 7, 3)}
+      ${rose(88, 75, 7, '#E8A6AA', '#B86B72')}${rose(112, 102, 8.5, '#F2C0C2', '#C47D83')}${rose(122, 106, 6, '#E8A6AA', '#B86B72')}
+      ${rose(82, 126, 7.5, '#F2C0C2', '#C47D83')}${rose(72, 129, 5.5, '#E8A6AA', '#B86B72')}
+      ${sparkle(48, 48, 5, '#D4AE62')}${sparkle(154, 52, 4.5, '#D4AE62')}${sparkle(146, 114, 3.5, '#E8A6AA')}${sparkle(50, 108, 3.5, '#D4AE62')}
+    `),
+  },
+  {
+    id: 'olive-terracotta',
+    name: 'Olive & Terracotta',
+    category: 'Wedding',
+    tagline: 'Sunlit hills, terracotta arch and olive sprigs.',
+    frame: 'blob',
+    titleFont: 'serif',
+    colors: { bg: '#FBF4EC', ink: '#4A3227', accent: '#994A31', soft: '#F2DFCD' },
+    defaults: {
+      eyebrow: 'Save the date',
+      title: 'Sofia & Matteo',
+      hosts: 'are getting married in Tuscany',
+      date: '2027-09-24',
+      time: '',
+      venue: 'Tenuta del Sole',
+      address: 'Via delle Olive 9, Siena',
+      message: 'Formal invitation and travel details to follow. We cannot wait to celebrate.',
+      rsvp: 'Formal invite to follow',
+    },
+    art: svg(`
+      <path d="M56 156V76Q56 32 100 32Q144 32 144 76V156Z" fill="#DF9A7A" opacity=".32"/>
+      <path d="M68 156V80Q68 44 100 44Q132 44 132 80V156Z" fill="#FFF7EE"/>
+      <circle cx="100" cy="84" r="19" fill="#E8B66F" opacity=".88"/>
+      <path d="M68 128Q88 114 108 124Q122 116 132 124V156H68Z" fill="#D28666" opacity=".55"/>
+      <path d="M68 138Q96 126 132 140V156H68Z" fill="#B86B4D" opacity=".5"/>
+      <path d="M36 142Q54 104 48 56" stroke="#6E8565" stroke-width="2" fill="none" stroke-linecap="round"/>
+      ${leaf(44, 124, -55, '#7E9774', 8.5, 3.2)}${leaf(54, 110, 32, '#95AD8A', 8, 3)}${leaf(46, 94, -48, '#7E9774', 8.5, 3.2)}
+      ${leaf(56, 80, 38, '#95AD8A', 8, 3)}${leaf(48, 64, -58, '#7E9774', 7.5, 3)}
+      <circle cx="54" cy="96" r="3.4" fill="#5D6F4B"/><circle cx="44" cy="112" r="3.2" fill="#5D6F4B"/>
+      <path d="M164 142Q146 104 152 56" stroke="#6E8565" stroke-width="2" fill="none" stroke-linecap="round"/>
+      ${leaf(156, 124, 55, '#7E9774', 8.5, 3.2)}${leaf(146, 110, -32, '#95AD8A', 8, 3)}${leaf(154, 94, 48, '#7E9774', 8.5, 3.2)}
+      ${leaf(144, 80, -38, '#95AD8A', 8, 3)}${leaf(152, 64, 58, '#7E9774', 7.5, 3)}
+      <circle cx="146" cy="96" r="3.4" fill="#5D6F4B"/><circle cx="156" cy="112" r="3.2" fill="#5D6F4B"/>
+      ${sparkle(100, 22, 4.5, '#C9894C')}${sparkle(32, 40, 3.5, '#D49B54')}${sparkle(168, 42, 3.5, '#D49B54')}
+    `),
+  },
+  {
+    id: 'velvet-toast',
+    name: 'Velvet Toast',
+    category: 'Wedding',
+    tagline: 'Deep burgundy velvet and a champagne tower.',
+    frame: 'arch',
+    titleFont: 'serif',
+    dark: true,
+    colors: { bg: '#3B222A', ink: '#F8F1E7', accent: '#E6C278', soft: '#4C2E38' },
+    defaults: {
+      eyebrow: 'Together with their families',
+      title: 'Maya & Daniel',
+      hosts: 'invite you to toast and dance',
+      date: '2027-11-13',
+      time: '19:00',
+      venue: 'The Grand Ballroom',
+      address: '210 Mercer Street, New York',
+      message: 'Evening ceremony, champagne tower and late-night dancing.',
+      rsvp: 'Kindly reply by October 1',
+    },
+    art: svg(`
+      <path d="M40 156V70Q40 18 100 18Q160 18 160 70V156" fill="none" stroke="#E6C278" stroke-width="1.2" opacity=".45"/>
+      ${coupe(100, 44)}
+      ${coupe(85, 75)}${coupe(115, 75)}
+      ${coupe(70, 106)}${coupe(100, 106)}${coupe(130, 106)}
+      <path d="M52 136H148" stroke="#E6C278" stroke-width="1.4" opacity=".5" stroke-linecap="round"/>
+      <circle cx="96" cy="34" r="2.2" fill="#F2D48E" opacity=".9"/>
+      <circle cx="105" cy="27" r="1.8" fill="#F2D48E" opacity=".75"/>
+      <circle cx="101" cy="38" r="1.5" fill="#FFF8E6" opacity=".85"/>
+      ${sparkle(56, 46, 5, '#E6C278')}${sparkle(144, 52, 4.5, '#E6C278')}${sparkle(136, 28, 3, '#F8F1E7')}${sparkle(60, 88, 3.2, '#F8F1E7')}
+    `),
+  },
+  {
+    id: 'emerald-candelabra',
+    name: 'Emerald Candelabra',
+    category: 'Wedding',
+    tagline: 'Forest velvet and a glowing brass candelabra.',
+    frame: 'arch',
+    titleFont: 'serif',
+    dark: true,
+    colors: { bg: '#1E312B', ink: '#F6F1E6', accent: '#E4C178', soft: '#284038' },
+    defaults: {
+      eyebrow: 'Together with their families',
+      title: 'Sienna & Julian',
+      hosts: 'invite you to a candlelit wedding',
+      date: '2027-12-04',
+      time: '18:30',
+      venue: 'The Glass Conservatory',
+      address: '140 Park Avenue, Chicago',
+      message: 'Black tie optional. Ceremony at dusk, dinner and dancing to follow.',
+      rsvp: 'Kindly reply by October 20',
+    },
+    art: svg(`
+      <path d="M40 156V70Q40 18 100 18Q160 18 160 70V156" fill="none" stroke="#E4C178" stroke-width="1.2" opacity=".45"/>
+      ${flame(100, 34)}${flame(66, 48)}${flame(134, 48)}
+      <rect x="96.5" y="42" width="7" height="46" rx="1.8" fill="#FAF4E6"/>
+      <rect x="62.5" y="56" width="7" height="36" rx="1.8" fill="#FAF4E6"/>
+      <rect x="130.5" y="56" width="7" height="36" rx="1.8" fill="#FAF4E6"/>
+      <path d="M58 92H74Q72 97 66 97Q60 97 58 92Z" fill="#E4C178"/>
+      <path d="M92 88H108Q106 93 100 93Q94 93 92 88Z" fill="#E4C178"/>
+      <path d="M126 92H142Q140 97 134 97Q128 97 126 92Z" fill="#E4C178"/>
+      <path d="M66 96Q66 116 100 116Q134 116 134 96" fill="none" stroke="#D9B467" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M100 93V138" stroke="#E4C178" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="100" cy="116" r="4.5" fill="#E4C178"/>
+      <path d="M82 140Q100 132 118 140Z" fill="#D9B467"/>
+      <rect x="78" y="139" width="44" height="3.5" rx="1.5" fill="#E4C178"/>
+      ${sparkle(52, 34, 4.2, '#E4C178')}${sparkle(148, 36, 4.5, '#E4C178')}${sparkle(54, 120, 3, '#F6F1E6')}${sparkle(146, 122, 3.2, '#E4C178')}
+    `),
+  },
+  {
+    id: 'noir-laurel',
+    name: 'Noir Laurel',
+    category: 'Wedding',
+    tagline: 'Espresso velvet with a gold laurel crest.',
+    frame: 'circle',
+    titleFont: 'serif',
+    dark: true,
+    colors: { bg: '#232022', ink: '#F7F2EA', accent: '#E2C07A', soft: '#302C2F' },
+    defaults: {
+      eyebrow: 'The honor of your presence',
+      title: 'Audrey & Sebastian',
+      hosts: 'at the celebration of their marriage',
+      date: '2027-11-20',
+      time: '19:00',
+      venue: 'The Astor Ballroom',
+      address: '88 Fifth Avenue, New York',
+      message: 'Formal evening ceremony, cocktail hour and seated dinner.',
+      rsvp: 'Kindly reply by October 10',
+    },
+    art: svg(`
+      <circle cx="100" cy="80" r="54" fill="none" stroke="#E2C07A" stroke-width="1.2" opacity=".45"/>
+      <circle cx="100" cy="80" r="47" fill="none" stroke="#E2C07A" stroke-width="0.9" opacity=".3"/>
+      <path d="M88 124Q52 108 54 68Q56 46 74 36" fill="none" stroke="#D9B56B" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M112 124Q148 108 146 68Q144 46 126 36" fill="none" stroke="#D9B56B" stroke-width="1.6" stroke-linecap="round"/>
+      ${leaf(62, 108, -62, '#E2C07A', 6.8, 2.6)}${leaf(52, 90, -82, '#CFA95D', 7, 2.7)}${leaf(53, 70, -104, '#E2C07A', 6.8, 2.6)}${leaf(61, 52, -125, '#CFA95D', 6.2, 2.4)}
+      ${leaf(73, 114, -18, '#CFA95D', 6, 2.4)}${leaf(62, 98, -32, '#E2C07A', 6, 2.4)}${leaf(62, 78, -50, '#CFA95D', 6, 2.4)}
+      ${leaf(138, 108, 62, '#E2C07A', 6.8, 2.6)}${leaf(148, 90, 82, '#CFA95D', 7, 2.7)}${leaf(147, 70, 104, '#E2C07A', 6.8, 2.6)}${leaf(139, 52, 125, '#CFA95D', 6.2, 2.4)}
+      ${leaf(127, 114, 18, '#CFA95D', 6, 2.4)}${leaf(138, 98, 32, '#E2C07A', 6, 2.4)}${leaf(138, 78, 50, '#CFA95D', 6, 2.4)}
+      <circle cx="91" cy="78" r="17" fill="none" stroke="#E8C984" stroke-width="3.6"/>
+      <circle cx="109" cy="78" r="17" fill="none" stroke="#CFA95D" stroke-width="3.6"/>
+      <path d="M91 53l4.5 4.5-4.5 6-4.5-6z" fill="#F7F2EA" stroke="#E2C07A" stroke-width="1.1"/>
+      <path d="M100 124C92 117 82 121 86 127C89 131 96 128 100 124Z" fill="#E2C07A"/>
+      <path d="M100 124C108 117 118 121 114 127C111 131 104 128 100 124Z" fill="#E2C07A"/>
+      <path d="M98 126L90 138M102 126L110 138" stroke="#D9B56B" stroke-width="1.8" stroke-linecap="round"/>
+      ${sparkle(100, 32, 6, '#E8C984')}${sparkle(78, 36, 3, '#F7F2EA')}${sparkle(122, 36, 3, '#F7F2EA')}
+    `),
+  },
+  {
+    id: 'velvet-roses',
+    name: 'Velvet Roses',
+    category: 'Wedding',
+    tagline: 'Wine velvet roses tied in gold ribbon.',
+    frame: 'blob',
+    titleFont: 'serif',
+    dark: true,
+    colors: { bg: '#3B222A', ink: '#F8F1E7', accent: '#E6C278', soft: '#4C2E38' },
+    defaults: {
+      eyebrow: 'With joyful hearts',
+      title: 'Elena & Adrian',
+      hosts: 'invite you to celebrate their vows',
+      date: '2027-10-09',
+      time: '18:00',
+      venue: 'Villa Bellagio',
+      address: '24 Vineyard Crest, Napa',
+      message: 'Evening vows in the courtyard, followed by wine and dinner.',
+      rsvp: 'Kindly reply by September 1',
+    },
+    art: svg(`
+      <path d="M100 94V142M95 102L82 138M105 102L118 138" stroke="#7E9B84" stroke-width="2" stroke-linecap="round"/>
+      ${leaf(58, 92, -40, '#6E8B74', 9, 3.8)}${leaf(142, 92, 40, '#6E8B74', 9, 3.8)}
+      ${leaf(68, 58, -62, '#83A189', 8.5, 3.5)}${leaf(132, 58, 62, '#83A189', 8.5, 3.5)}
+      ${leaf(74, 114, 58, '#6E8B74', 8, 3.4)}${leaf(126, 114, -58, '#6E8B74', 8, 3.4)}
+      ${rose(74, 82, 16, '#B95D6D', '#7C303F')}${rose(126, 82, 16, '#D89A9E', '#995B62')}
+      ${rose(100, 62, 20, '#F3E4D8', '#C8AC9B')}${rose(100, 96, 13, '#9E4253', '#64222F')}
+      <path d="M100 116C88 109 78 113 82 120C85 124 94 121 100 116Z" fill="none" stroke="#E6C278" stroke-width="2.4"/>
+      <path d="M100 116C112 109 122 113 118 120C115 124 106 121 100 116Z" fill="none" stroke="#E6C278" stroke-width="2.4"/>
+      <path d="M98 119L88 139M102 119L112 139" stroke="#E6C278" stroke-width="2.2" stroke-linecap="round"/>
+      ${sparkle(44, 48, 4.8, '#E6C278')}${sparkle(156, 48, 4.8, '#E6C278')}${sparkle(100, 26, 4.2, '#F8F1E7')}${sparkle(154, 116, 3.5, '#E6C278')}
+    `),
+  },
+  {
+    id: 'gala-chandelier',
+    name: 'Gala Chandelier',
+    category: 'Wedding',
+    tagline: 'Plum velvet and a crystal chandelier.',
+    frame: 'rect',
+    titleFont: 'serif',
+    dark: true,
+    colors: { bg: '#2A2338', ink: '#F7F1EB', accent: '#E6C47E', soft: '#39304B' },
+    defaults: {
+      eyebrow: 'Join us for an evening of love',
+      title: 'Naomi & Theodore',
+      hosts: 'dinner, champagne and dancing',
+      date: '2028-01-15',
+      time: '19:30',
+      venue: 'The Opera Rotunda',
+      address: '52 Grand Boulevard, Vienna',
+      message: 'Cocktail reception, formal dinner and dancing under the chandelier.',
+      rsvp: 'Kindly reply by December 1',
+    },
+    art: svg(`
+      <circle cx="100" cy="84" r="46" fill="#E6C47E" opacity=".09"/>
+      <path d="M100 22V106" stroke="#E6C47E" stroke-width="2.4"/>
+      <circle cx="100" cy="48" r="4" fill="#E6C47E"/>
+      <circle cx="100" cy="112" r="4.5" fill="#F7F1EB" opacity=".9"/>
+      <path d="M100 106L96 116L100 124L104 116Z" fill="#E6C47E"/>
+      <path d="M100 66Q78 66 64 52" fill="none" stroke="#E6C47E" stroke-width="2"/>
+      <path d="M100 66Q122 66 136 52" fill="none" stroke="#E6C47E" stroke-width="2"/>
+      <path d="M100 84Q66 84 48 64" fill="none" stroke="#E6C47E" stroke-width="2.2"/>
+      <path d="M100 84Q134 84 152 64" fill="none" stroke="#E6C47E" stroke-width="2.2"/>
+      <path d="M48 68Q74 96 100 104Q126 96 152 68" fill="none" stroke="#F7F1EB" stroke-width="1.2" stroke-dasharray="1 6" stroke-linecap="round" opacity=".8"/>
+      <path d="M64 56Q82 76 100 82Q118 76 136 56" fill="none" stroke="#F7F1EB" stroke-width="1.1" stroke-dasharray="1 5.5" stroke-linecap="round" opacity=".75"/>
+      <rect x="45.5" y="54" width="5" height="10" rx="1.2" fill="#FAF4E6"/>
+      <rect x="61.5" y="42" width="5" height="10" rx="1.2" fill="#FAF4E6"/>
+      <rect x="133.5" y="42" width="5" height="10" rx="1.2" fill="#FAF4E6"/>
+      <rect x="149.5" y="54" width="5" height="10" rx="1.2" fill="#FAF4E6"/>
+      <path d="M48 45Q50.5 50 48 53Q45.5 50 48 45Z" fill="#F2BE5C"/>
+      <path d="M64 33Q66.5 38 64 41Q61.5 38 64 33Z" fill="#F2BE5C"/>
+      <path d="M136 33Q138.5 38 136 41Q133.5 38 136 33Z" fill="#F2BE5C"/>
+      <path d="M152 45Q154.5 50 152 53Q149.5 50 152 45Z" fill="#F2BE5C"/>
+      <path d="M48 72L45.5 79L48 84L50.5 79Z" fill="#F7F1EB" opacity=".85"/>
+      <path d="M152 72L149.5 79L152 84L154.5 79Z" fill="#F7F1EB" opacity=".85"/>
+      <path d="M74 96L72 102L74 106L76 102Z" fill="#F7F1EB" opacity=".8"/>
+      <path d="M126 96L124 102L126 106L128 102Z" fill="#F7F1EB" opacity=".8"/>
+      ${sparkle(32, 44, 4, '#E6C47E')}${sparkle(168, 46, 4.2, '#E6C47E')}${sparkle(36, 114, 3.2, '#F7F1EB')}${sparkle(164, 112, 3.4, '#E6C47E')}
     `),
   },
   {

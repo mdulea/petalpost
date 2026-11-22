@@ -7,8 +7,8 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-nunta.html',
     heading: 'Invitații de nuntă',
     description:
-      'Modele ilustrate de invitații de nuntă cu frunze de salvie, trandafiri și lavandă. Adaugă numele, locația și o fotografie, apoi trimite linkul.',
-    lead: 'Frunze fine, trandafiri de grădină, lavandă și cer înstelat. Adaugă numele voastre, detaliile ceremoniei și o fotografie împreună.',
+      'Modele ilustrate de invitații de nuntă, de la flori și arcade de ceremonie până la serii de gală în catifea. Adaugă detaliile și trimite linkul.',
+    lead: 'Flori de grădină, arcade de ceremonie, tort cu etaje, măslin cu teracotă și serii de gală în catifea. Adaugă numele voastre, detaliile ceremoniei și o fotografie împreună.',
     sections: [
       {
         heading: 'Ce conține o invitație de nuntă',

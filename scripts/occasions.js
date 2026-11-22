@@ -47,8 +47,8 @@ export const OCCASIONS = {
     file: 'wedding-invitations.html',
     heading: 'Wedding invitations',
     description:
-      'Hand-drawn wedding invitation templates with greenery, roses and lavender. Add your names, venue and photo, then share a link.',
-    lead: 'Greenery, garden roses, lavender and a midnight sky. Add your names, the ceremony details and a photo of the two of you.',
+      'Hand-drawn wedding invitation templates from garden florals and ceremony arches to candlelit velvet galas. Add your details and share a link.',
+    lead: 'Garden florals, ceremony arches, tiered cake, sunlit terracotta and dark velvet galas. Add your names, the ceremony details and a photo of the two of you.',
     sections: [
       {
         heading: 'What a wedding invitation says',
