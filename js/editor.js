@@ -399,6 +399,11 @@ rsvpForm.addEventListener('submit', async (e) => {
     rsvpStatus.textContent = `Enter your name, and a party size from 1 to ${REPLY_LIMITS.partySize} when you come.`;
     return;
   }
+  if (state.sample) {
+    rsvpStatus.textContent =
+      'Sample reply checked locally. Nothing was sent. Use Make your own to collect real replies and track headcount.';
+    return;
+  }
   // The edit link replaces the address before the request, so a reload or bookmark opens the reply if it was saved.
   history.replaceState(null, '', replyLink());
   sendReply.disabled = true;
@@ -473,6 +478,12 @@ if (state.guest) {
   } else if (state.event) {
     setHeading('Opening the invitation');
     openEvent();
+  } else if (state.sample) {
+    setHeading(state.d.title || 'You are invited');
+    const sampleNotice = document.getElementById('sampleNotice');
+    sampleNotice.textContent = 'Sample invitation. Replies submitted here are not saved.';
+    sampleNotice.hidden = false;
+    rsvpForm.hidden = false;
   } else {
     setHeading(state.d.title || 'You are invited');
   }

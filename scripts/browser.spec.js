@@ -1,4 +1,4 @@
-// Fails when the landing gallery or its occasion filter, a content page, the editor preview, the draft reload, the guest view, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the editor preview, the draft reload, the guest view, the sample guest invitation, the calendar download, the photo
 // upload, the PNG download or the link preview generator breaks in Chromium, or a page breaks the
 // Content-Security-Policy.
 // Run: pnpm test:browser
@@ -68,6 +68,7 @@ test('a share link opens the guest view and its calendar file in another browser
   await guest.goto(link);
   await expect(guest.locator('body')).toHaveClass(/view-mode/);
   await expect(guest.locator('h1')).toHaveText('Zoe turns 30');
+  await expect(guest.locator('#sampleNotice')).toBeHidden();
   const download = guest.waitForEvent('download');
   await guest.click('#addCalendar');
   expect(await readFile(await (await download).path(), 'utf8')).toContain('SUMMARY:Zoe turns 30');
@@ -87,6 +88,46 @@ test('a photo upload and the PNG download work', async ({ page }) => {
   const png = await readFile(await (await download).path());
   expect(png.subarray(1, 4).toString()).toBe('PNG');
   expect(png.length).toBeGreaterThan(10000);
+  expect(problems).toEqual([]);
+});
+
+test('the hero sample link opens a client-only sample guest invitation with local RSVP handling', async ({
+  browser,
+}) => {
+  const page = await (await browser.newContext()).newPage();
+  const problems = watch(page);
+  const apiRequests = [];
+  page.on('request', (req) => {
+    if (new URL(req.url()).pathname.startsWith('/api/')) apiRequests.push(req.url());
+  });
+
+  await page.goto('/');
+  await page.click('.hero .cta-row a[href="editor.html?view=1&sample=1"]');
+  await expect(page.locator('body')).toHaveClass(/view-mode/);
+  await expect(page.locator('#previewCard .invite')).toBeVisible();
+  await expect(page.locator('#sampleNotice')).toBeVisible();
+  await expect(page.locator('#addCalendar')).toBeVisible();
+  await expect(page.locator('#openMap')).toBeVisible();
+  await expect(page.locator('#rsvpForm')).toBeVisible();
+  await expect(page.locator('#reportRow')).toBeHidden();
+
+  const sampleTitle = await page.locator('#previewCard .invite-title').textContent();
+  const download = page.waitForEvent('download');
+  await page.click('#addCalendar');
+  expect(await readFile(await (await download).path(), 'utf8')).toContain(`SUMMARY:${sampleTitle}`);
+
+  await page.click('#sendReply');
+  await expect(page.locator('#rsvpStatus')).toContainText('Enter your name');
+  await expect(page.locator('#replySaved')).toBeHidden();
+
+  await page.fill('#guestName', 'Alex');
+  await page.fill('#partySize', '2');
+  await page.click('#sendReply');
+  await expect(page.locator('#rsvpStatus')).toContainText('Nothing was sent');
+  await expect(page.locator('#replySaved')).toBeHidden();
+  expect(await page.evaluate(() => location.hash)).toBe('');
+  expect(apiRequests).toEqual([]);
+  expect(await page.evaluate(() => localStorage.length)).toBe(0);
   expect(problems).toEqual([]);
 });
 
