@@ -6,7 +6,7 @@
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
-// failure; private link round trips; dynamic /e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses.
+// failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses; Romanian link helpers and localized API error messages via Accept-Language.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
 // checks, which read the stored keys in a database of their own.
 // Run: node scripts/check-rsvp.js
@@ -16,7 +16,16 @@ import { after, test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 import { getTemplate } from '../js/templates.js';
 import { eventLink, makeInviteData } from '../js/invite.js';
-import { createClient, makeReply, manageLink, newId, newSecret, readCredential, responseLink } from '../js/rsvp.js';
+import {
+  createClient,
+  editorPage,
+  makeReply,
+  manageLink,
+  newId,
+  newSecret,
+  readCredential,
+  responseLink,
+} from '../js/rsvp.js';
 import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
@@ -559,17 +568,46 @@ test('private links read back to the credential they carry', () => {
   const [eventId, id, secret] = [newId(), newId(), newSecret()];
   const origin = 'https://petalpost.example';
   const reply = responseLink(origin, eventId, id, secret);
+  const roReply = responseLink(origin, eventId, id, secret, 'ro');
   const manage = manageLink(origin, eventId, secret);
   assert.deepEqual(
     {
       reply: [reply.split('#')[0], readCredential(reply.slice(reply.indexOf('#')), 'r=')],
+      roReply: [roReply.split('#')[0], readCredential(roReply.slice(roReply.indexOf('#')), 'r=')],
       manage: [manage.split('#')[0], readCredential(manage.slice(manage.indexOf('#')), '')],
       event: eventLink(origin, eventId),
+      roEvent: eventLink(origin, eventId, 'ro'),
+      roEditor: editorPage(origin, 'ro'),
+      roManage: manageLink(origin, eventId, secret, 'ro').split('#')[0],
     },
     {
       reply: [`https://petalpost.example/e/${eventId}`, { id, secret }],
+      roReply: [`https://petalpost.example/ro/e/${eventId}`, { id, secret }],
       manage: ['https://petalpost.example/manage.html', { id: eventId, secret }],
       event: `https://petalpost.example/e/${eventId}`,
+      roEvent: `https://petalpost.example/ro/e/${eventId}`,
+      roEditor: 'https://petalpost.example/ro/editor.html',
+      roManage: 'https://petalpost.example/ro/manage.html',
+    },
+  );
+});
+
+test('a Romanian client receives Romanian API and network error messages', async () => {
+  const { raw } = await setup();
+  const roClient = createClient(
+    (path, init = {}) => raw(path, { ...init, headers: { ...init.headers, 'x-real-ip': newId() } }),
+    { lang: 'ro' },
+  );
+  const missing = await roClient.loadEvent(newId());
+  const offline = createClient(() => Promise.reject(new TypeError('Failed to fetch')), { lang: 'ro' });
+  const down = await offline.loadEvent(newId());
+  assert.deepEqual(
+    { missingStatus: missing.status, missing: missing.message, downStatus: down.status, down: down.message },
+    {
+      missingStatus: 404,
+      missing: 'Această invitație nu există. Este posibil să fi fost ștearsă.',
+      downStatus: 0,
+      down: 'Petalpost nu a putut fi contactat. Verifică conexiunea și încearcă din nou.',
     },
   );
 });
@@ -622,6 +660,18 @@ test('the /e/{id} route renders dynamic OG tags, escapes special text and handle
 
   const post = await eventPage(new Request(`https://petalpost.test/e/${cred.id}`, { method: 'POST' }));
   assert.deepEqual([post.status, post.headers.get('allow')], [405, 'GET, HEAD']);
+
+  const roOk = await eventPage(new Request(`https://petalpost.test/ro/e/${cred.id}`));
+  const roHtml = await roOk.text();
+  assert.equal(roOk.status, 200);
+  assert.match(roHtml, /<html lang="ro">/);
+  assert.match(roHtml, /ora 14:00/);
+  assert.match(roHtml, new RegExp(`<meta property="og:url" content="https://www\\.petalpost\\.ro/ro/e/${cred.id}" />`));
+  assert.doesNotMatch(roHtml, /<link rel="alternate"/);
+
+  const roMissing = await eventPage(new Request(`https://petalpost.test/ro/e/${newId()}`));
+  assert.equal(roMissing.status, 404);
+  assert.match(await roMissing.text(), /<title>Această invitație nu există \| Petalpost<\/title>/);
 
   const closedDb = await openDatabase();
   await closedDb.close();

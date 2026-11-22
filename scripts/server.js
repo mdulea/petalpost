@@ -43,7 +43,7 @@ const LOCAL_TOOLS = ['scripts/og-card.html', 'scripts/og-card.js'];
 async function staticFile(pathname) {
   let path;
   try {
-    path = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
+    path = decodeURIComponent(pathname.endsWith('/') ? `${pathname}index.html` : pathname);
   } catch {
     return null;
   }
@@ -67,11 +67,11 @@ async function toRequest(req, url) {
   return new Request(url, { method: req.method, headers, body });
 }
 
-/** @param {{port: number, memory?: boolean}} options */
-export async function startServer({ port, memory = false }) {
+/** @param {{port: number, memory?: boolean, dailyEvents?: number}} options */
+export async function startServer({ port, memory = false, dailyEvents }) {
   const db = memory ? new PGlite() : new PGlite(join(root, '.pglite'));
   await migrate(db);
-  const api = createApi(db);
+  const api = createApi(db, dailyEvents ? { dailyEvents } : undefined);
   const eventPage = createEventPage(db);
 
   const server = createServer(async (req, res) => {
@@ -80,8 +80,9 @@ export async function startServer({ port, memory = false }) {
     for (const rule of RULES.filter((r) => r.pattern.test(url.pathname))) {
       for (const { key, value } of rule.headers) headers[key] = value;
     }
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/e/')) {
-      const handler = url.pathname.startsWith('/e/') ? eventPage : api;
+    const isEventPage = url.pathname.startsWith('/e/') || url.pathname.startsWith('/ro/e/');
+    if (url.pathname.startsWith('/api/') || isEventPage) {
+      const handler = isEventPage ? eventPage : api;
       const response = await handler(await toRequest(req, url));
       response.headers.forEach((value, key) => {
         headers[key] = value;
@@ -118,7 +119,10 @@ export async function startServer({ port, memory = false }) {
 }
 
 if (import.meta.main) {
-  const { values } = parseArgs({ options: { port: { type: 'string' }, memory: { type: 'boolean' } } });
-  const { url } = await startServer({ port: Number(values.port ?? 3000), memory: values.memory });
+  const { values } = parseArgs({
+    options: { port: { type: 'string' }, memory: { type: 'boolean' }, 'daily-events': { type: 'string' } },
+  });
+  const dailyEvents = values['daily-events'] ? Number(values['daily-events']) : undefined;
+  const { url } = await startServer({ port: Number(values.port ?? 3000), memory: values.memory, dailyEvents });
   console.log(`Petalpost at ${url}`);
 }

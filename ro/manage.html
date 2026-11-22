@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Petalpost | Invitația ta</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Sari la conținut</a>
+    <header class="site-header">
+      <a class="brand" href="/ro/" aria-label="Petalpost acasă">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2" />
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round" />
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74" />
+        </svg>
+        Petalpost
+      </a>
+      <nav class="nav" aria-label="Limbă">
+        <a class="pill pill-lang" href="/manage.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </header>
+
+    <main class="manage" id="main">
+      <div class="manage-head">
+        <h1 id="manageHeading">Invitația ta</h1>
+        <p class="status" id="manageStatus" role="status"></p>
+      </div>
+
+      <div class="manage-body" id="manageContent" hidden>
+        <div class="preview-stage">
+          <div class="preview-card" id="managePreview"></div>
+        </div>
+
+        <div>
+          <section class="panel" aria-labelledby="h-replies">
+            <h2 id="h-replies">
+              <svg class="icon"><use href="#i-send" /></svg>Confirmări
+            </h2>
+            <ul class="totals" id="totals"></ul>
+            <ul class="reply-list" id="responseList"></ul>
+            <p class="hint" id="noReplies" hidden>Încă nu există răspunsuri.</p>
+            <button class="btn btn-ghost btn-small" type="button" id="refresh">
+              <svg class="icon"><use href="#i-reset" /></svg>Reîmprospătează
+            </button>
+          </section>
+
+          <section class="panel" aria-labelledby="h-share">
+            <h2 id="h-share">
+              <svg class="icon"><use href="#i-link" /></svg>Linkul invitației
+            </h2>
+            <div class="field">
+              <label for="eventLink">Trimite acest link invitaților</label>
+              <div class="copy-row">
+                <input class="input" id="eventLink" readonly />
+                <button class="btn btn-ghost btn-small" type="button" id="copyEventLink">Copiază</button>
+              </div>
+            </div>
+            <p class="warning">
+              Păstrează privat linkul acestei pagini. Oricine îl are poate vedea confirmările și șterge invitația.
+              Petalpost nu poate recupera un link de administrare pierdut.
+            </p>
+          </section>
+
+          <section class="panel" aria-labelledby="h-delete">
+            <h2 id="h-delete">
+              <svg class="icon"><use href="#i-trash" /></svg>Ștergere
+            </h2>
+            <p class="hint">
+              Ștergerea elimină invitația și toate răspunsurile de pe Petalpost. Invitații nu o vor mai putea deschide.
+            </p>
+            <button class="btn btn-rose btn-small" type="button" id="deleteEvent">
+              <svg class="icon"><use href="#i-trash" /></svg>Șterge invitația
+            </button>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- generated:footer -->
+    <footer class="site-footer">
+      <p class="footer-tagline">Petalpost. Făcut pentru oamenii pe care îi aduni cu drag.</p>
+      <nav class="footer-nav" aria-label="Subsol">
+        <div class="footer-group">
+          <p class="footer-title">Ocazii</p>
+          <a href="/ro/invitatii-nunta.html">Invitații de nuntă</a
+          ><a href="/ro/invitatii-cununie.html">Invitații de cununie civilă</a
+          ><a href="/ro/invitatii-botez.html">Invitații de botez</a
+          ><a href="/ro/invitatii-zi-de-nastere.html">Invitații de zi de naștere</a
+          ><a href="/ro/invitatii-casa-noua.html">Invitații de casă nouă</a
+          ><a href="/ro/invitatii-absolvire.html">Invitații de absolvire</a
+          ><a href="/ro/invitatii-baby-shower.html">Invitații de baby shower</a
+          ><a href="/ro/invitatii-brunch.html">Invitații de brunch</a>
+        </div>
+        <div class="footer-group">
+          <p class="footer-title">Ghiduri</p>
+          <a href="/ro/text-invitatii.html">Texte pentru invitații</a>
+          <a href="/ro/cand-sa-trimiti-invitatiile.html">Când să trimiți invitațiile</a>
+        </div>
+        <div class="footer-group">
+          <p class="footer-title">Petalpost</p>
+          <a href="/ro/">Acasă</a>
+          <a href="/ro/editor.html">Creează invitație</a>
+          <a href="/ro/despre.html">Despre</a>
+          <a href="/ro/confidentialitate.html">Confidențialitate</a>
+          <a href="/ro/termeni.html">Termeni</a>
+          <a href="mailto:contact@petalpost.ro">Contact</a>
+          <a href="/" hreflang="en" lang="en">English</a>
+        </div>
+      </nav>
+    </footer>
+    <!-- /generated:footer -->
+
+    <script type="module" src="/js/manage.js"></script>
+    <script src="/js/analytics.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
+</html>
