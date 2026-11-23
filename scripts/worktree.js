@@ -22,7 +22,7 @@ const fail = (message) => {
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
 // Runs git with its output shown and exits with git's status when it fails.
-const gitShown = (cwd, ...args) => {
+const gitOrExit = (cwd, ...args) => {
   const { status } = spawnSync('git', args, { cwd, stdio: 'inherit' });
   if (status !== 0) process.exit(status ?? 1);
 };
@@ -45,23 +45,23 @@ if (command === 'add') {
     fail(`The main checkout ${mainCheckout} has uncommitted changes. Commit or stash them first.`);
   }
   const path = join(mainCheckout, '.worktrees', `${type}-${task}`);
-  gitShown(mainCheckout, 'fetch', 'origin');
-  gitShown(mainCheckout, 'worktree', 'add', '--no-track', '-b', `${type}/${task}`, path, 'origin/main');
+  gitOrExit(mainCheckout, 'fetch', 'origin');
+  gitOrExit(mainCheckout, 'worktree', 'add', '--no-track', '-b', `${type}/${task}`, path, 'origin/main');
   if (install) {
-    const store = join(mainCheckout, '.pnpm-store');
-    const { status } = spawnSync(`pnpm install --frozen-lockfile --store-dir "${store}"`, {
-      cwd: path,
-      shell: true,
-      stdio: 'inherit',
-    });
+    // pnpm sets npm_execpath to its own executable or JavaScript entry, which runs without a shell on every platform.
+    const pnpm = process.env.npm_execpath;
+    if (!pnpm) fail(`The worktree ${path} exists, but no pnpm ran this command. Run pnpm install there.`);
+    const [file, ...prefix] = /\.[cm]?js$/.test(pnpm) ? [process.execPath, pnpm] : [pnpm];
+    const installArgs = ['install', '--frozen-lockfile', '--store-dir', join(mainCheckout, '.pnpm-store')];
+    const { status } = spawnSync(file, [...prefix, ...installArgs], { cwd: path, stdio: 'inherit' });
     if (status !== 0) fail(`The worktree ${path} exists, but pnpm install failed.`);
   }
   console.log(`Worktree ready: ${path}`);
 } else if (command === 'remove') {
   const [, type, task] = (args[0] ?? '').match(/^([^-]*)-(.*)$/) ?? [];
   validate(type ?? '', task);
-  gitShown(mainCheckout, 'worktree', 'remove', join(mainCheckout, '.worktrees', `${type}-${task}`));
-  gitShown(mainCheckout, 'branch', '-D', `${type}/${task}`);
+  gitOrExit(mainCheckout, 'worktree', 'remove', join(mainCheckout, '.worktrees', `${type}-${task}`));
+  gitOrExit(mainCheckout, 'branch', '-D', `${type}/${task}`);
 } else {
   fail(USAGE);
 }
