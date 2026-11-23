@@ -1,7 +1,8 @@
 // Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply and link fragment
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
-// reach only their own event or reply; reply totals; deletion with its replies; no secret, hash or reply id in any
+// reach only their own event or reply; reply totals; reply withdrawal, its stale version and its repeat; deletion
+// with its replies; no secret, hash or reply id in any
 // response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
@@ -269,6 +270,47 @@ test('a reply with a stale version gets 409 with the current answer', async () =
   );
 });
 
+test('a withdrawn reply leaves the host list and totals, and its edit link no longer loads it', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  await guests.saveReply(cred.id, guest(), lee);
+  const withdrawn = await guests.withdrawReply(cred.id, { ...reply, version: 1 });
+  const list = await client().loadResponses(cred);
+  assert.deepEqual(
+    {
+      status: withdrawn.status,
+      answers: answers(list),
+      totals: list.data.totals,
+      loaded: (await guests.loadReply(cred.id, reply)).status,
+    },
+    { status: 204, answers: [lee], totals: { responses: 1, yes: 1, no: 0, attending: 1 }, loaded: 404 },
+  );
+});
+
+test('a withdrawal with a stale version gets 409 with the current answer and keeps the reply', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  await guests.saveReply(cred.id, { ...reply, version: 1 }, lee);
+  const stale = await guests.withdrawReply(cred.id, { ...reply, version: 1 });
+  const { error, ...current } = stale.data;
+  assert.deepEqual(
+    { status: stale.status, current, answers: answers(await client().loadResponses(cred)) },
+    { status: 409, current: { version: 2, ...lee }, answers: [lee] },
+  );
+});
+
+test('a withdrawal repeated after a lost confirmation succeeds', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  reply.version = 1;
+  const first = await guests.withdrawReply(cred.id, reply);
+  const repeated = await guests.withdrawReply(cred.id, reply);
+  assert.deepEqual([first.status, repeated.status], [204, 204]);
+});
+
 test('an edit secret changes and reads only its own response', async () => {
   const { client, cred, guests } = await publishedEvent();
   const first = guest();
@@ -280,25 +322,27 @@ test('an edit secret changes and reads only its own response', async () => {
     guests.saveReply(cred.id, stolen, lee),
     guests.saveReply(cred.id, { ...stolen, version: 1 }, lee),
     guests.loadReply(cred.id, stolen),
+    guests.withdrawReply(cred.id, { ...stolen, version: 1 }),
   ]);
   assert.deepEqual(
     { statuses: results.map((r) => r.status), answers: answers(await client().loadResponses(cred)) },
-    { statuses: [403, 403, 403], answers: [sam, ana] },
+    { statuses: [403, 403, 403, 403], answers: [sam, ana] },
   );
 });
 
-test('a response id under another event cannot be read or changed there', async () => {
-  const { cred, guests } = await publishedEvent();
+test('a response id under another event cannot be read, changed or withdrawn there', async () => {
+  const { client, cred, guests } = await publishedEvent();
   const other = await publishedEvent();
   const reply = guest();
   await guests.saveReply(cred.id, reply, sam);
   const results = await Promise.all([
     guests.saveReply(other.cred.id, reply, lee),
     guests.loadReply(other.cred.id, reply),
+    guests.withdrawReply(other.cred.id, { ...reply, version: 1 }),
   ]);
   assert.deepEqual(
-    results.map((r) => r.status),
-    [403, 403],
+    { statuses: results.map((r) => r.status), answers: answers(await client().loadResponses(cred)) },
+    { statuses: [403, 403, 403], answers: [sam] },
   );
 });
 
@@ -329,8 +373,9 @@ test('deleting the invitation removes it and its replies', async () => {
     guests.loadReply(cred.id, reply),
     guests.saveReply(cred.id, { ...reply, version: 1 }, lee),
     guests.saveReply(cred.id, guest(), lee),
+    guests.withdrawReply(cred.id, { ...reply, version: 1 }),
   ]);
-  assert.deepEqual([deleted.status, ...gone.map((r) => r.status)], [204, 404, 404, 404, 404, 404]);
+  assert.deepEqual([deleted.status, ...gone.map((r) => r.status)], [204, 404, 404, 404, 404, 404, 404]);
 });
 
 test('no response body or header carries a secret, its hash or a reply id, and none is cached', async () => {
@@ -351,6 +396,9 @@ test('no response body or header carries a secret, its hash or a reply id, and n
   await recording.saveReply(cred.id, { ...reply, version: 1 }, lee);
   await recording.saveReply(cred.id, { ...reply, version: 1 }, ana);
   await recording.loadReply(cred.id, reply);
+  await recording.withdrawReply(cred.id, { ...reply, version: 1 });
+  await recording.withdrawReply(cred.id, { ...reply, version: 2 });
+  await recording.withdrawReply(cred.id, { ...reply, version: 2 });
   await recording.loadResponses(cred);
   await recording.deleteEvent(cred);
   const leaks = [cred.secret, reply.secret, sha256(cred.secret), sha256(reply.secret), reply.id, 'secret'];
@@ -401,6 +449,8 @@ test('malformed requests get their status and an error message', async () => {
     'a field that is not text': [400, event, put(withField({ venue: 7 }), auth)],
     'a reply with an empty name': [400, reply, put({ ...sam, name: ' ' }, bearer(newSecret()))],
     'a reply with a party of 11': [400, reply, put({ ...sam, partySize: 11 }, bearer(newSecret()))],
+    'a withdrawal without a version': [400, reply, { ...put({}, bearer(newSecret())), method: 'DELETE' }],
+    'a withdrawal without Authorization': [401, reply, { ...put({ version: 1 }), method: 'DELETE' }],
   };
   const results = {};
   for (const [label, [, path, init]] of Object.entries(cases)) {

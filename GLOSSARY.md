@@ -40,6 +40,11 @@ A submitted RSVP for one published invitation. It records the name given by the 
 A reply answers the published invitation as it is at any time, so it stays valid when the host changes the invitation's details.
 _Avoid_ `response` when naming this concept in the domain model.
 
+**Withdraw**
+
+A guest's action that removes their reply from the published invitation. Nothing records that a withdrawn reply existed.
+_Avoid_ `cancel`, which reads like declining, and `delete`, which is the host's action on a published invitation.
+
 **Party size**
 
 The number of people covered by an accepting reply, including the guest if they are attending. A declined reply has a party size of zero.

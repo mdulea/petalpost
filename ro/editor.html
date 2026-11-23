@@ -257,14 +257,17 @@
           <p class="status" id="rsvpStatus" role="status"></p>
           <div class="published" id="replySaved" hidden>
             <p class="warning">
-              Păstrează acest link privat dacă vrei să modifici răspunsul mai târziu. Oricine îl are îți poate schimba
-              răspunsul.
+              Păstrează acest link privat dacă vrei să modifici sau să retragi răspunsul mai târziu. Oricine îl are îți
+              poate schimba răspunsul.
             </p>
             <label class="field-label" for="replyLink">Linkul tău de modificare</label>
             <div class="copy-row">
               <input class="input" id="replyLink" readonly />
               <button class="btn btn-ghost btn-small" type="button" id="copyReplyLink">Copiază</button>
             </div>
+            <button class="btn btn-rose btn-small" type="button" id="withdrawReply">
+              <svg class="icon"><use href="#i-trash" /></svg>Retrage răspunsul
+            </button>
             <div class="reply-cta" id="replyCta">
               <p>Organizezi un eveniment? Creează o invitație gratuită cu confirmări incluse, fără cont.</p>
               <a class="btn btn-ghost btn-small" href="/ro/#templates">

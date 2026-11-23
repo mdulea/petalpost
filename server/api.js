@@ -10,6 +10,7 @@
 // GET /api/events/{id}/responses           management secret; {t, d, version, responses, totals}
 // PUT /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, version?}
 // GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, version}
+// DELETE /api/events/{id}/responses/{rid}  edit secret; {version} withdraws the reply; 204, also when it is gone
 // GET /api/retention                       public; deletes expired events and their responses; {deleted}
 //
 // An event expires RETENTION_DAYS days after the later of its event date and its last change; an event without a
@@ -46,7 +47,10 @@ const ROUTES = [
   { pattern: /^\/api\/retention$/, methods: { GET: deleteExpired } },
   { pattern: /^\/api\/events\/([^/]+)$/, methods: { GET: getEvent, PUT: putEvent, DELETE: deleteEvent } },
   { pattern: /^\/api\/events\/([^/]+)\/responses$/, methods: { GET: listResponses } },
-  { pattern: /^\/api\/events\/([^/]+)\/responses\/([^/]+)$/, methods: { GET: getReply, PUT: putReply } },
+  {
+    pattern: /^\/api\/events\/([^/]+)\/responses\/([^/]+)$/,
+    methods: { GET: getReply, PUT: putReply, DELETE: withdrawReply },
+  },
 ];
 
 // A thrown Refusal becomes its error response, and rolls back the transaction it leaves.
@@ -271,5 +275,24 @@ async function putReply({ db, request, ids: [eventId, id] }) {
       [id, eventId, hash(secret), reply.name, reply.attending, reply.partySize],
     );
     return json(201, { version: 1, created: true });
+  });
+}
+
+// A withdrawal leaves no trace of the reply. A repeat after a lost confirmation finds no reply and also succeeds.
+async function withdrawReply({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const body = await readBody(request);
+  if (body.version === undefined) throw new Refusal(400, 'version');
+  return db.transaction(async (tx) => {
+    // The same event row lock as putReply, so a withdrawal and a new reply to one event take turns.
+    const event = (await tx.query('select 1 from events where id = $1 for update', [eventId])).rows[0];
+    if (!event) throw new Refusal(404, 'eventMissing');
+    const existing = await ownedReply(tx, eventId, id, secret);
+    if (!existing) return json(204, null);
+    if (body.version !== existing.version) {
+      throw new Refusal(409, 'replyChanged', { version: existing.version, ...replyOf(existing) });
+    }
+    await tx.query('delete from responses where id = $1', [id]);
+    return json(204, null);
   });
 }

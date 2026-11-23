@@ -255,13 +255,16 @@
           <p class="status" id="rsvpStatus" role="status"></p>
           <div class="published" id="replySaved" hidden>
             <p class="warning">
-              Keep this private link to change your reply later. Anyone with it can change your reply.
+              Keep this private link to change or withdraw your reply later. Anyone with it can change your reply.
             </p>
             <label class="field-label" for="replyLink">Your edit link</label>
             <div class="copy-row">
               <input class="input" id="replyLink" readonly />
               <button class="btn btn-ghost btn-small" type="button" id="copyReplyLink">Copy</button>
             </div>
+            <button class="btn btn-rose btn-small" type="button" id="withdrawReply">
+              <svg class="icon"><use href="#i-trash" /></svg>Withdraw my reply
+            </button>
             <div class="reply-cta" id="replyCta">
               <p>Planning an event of your own? Make a free invite with RSVP tracking, no account needed.</p>
               <a class="btn btn-ghost btn-small" href="/#templates">

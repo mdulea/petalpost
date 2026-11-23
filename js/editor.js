@@ -437,7 +437,8 @@ document.getElementById('copyManageLink').addEventListener('click', () =>
 // Guest replies to a published event. The reply id and secret are made once per page. The guest view never writes
 // storage, so the first send puts them in the address as the edit link #r=<id>.<secret> before the request. A retry
 // or a reload after a lost confirmation then reuses them and cannot create a second reply. An edit link loads that
-// reply, and saving sends its version.
+// reply, and saving sends its version. Withdrawing sends the version too, and the page then starts over with a new
+// reply id and secret, so the next send makes a separate reply under a new edit link.
 const rsvpForm = /** @type {HTMLFormElement} */ (document.getElementById('rsvpForm'));
 const rsvpStatus = document.getElementById('rsvpStatus');
 const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('replyLink'));
@@ -448,6 +449,7 @@ nameInput.maxLength = REPLY_LIMITS.name;
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
+const withdrawButton = /** @type {HTMLButtonElement} */ (document.getElementById('withdrawReply'));
 
 const attendingChecked = () =>
   /** @type {HTMLInputElement} */ (rsvpForm.querySelector('input[name="attending"]:checked')).value === 'yes';
@@ -511,6 +513,29 @@ rsvpForm.addEventListener('submit', async (e) => {
   rsvpStatus.textContent = result.message;
 });
 
+// The withdraw button sits in the saved-reply panel, so it shows only once the server has confirmed a version.
+withdrawButton.addEventListener('click', async () => {
+  if (!window.confirm(copy.withdrawConfirm)) return;
+  withdrawButton.disabled = true;
+  rsvpStatus.textContent = copy.withdrawingReply;
+  const result = await client.withdrawReply(state.event, replyCred);
+  withdrawButton.disabled = false;
+  if (result.ok) {
+    Object.assign(replyCred, { id: newId(), secret: newSecret(), version: null });
+    history.replaceState(null, '', eventLink(location.origin, state.event, lang));
+    rsvpForm.reset();
+    syncPartySize();
+    document.getElementById('replySaved').hidden = true;
+    rsvpStatus.textContent = copy.replyWithdrawn;
+    return;
+  }
+  if (result.status === 409) {
+    replyCred.version = result.data.version;
+    fillReply(result.data);
+  }
+  rsvpStatus.textContent = result.message;
+});
+
 document.getElementById('copyReplyLink').addEventListener('click', () =>
   copyLink(replyLinkInput.value, () => {
     rsvpStatus.textContent = copy.replyLinkCopied;
@@ -545,8 +570,11 @@ async function openEvent() {
   document.getElementById('reportRow').hidden = false;
   if (!fromLink) return;
   const saved = await client.loadReply(state.event, replyCred);
-  // The event exists, so a missing reply was never saved. The empty form sends it as a new reply.
-  if (saved.status === 404) return;
+  // The event exists, so the reply was never saved or was withdrawn. The empty form sends it as a new reply.
+  if (saved.status === 404) {
+    rsvpStatus.textContent = copy.noSavedReply;
+    return;
+  }
   if (!saved.ok) {
     rsvpStatus.textContent = saved.message;
     return;

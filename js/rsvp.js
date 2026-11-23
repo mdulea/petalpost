@@ -127,5 +127,8 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     saveReply: (eventId, cred, reply) => save(replyPath(eventId, cred.id), cred, reply),
     // data is {name, attending, partySize, version}.
     loadReply: (eventId, cred) => call('GET', replyPath(eventId, cred.id), cred.secret),
+    // Removes the guest's reply at cred.version; a reply that is already gone counts as withdrawn. data is null.
+    withdrawReply: (eventId, cred) =>
+      call('DELETE', replyPath(eventId, cred.id), cred.secret, { version: cred.version }),
   };
 }

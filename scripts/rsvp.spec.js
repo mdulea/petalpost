@@ -3,7 +3,9 @@
 // link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
 // the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
-// after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer;
+// after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer; a confirmed
+// withdrawal clears the form and the address, its old edit link says no reply is saved yet and can send, and a stale
+// withdrawal loads the latest answer; the Romanian withdrawal copy;
 // publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
@@ -92,6 +94,86 @@ test('a guest edits a reply through the edit link, and the host sees one reply a
     replies: [expect.stringMatching(/Sam Lee[\s\S]*Yes[\s\S]*3/), expect.stringMatching(/Ana[\s\S]*No/)],
   });
   expect([...host.problems, ...sam.problems, ...samLater.problems, ...ana.problems]).toEqual([]);
+});
+
+test('a guest withdraws a reply after confirming, and a new send makes a separate reply under a new link', async ({
+  browser,
+}) => {
+  const host = await newBrowser(browser);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await expect(sam.page.locator('#withdrawReply')).toBeHidden();
+  await reply(sam.page, { name: 'Sam', partySize: 2 });
+  const oldLink = await sam.page.locator('#replyLink').inputValue();
+
+  sam.page.once('dialog', (dialog) => dialog.dismiss());
+  await sam.page.click('#withdrawReply');
+  await expect(sam.page.locator('#guestName')).toHaveValue('Sam');
+  sam.page.once('dialog', (dialog) => dialog.accept());
+  await sam.page.click('#withdrawReply');
+  await expect(sam.page.locator('#rsvpStatus')).toHaveText(
+    'Your reply is withdrawn. The host no longer sees it. You can send a new reply.',
+  );
+  expect({
+    name: await sam.page.locator('#guestName').inputValue(),
+    saved: await sam.page.locator('#replySaved').isVisible(),
+    url: sam.page.url(),
+  }).toEqual({ name: '', saved: false, url: invitation });
+
+  await reply(sam.page, { name: 'Sam again' });
+  const newLink = await sam.page.locator('#replyLink').inputValue();
+  await host.page.goto(manage);
+  expect({ same: newLink === oldLink, replies: (await managed(host.page)).replies }).toEqual({
+    same: false,
+    replies: [expect.stringMatching(/^Sam again\b/)],
+  });
+  expect([...host.problems, ...sam.problems]).toEqual([]);
+});
+
+test('a withdrawn reply edit link says no reply is saved under it yet and can still send one', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: 'Sam' });
+  const oldLink = await sam.page.locator('#replyLink').inputValue();
+  sam.page.once('dialog', (dialog) => dialog.accept());
+  await sam.page.click('#withdrawReply');
+  await expect(sam.page.locator('#replySaved')).toBeHidden();
+
+  const samLater = await newBrowser(browser);
+  await samLater.page.goto(oldLink);
+  await expect(samLater.page.locator('#rsvpStatus')).toHaveText(
+    'No reply is saved under this link yet. Send the form to save one.',
+  );
+  await expect(samLater.page.locator('#withdrawReply')).toBeHidden();
+  await reply(samLater.page, { name: 'Sam Lee' });
+  await host.page.goto(manage);
+  expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam Lee\b/)]);
+  expect([...host.problems, ...sam.problems, ...samLater.problems]).toEqual([]);
+});
+
+test('a withdrawal from a stale page fails and shows the latest answer', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: 'Sam' });
+  const samPhone = await newBrowser(browser);
+  await samPhone.page.goto(await sam.page.locator('#replyLink').inputValue());
+  await expect(samPhone.page.locator('#guestName')).toHaveValue('Sam');
+  await reply(samPhone.page, { name: 'Sam from the phone', partySize: 4 });
+
+  sam.page.once('dialog', (dialog) => dialog.accept());
+  await sam.page.click('#withdrawReply');
+  await expect(sam.page.locator('#rsvpStatus')).toHaveText(
+    'This reply changed in another browser. The latest answer is shown.',
+  );
+  await expect(sam.page.locator('#guestName')).toHaveValue('Sam from the phone');
+  await host.page.goto(manage);
+  expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam from the phone\b/)]);
+  expect([...host.problems, ...sam.problems, ...samPhone.problems]).toEqual([]);
 });
 
 test('the invitation link and a guessed secret cannot open the management page', async ({ browser }) => {
@@ -569,5 +651,25 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   const stranger = await newBrowser(browser);
   await stranger.page.goto(manage.replace(/\.[^.]+$/, `.${'x'.repeat(43)}`));
   await expect(stranger.page.locator('#manageStatus')).toHaveText('Acest link nu oferă acces la această invitație.');
-  expect([...host.problems, ...guest.problems, ...stranger.problems]).toEqual([]);
+
+  const editLink = await guest.page.locator('#replyLink').inputValue();
+  let question = '';
+  guest.page.once('dialog', (dialog) => {
+    question = dialog.message();
+    dialog.accept();
+  });
+  await guest.page.click('#withdrawReply');
+  await expect(guest.page.locator('#rsvpStatus')).toHaveText(
+    'Răspunsul tău a fost retras. Gazda nu îl mai vede. Poți trimite un răspuns nou.',
+  );
+  expect({ question, url: guest.page.url() }).toEqual({
+    question: 'Retragi răspunsul? Gazda nu îl va mai vedea.',
+    url: invitation,
+  });
+  const guestLater = await newBrowser(browser);
+  await guestLater.page.goto(editLink);
+  await expect(guestLater.page.locator('#rsvpStatus')).toHaveText(
+    'Încă nu există un răspuns salvat la acest link. Trimite formularul pentru a-l salva.',
+  );
+  expect([...host.problems, ...guest.problems, ...stranger.problems, ...guestLater.problems]).toEqual([]);
 });
