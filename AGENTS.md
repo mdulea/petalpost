@@ -9,10 +9,11 @@
 
 README.md sections, by need:
 
-- project, setup, commands, layout -> Overview, Installation, Run, Development, Project structure
+- project, setup, commands, layout, generated pages -> Overview, Installation, Run, Development, Project structure
+- worktrees, branches, checks, pull requests, merges, commit + pull request messages -> Workflow
 - env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED`; database, migrations -> Deployment, Database
 - line endings, dependency upgrades, install errors -> Tooling notes
-- deployment, security headers, contact address, production-origin changes -> Deployment
+- deployment, Vercel CLI, `.vercelignore`, security headers, contact address, production-origin changes -> Deployment
 
 ## Code
 
@@ -25,24 +26,22 @@ README.md sections, by need:
 ## Testing
 
 - behavior change -> add/update `node:test` checks in `scripts/`; test added to `scripts/check-*.js` or `scripts/*.spec.js` -> update header comment listing checks
-- before finishing: `pnpm test`, `pnpm typecheck`, `pnpm test:browser` all pass
+- before finishing: `pnpm check` passes
 
 ## Gotchas
 
 - `scripts/server.js` matches Vercel: `vercel.json` headers; clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`, `/ro/` -> `ro/index.html`; dir listings off; `/api/*`, `/e/{id}`, `/ro/e/{id}` -> PGlite, never Neon; `check-site.js` checks it
-- `DATABASE_URL_UNPOOLED` for `pnpm migrate` -> verified non-production Neon branch first
 - inline scripts blocked by CSP -> page scripts in files; inline `style` attributes allowed for `renderInvite`
 - package store: `.pnpm-store/` inside repo
 - `js/analytics.js` == classic script; ESLint `sourceType: 'script'`
 - new page-level global from classic script -> declare in `js/globals.d.ts` + ESLint globals
-- pushing `main` releases to production -> run [Testing](#testing) checks first
-- Vercel CLI -> `pnpm dlx vercel`; see README Deployment for preview cleanup and Hobby observability limits
-- new non-site file -> `.vercelignore`
-- `*-invitations.html`, `ro/invitatii-*.html`, landing galleries, page footers == `pnpm pages` output -> edit `scripts/pages.js`, `scripts/occasions.js` or `scripts/occasions-ro.js`, rerun; `check-site.js` fails on drift
 
-## Git and output
+## Workflow
 
-- worktrees -> `.worktrees/`
-- commit subject: imperative sentence-case reason, type prefix forbidden, e.g. `Run the format check and lint in pnpm test`; blank line; body: approach rationale + context/constraints/tradeoffs absent from diff; implementation details -> diff only
-- formatting-only commit -> hash to `.git-blame-ignore-revs`
+README Workflow == procedure; agent limits:
+
+- work + commit only in own worktree; main checkout + other agents' worktrees forbidden
+- push + open pull request only when user says branch ready
+- merge, `pnpm worktree remove` -> only on request
+- `pnpm migrate` against Neon forbidden
 - output: changes, reasons, tests

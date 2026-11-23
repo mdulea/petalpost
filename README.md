@@ -87,13 +87,14 @@ A lost management link cannot be recovered.
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
-- `.github/workflows/checks.yml` runs every check on each push and pull request. It is disabled in GitHub because the account has no Actions minutes; `gh workflow enable Checks` turns it back on.
+- `.github/workflows/checks.yml` runs `pnpm check` on each push and pull request.
 - `docs/petalpost-flow.html` is a diagram of the site flow.
 
 ## Development
 
 | Task           | Command                                  |
 | -------------- | ---------------------------------------- |
+| All checks     | `pnpm check`                             |
 | Test suite     | `pnpm test`                              |
 | One check file | `pnpm exec node scripts/check-invite.js` |
 | Lint           | `pnpm lint`                              |
@@ -107,7 +108,9 @@ A lost management link cannot be recovered.
 
 To run another check file, replace `check-invite.js` with any `scripts/check-*.js` file.
 
-`test` runs the Prettier format check, ESLint and the contrast, invite, RSVP and site checks in `scripts/` with the Node.js test runner.
+`check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
+
+`test` runs the Prettier format check, ESLint and the contrast, invite, RSVP, site and worktree checks in `scripts/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
@@ -123,13 +126,10 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 ## Deployment
 
-Vercel's GitHub integration deploys every push to `main` to production.
-No check holds a deployment back.
-Run `pnpm test`, `pnpm typecheck` and `pnpm test:browser` locally before you push `main`.
-After you enable the workflow, you can add a Vercel Deployment Check on the `checks` job, which holds production until the GitHub checks pass.
-Pushes to other branches get preview deployments.
+Vercel's GitHub integration deploys every commit on `main` to production.
+A Vercel Deployment Check in the project settings holds each production deployment until the GitHub `checks` job passes.
+`git.deploymentEnabled` in `vercel.json` turns off Git deployments for every other branch, so Vercel builds no previews.
 The Vercel CLI is not installed locally or as a dependency; invoke it with `pnpm dlx vercel`.
-To remove stale preview deployments after merging branches, list them with `pnpm dlx vercel ls --environment preview` and delete each URL with `pnpm dlx vercel rm <url> --confirm-name`.
 On the Vercel Hobby plan, function invocation metrics older than 30 minutes require Observability Plus on Pro, so CLI metric queries beyond that window return `payment_required`.
 Vercel runs `pnpm install --prod --frozen-lockfile`, then `pnpm build`, and serves `dist/` as static files.
 `scripts/build.js` copies only the site files from an allowlist into `dist/`: the root pages, `ro/` pages, images, `robots.txt`, `sitemap.xml` and `THIRD_PARTY_NOTICES.txt`, and `css/`, `fonts/`, `vendor/` and the `js/` modules.
@@ -158,7 +158,7 @@ Apply schema changes with `pnpm migrate`, which applies the unapplied files in `
 DATABASE_URL_UNPOOLED='<connection string>' pnpm migrate
 ```
 
-Run it first against a verified non-production Neon branch, then against production before you deploy the code that needs the change.
+No non-production Neon branch exists, so run it against production before you merge the pull request whose code needs the change.
 Never commit a connection string or an `.env` file.
 
 Every page loads Vercel Web Analytics.
@@ -190,11 +190,29 @@ To regenerate it:
 3. Click "Save og-image.png".
 4. Move the downloaded file to the repository root and commit it.
 
-## Contributing
+## Workflow
 
-1. Branch from `main`.
-2. Make the change and add tests to the checks in `scripts/`.
-3. Run `pnpm test`, `pnpm typecheck` and `pnpm test:browser`.
-4. Describe what the branch changes and why.
+Every change reaches `main` through a pull request.
+Branch protection on `main` requires a pull request and a passing `checks` job, blocks force pushes and deletion, and applies to administrators too.
+The main checkout stays on `main` and changes only through `git pull --ff-only`.
+
+1. In the main checkout, with no uncommitted changes, run `pnpm worktree add <type> <task>`.
+   The type is one of `feat`, `fix`, `docs`, `refactor`, `test` and `chore`.
+   The task is lowercase words joined by hyphens, such as `setup-guide`.
+   The command fetches `origin`, creates branch `<type>/<task>` from `origin/main`, adds the worktree `.worktrees/<type>-<task>`, and installs the dependencies from the main checkout's `.pnpm-store/`.
+2. Commit in that worktree. Each behavior change adds or updates a check in `scripts/`.
+3. Run `pnpm check`.
+4. Push with `git push -u origin HEAD` and open a pull request with `gh pr create`.
+   When the pull request adds a migration, its body says so, and you apply the migration to production as [Database](#database) describes before you merge.
+5. Squash-merge the pull request after the `checks` job passes.
+   The repository allows only squash merges, builds the commit message from the pull request title and body, and deletes the remote branch.
+6. In the main checkout, run `git pull --ff-only` and `pnpm worktree remove <type>-<task>`.
+   The command removes the worktree and force-deletes its local branch, because a squash merge leaves that branch unmerged.
+
+### Commits and pull requests
+
+- A commit subject and a pull request title state the reason for the change in the imperative and in sentence case, with no type prefix, such as `Run the format check and lint in pnpm test`.
+- A commit body and a pull request body explain the approach and the context, constraints and tradeoffs that the diff does not show. Leave implementation details to the diff.
+- When a formatting-only commit lands on `main`, add its hash to `.git-blame-ignore-revs`.
 
 Agents: [AGENTS.md](AGENTS.md).
