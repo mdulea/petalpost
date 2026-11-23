@@ -3,11 +3,13 @@
 // with uncommitted changes. It then fetches origin, creates branch <type>/<task> from origin/main without tracking it,
 // adds the worktree .worktrees/<type>-<task>, and installs dependencies from the main checkout's .pnpm-store.
 // `--no-install` skips the install.
-// `remove <type>-<task>` removes the worktree and force-deletes its local branch, because a squash merge leaves the
-// branch unmerged. git refuses to remove a worktree with uncommitted changes. The remote branch is left alone,
-// because GitHub deletes it on merge.
+// `remove <type>-<task>` removes the worktree, then .worktrees/ once it is empty, and force-deletes the local branch,
+// because a squash merge leaves the branch unmerged. git refuses to remove a worktree with uncommitted changes. It then
+// prunes the remote-tracking branches whose remote branch is gone, as after GitHub deletes a merged branch, and deletes
+// the remote branch when it still exists.
 // Run: pnpm worktree add <type> <task> [--no-install] | pnpm worktree remove <type>-<task>
 import { execFileSync, spawnSync } from 'node:child_process';
+import { readdirSync, rmdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const TYPES = ['feat', 'fix', 'docs', 'refactor', 'test', 'chore'];
@@ -60,8 +62,15 @@ if (command === 'add') {
 } else if (command === 'remove') {
   const [, type, task] = (args[0] ?? '').match(/^([^-]*)-(.*)$/) ?? [];
   validate(type ?? '', task);
-  gitOrExit(mainCheckout, 'worktree', 'remove', join(mainCheckout, '.worktrees', `${type}-${task}`));
-  gitOrExit(mainCheckout, 'branch', '-D', `${type}/${task}`);
+  const branch = `${type}/${task}`;
+  const worktrees = join(mainCheckout, '.worktrees');
+  gitOrExit(mainCheckout, 'worktree', 'remove', join(worktrees, `${type}-${task}`));
+  if (readdirSync(worktrees).length === 0) rmdirSync(worktrees);
+  gitOrExit(mainCheckout, 'branch', '-D', branch);
+  gitOrExit(mainCheckout, 'fetch', '--prune', 'origin');
+  if (git(mainCheckout, 'ls-remote', '--heads', 'origin', branch).trim()) {
+    gitOrExit(mainCheckout, 'push', 'origin', '--delete', branch);
+  }
 } else {
   fail(USAGE);
 }
