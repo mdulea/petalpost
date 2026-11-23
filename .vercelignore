@@ -17,6 +17,7 @@ scripts/*
 dist/
 .pglite/
 README.md
+GLOSSARY.md
 .worktrees/
 docs/
 AGENTS.md

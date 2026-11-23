@@ -12,6 +12,8 @@ The pages are static HTML, CSS and JavaScript.
 API functions on the same origin store published invitations and replies in Neon Postgres.
 It runs at `https://www.petalpost.ro`.
 
+See the [glossary](GLOSSARY.md) for the terms used to describe invitations and replies and the [domain decisions](docs/decisions/) for the choices behind their behavior.
+
 ## Quick start
 
 ### Prerequisites
