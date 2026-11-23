@@ -40,8 +40,9 @@ README.md sections, by need:
 
 README Workflow == procedure; agent limits:
 
-- work + commit only in own worktree; main checkout + other agents' worktrees forbidden
+- work + commit only in own worktree; main checkout + other agents' worktrees forbidden, except post-merge cleanup
 - push + open pull request only when user says branch ready
-- merge, `pnpm worktree remove` -> only on request
+- merge -> only on request
+- after own pull request merges -> in main checkout `git pull --ff-only`, then `pnpm worktree remove <type>-<task>`; unasked
 - `pnpm migrate` against Neon forbidden
 - output: changes, reasons, tests
