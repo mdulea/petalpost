@@ -20,7 +20,8 @@
     "pages": "node scripts/pages.js",
     "typecheck": "tsc -p .",
     "test": "pnpm format:check && pnpm lint && node --test scripts/check-*.js",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "worktree": "node scripts/worktree.js"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16",
