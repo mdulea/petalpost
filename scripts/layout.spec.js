@@ -133,7 +133,8 @@ test('the editor keeps its grid at every viewport', async ({ page }) => {
 
 // Tabs from the page top through the form at each narrow viewport, where the Preview button floats.
 test('the Preview button never covers the focused control', async ({ page }) => {
-  test.setTimeout(180000);
+  // Triples the project timeout: Chromium takes about 27 seconds, and Linux WebKit with two workers about 3.5 minutes.
+  test.slow();
   const failures = [];
   for (const viewport of VIEWPORTS.filter(({ width }) => width <= 960)) {
     await page.setViewportSize(viewport);
