@@ -2,8 +2,7 @@
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
 // reach only their own event or reply; reply totals; reply withdrawal, its stale version and its repeat; deletion
-// with its replies; no secret, hash or reply id in any
-// response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
+// with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
