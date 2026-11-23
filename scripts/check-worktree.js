@@ -1,7 +1,8 @@
 // Fails when pnpm worktree add does not create branch <type>/<task> and worktree .worktrees/<type>-<task>, starts the
 // branch somewhere other than the latest origin/main when local main is behind, accepts an unknown type or a task name
 // that is not lowercase and hyphenated, runs while the main checkout has uncommitted changes, or when pnpm worktree
-// remove leaves the worktree or its local branch behind. Each case runs the command against a throwaway repository
+// remove leaves the worktree, an empty .worktrees directory, its local branch, its remote branch or its
+// remote-tracking branch behind. Each case runs the command against a throwaway repository
 // with a local bare origin and skips the dependency install.
 // Run: node scripts/check-worktree.js
 import assert from 'node:assert/strict';
@@ -84,12 +85,32 @@ test('add refuses while the main checkout has uncommitted changes', () => {
   );
 });
 
-test('remove deletes the worktree and its local branch', () => {
+test('remove deletes the worktree, the emptied .worktrees directory and the local branch', () => {
   const { main } = setup();
   worktree(main, 'add', 'chore', 'tidy-up', '--no-install');
   const result = worktree(main, 'remove', 'chore-tidy-up');
   assert.deepEqual(
-    [result.status, existsSync(join(main, '.worktrees', 'chore-tidy-up')), git(main, 'branch', '--list', 'chore/*')],
+    [result.status, existsSync(join(main, '.worktrees')), git(main, 'branch', '--list', 'chore/*')],
     [0, false, ''],
   );
+});
+
+test('remove deletes a remote branch that still exists and its remote-tracking branch', () => {
+  const { origin, main } = setup();
+  worktree(main, 'add', 'feat', 'guest-list', '--no-install');
+  git(join(main, '.worktrees', 'feat-guest-list'), 'push', '-q', '-u', 'origin', 'HEAD');
+  worktree(main, 'remove', 'feat-guest-list');
+  assert.deepEqual(
+    [git(origin, 'branch', '--list', 'feat/*'), git(main, 'branch', '-r', '--list', 'origin/feat/*')],
+    ['', ''],
+  );
+});
+
+test('remove drops the remote-tracking branch of a remote branch that GitHub already deleted', () => {
+  const { origin, main } = setup();
+  worktree(main, 'add', 'fix', 'late-reply', '--no-install');
+  git(join(main, '.worktrees', 'fix-late-reply'), 'push', '-q', '-u', 'origin', 'HEAD');
+  git(origin, 'branch', '-D', 'fix/late-reply');
+  const result = worktree(main, 'remove', 'fix-late-reply');
+  assert.deepEqual([result.status, git(main, 'branch', '-r', '--list', 'origin/fix/*')], [0, '']);
 });

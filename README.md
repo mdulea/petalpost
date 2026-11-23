@@ -207,7 +207,9 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
 5. Squash-merge the pull request after the `checks` job passes.
    The repository allows only squash merges, builds the commit message from the pull request title and body, and deletes the remote branch.
 6. In the main checkout, run `git pull --ff-only` and `pnpm worktree remove <type>-<task>`.
-   The command removes the worktree and force-deletes its local branch, because a squash merge leaves that branch unmerged.
+   The command removes the worktree, and `.worktrees/` once it is empty.
+   It force-deletes the local branch, because a squash merge leaves that branch unmerged.
+   It prunes the remote-tracking branches whose remote branch GitHub deleted, and deletes the remote branch when it still exists.
 
 ### Commits and pull requests
 
