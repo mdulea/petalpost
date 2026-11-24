@@ -1355,6 +1355,119 @@ export const TEMPLATES = [
     `),
   },
   {
+    id: 'mot-tava',
+    name: 'Tava cu obiecte',
+    category: 'Moț',
+    locales: ['ro'],
+    tagline: 'Tavă cu carte, stilou, bănuț și lingură de lemn.',
+    frame: 'arch',
+    titleFont: 'serif',
+    colors: { bg: '#F5F1E6', ink: '#3E3A2C', accent: '#6B5A1E', soft: '#E9E1CB' },
+    defaults: {
+      eyebrow: 'Vă invităm cu drag la',
+      title: 'Moțul Sofiei',
+      hosts: 'părinții Diana & Andrei, nașii Corina & Paul',
+      date: '2027-10-09',
+      time: '14:00',
+      venue: 'Restaurant Casa Albă',
+      address: 'Bulevardul Eroilor 3, Cluj-Napoca',
+      message: 'Tăiem moțul, rupem turta și o lăsăm pe Sofia să își aleagă viitorul din tavă.',
+      rsvp: 'Confirmări până pe 25 septembrie',
+    },
+    art: svg(`
+      <path d="M40 46Q70 62 100 46Q130 62 160 46" fill="none" stroke="#C9A46A" stroke-width="1.4"/>
+      ${leaf(56, 52, 20, '#93AE87')}${leaf(84, 52, -20, '#A9C29D')}${leaf(116, 52, 20, '#93AE87')}${leaf(144, 52, -20, '#A9C29D')}
+      <ellipse cx="100" cy="114" rx="76" ry="27" fill="#C9A46A"/>
+      <ellipse cx="100" cy="110" rx="68" ry="22" fill="#EAD6AA" stroke="#B68E55" stroke-width="1.4"/>
+      <g transform="rotate(-10 64 104)">
+        <rect x="44" y="92" width="40" height="24" rx="2" fill="#F8F4EA" stroke="#8C96A3" stroke-width="1.2"/>
+        <rect x="44" y="89" width="40" height="24" rx="2" fill="#7E9BB8" stroke="#4F6993" stroke-width="1.3"/>
+        <path d="M49 93V109" stroke="#FFFDF7" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <g transform="rotate(-18 100 98)">
+        <rect x="82" y="96" width="34" height="5" rx="2.5" fill="#934B54"/>
+        <path d="M116 96l8 2.5-8 2.5Z" fill="#4E3A2E"/>
+        <path d="M88 96V93" stroke="#E0B45C" stroke-width="1.6" stroke-linecap="round"/>
+      </g>
+      <circle cx="102" cy="118" r="8" fill="#E6BE68" stroke="#B88A2E" stroke-width="1.4"/>
+      <circle cx="102" cy="118" r="4.4" fill="none" stroke="#B88A2E" stroke-width="1"/>
+      <g transform="rotate(22 142 108)">
+        <ellipse cx="128" cy="108" rx="10" ry="7" fill="#D2A878" stroke="#9A7150" stroke-width="1.3"/>
+        <rect x="137" y="106" width="32" height="4" rx="2" fill="#D2A878" stroke="#9A7150" stroke-width="1"/>
+      </g>
+      ${sparkle(100, 28, 5, '#E0B45C')}${sparkle(40, 80, 4, '#E0B45C')}${sparkle(164, 78, 4.5, '#E0B45C')}${sparkle(30, 132, 3, '#C9A46A')}${sparkle(170, 134, 3, '#C9A46A')}
+    `),
+  },
+  {
+    id: 'mot-turta',
+    name: 'Turta',
+    category: 'Moț',
+    locales: ['ro'],
+    tagline: 'Turtă rotundă cu glazură albă și spice de grâu.',
+    frame: 'blob',
+    titleFont: 'serif',
+    colors: { bg: '#FBF1E6', ink: '#4A3426', accent: '#8A4A1C', soft: '#F2DEC8' },
+    defaults: {
+      eyebrow: 'Vă invităm cu drag la',
+      title: 'Moțul Sofiei',
+      hosts: 'părinții Elena & Radu, nașii Maria & Vlad',
+      date: '2027-08-21',
+      time: '13:30',
+      venue: 'Restaurant Hanul Vechi',
+      address: 'Strada Mihai Viteazu 8, Brașov',
+      message: 'Nașii taie moțul Sofiei și rup turta deasupra capului ei, apoi ne bucurăm la masă.',
+      rsvp: 'Confirmă până pe 7 august',
+    },
+    art: svg(`
+      <path d="M38 138Q34 108 46 84M162 138Q166 108 154 84" fill="none" stroke="#C99A66" stroke-width="1.8" stroke-linecap="round"/>
+      ${leaf(42, 98, -60, '#DDB688', 7, 3.2)}${leaf(50, 98, 60, '#DDB688', 7, 3.2)}${leaf(39, 112, -60, '#DDB688', 7, 3.2)}${leaf(47, 112, 60, '#DDB688', 7, 3.2)}
+      ${leaf(158, 98, 60, '#DDB688', 7, 3.2)}${leaf(150, 98, -60, '#DDB688', 7, 3.2)}${leaf(161, 112, 60, '#DDB688', 7, 3.2)}${leaf(153, 112, -60, '#DDB688', 7, 3.2)}
+      <ellipse cx="100" cy="134" rx="50" ry="7" fill="#E9D2B8"/>
+      <circle cx="100" cy="84" r="50" fill="#B9773E"/>
+      <circle cx="100" cy="82" r="45" fill="#CF8E50"/>
+      <circle cx="100" cy="82" r="38" fill="none" stroke="#FFF6E8" stroke-width="2.4" stroke-dasharray="0.1 7" stroke-linecap="round"/>
+      <circle cx="100" cy="82" r="27" fill="none" stroke="#FFF6E8" stroke-width="1.6"/>
+      ${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M100 51Q104 47 100 44Q96 47 100 51Z" fill="#FFF6E8" transform="rotate(${a} 100 82)"/>`).join('')}
+      ${daisy(100, 82, '#FFF6E8', '#E8A3A6')}
+      ${sparkle(40, 40, 5, '#E0B45C')}${sparkle(162, 34, 4.5, '#E0B45C')}${sparkle(170, 64, 3, '#C98589')}${sparkle(30, 64, 3, '#C98589')}
+    `),
+  },
+  {
+    id: 'mot-primul-an',
+    name: 'Primul an',
+    category: 'Moț',
+    locales: ['ro'],
+    tagline: 'Tort cu lumânarea 1 și baloane colorate.',
+    frame: 'rect',
+    titleFont: 'display',
+    colors: { bg: '#F3F4FA', ink: '#33364F', accent: '#4D4F8C', soft: '#E1E3F3' },
+    defaults: {
+      eyebrow: 'Vă invităm cu drag la',
+      title: 'Moțul Sofiei',
+      hosts: 'părinții Oana & Cristi, nașii Laura & Dan',
+      date: '2027-11-13',
+      time: '12:30',
+      venue: 'Restaurant Grădina Verde',
+      address: 'Strada Florilor 21, Timișoara',
+      message: 'Sofia împlinește un an! Tăiem moțul, rupem turta și suflăm împreună în lumânare.',
+      rsvp: 'Confirmări până pe 30 octombrie',
+    },
+    art: svg(`
+      <path d="M44 70Q38 96 58 124M156 64Q164 94 142 122M28 92Q30 112 46 128" fill="none" stroke="#9BA0C4" stroke-width="1.2"/>
+      <ellipse cx="44" cy="52" rx="15" ry="18" fill="#E8A3A6"/><path d="M44 70l-3 4h6Z" fill="#E8A3A6"/>
+      <ellipse cx="156" cy="46" rx="15" ry="18" fill="#A9BFE6"/><path d="M156 64l-3 4h6Z" fill="#A9BFE6"/>
+      <ellipse cx="28" cy="80" rx="10" ry="12" fill="#E6BE68"/><path d="M28 92l-2 3h4Z" fill="#E6BE68"/>
+      <path d="M38 44Q40 38 46 37M150 38Q152 32 158 31" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>
+      <ellipse cx="100" cy="136" rx="52" ry="7" fill="#D8DBEE"/>
+      <rect x="60" y="98" width="80" height="36" rx="6" fill="#FFFDF8" stroke="#C9CCE4" stroke-width="1.6"/>
+      <path d="M60 104Q60 98 66 98H134Q140 98 140 104V108Q133 116 126 108Q119 116 112 108Q105 116 98 108Q91 116 84 108Q77 116 70 108Q65 114 60 108Z" fill="#E8A3A6"/>
+      ${[72, 86, 100, 114, 128].map((x) => `<circle cx="${x}" cy="124" r="2.4" fill="#A9BFE6"/>`).join('')}
+      <path d="M95 76L103 68H107V98H101V77L97 80Z" fill="#8E90D0" stroke="#4D4F8C" stroke-width="1.2" stroke-linejoin="round"/>
+      ${flame(104, 56)}
+      ${sparkle(76, 40, 4, '#E0B45C')}${sparkle(128, 76, 4.5, '#E0B45C')}${sparkle(176, 96, 3.5, '#E8A3A6')}${sparkle(174, 132, 3, '#A9BFE6')}
+    `),
+  },
+  {
     id: 'cununie-verighete',
     name: 'Verighete de aur',
     category: 'Cununie',
