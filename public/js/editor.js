@@ -574,7 +574,8 @@ rsvpForm.addEventListener('submit', async (e) => {
     name: nameInput.value,
     attending,
     partySize: attending ? Number(partySizeInput.value) : 0,
-    note: noteInput.value,
+    // Text pasted from a spreadsheet can hold tabs, which makeReply refuses, so they become spaces.
+    note: noteInput.value.replaceAll('\t', ' '),
   });
   showReplyErrors(invalid);
   if (!reply) {

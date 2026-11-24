@@ -19,7 +19,8 @@
 //
 // A PUT without version creates the record: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
-// or 409 with the error and the current record when the version is stale.
+// or 409 with the error and the current record when the version is stale. A reply created without note has an
+// empty note, and a reply updated without note keeps its stored note.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { apiMessages, normalizeLang } from '../public/js/i18n.js';
 import { readPublished } from '../public/js/invite.js';
@@ -264,7 +265,8 @@ async function putReply({ db, request, ids: [eventId, id] }) {
       await tx.query(
         `update responses set name = $2, attending = $3, party_size = $4, note = $5, version = version + 1,
          updated_at = now() where id = $1`,
-        [id, reply.name, reply.attending, reply.partySize, reply.note],
+        // A page loaded before replies had notes sends none, so an update without the field keeps the stored note.
+        [id, reply.name, reply.attending, reply.partySize, body.note === undefined ? existing.note : reply.note],
       );
       return json(200, { version: existing.version + 1, created: false });
     }

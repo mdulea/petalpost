@@ -1,7 +1,7 @@
 // Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, including the optional note, its trimming, line breaks, control characters and 300-character limit; link fragment
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
-// reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored row or note, its stale version and its repeat; deletion
+// reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing, and an update without a note that keeps it; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored row or note, its stale version and its repeat; deletion
 // with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a reply without an answer; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
@@ -313,6 +313,16 @@ test('a guest changes and clears the note through the edit link', async () => {
     },
     { changed: 'Vegetarian, please.', cleared: { ...sam, note: '', version: 3 }, answers: [{ ...sam, note: '' }] },
   );
+});
+
+// A page loaded before the note existed sends no note field, so its edits leave the stored note alone.
+test('an update without a note field keeps the stored note', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  const { note, ...withoutNote } = sam;
+  await guests.saveReply(cred.id, { ...reply, version: 1 }, { ...withoutNote, name: 'Sam Lee' });
+  assert.deepEqual((await guests.loadReply(cred.id, reply)).data, { ...sam, name: 'Sam Lee', version: 2 });
 });
 
 test('a reply with a stale version gets 409 with the current answer', async () => {

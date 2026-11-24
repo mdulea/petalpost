@@ -1,4 +1,4 @@
-// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint, the characters-left counters of the editor fields, the guest name and the guest note with their descriptions and limit announcement in English and Romanian, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the guest note with their descriptions and limit announcement in English and Romanian, the calendar download, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
 // Romanian language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
@@ -372,6 +372,10 @@ test(
     await page.click('#sendReply');
     await expectFieldErrors(page, {});
     await expect(page.locator('#rsvpStatus')).toContainText('Nothing was sent');
+    // A tab pasted from a spreadsheet becomes a space instead of an error that names the length.
+    await page.fill('#guestNote', 'Vegan\tno nuts');
+    await page.click('#sendReply');
+    await expectFieldErrors(page, {});
 
     await page.goto('ro/editor.html?view=1&sample=1');
     await expect(page.locator('#guestNote')).toHaveAccessibleName('Notă (opțional)');
