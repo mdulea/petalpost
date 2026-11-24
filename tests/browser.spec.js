@@ -52,10 +52,12 @@ test('the Romanian landing page shows every Romanian template and filters local 
 for (const path of [
   'birthday-invitations.html',
   'invitation-wording.html',
+  'when-to-send-invitations.html',
   'about.html',
   'ro/invitatii-botez.html',
   'ro/invitatii-cununie.html',
   'ro/text-invitatii.html',
+  'ro/cand-sa-trimiti-invitatiile.html',
   'ro/despre.html',
 ]) {
   test(`${path} loads its icons without errors`, async ({ page }) => {
