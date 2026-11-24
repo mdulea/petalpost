@@ -1,5 +1,5 @@
 // Fails when a template's text colors, or any accent swatch as rendered on it, drop below WCAG AA (4.5:1) on its card background, when a core site text-on-surface token pair in css/styles.css drops below 4.5:1, or when a css/styles.css rule pairing color and background tokens drops below 4.5:1.
-// Run: node tests/check-contrast.js
+// Run: pnpm exec node tests/check-contrast.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';

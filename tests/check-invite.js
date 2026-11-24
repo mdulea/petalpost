@@ -3,7 +3,7 @@
 // template ids, Romanian localization coverage, the Romanian occasion order, Romanian-only occasions kept out of the English
 // catalog, 24-hour time formatting, the calendar file, the report link or the choice of when the Romanian language banner
 // shows and where it links break.
-// Run: node tests/check-invite.js
+// Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as templates from '../public/js/templates.js';

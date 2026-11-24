@@ -5,7 +5,7 @@
 // remote-tracking branch behind. Each case runs the command against a throwaway repository
 // with a local bare origin and skips the dependency install. Fails too when a GIT_DIR inherited from a git hook or
 // git rebase --exec redirects these git calls away from the throwaway repository.
-// Run: node tests/check-worktree.js
+// Run: pnpm exec node tests/check-worktree.js
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';

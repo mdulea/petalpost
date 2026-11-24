@@ -62,6 +62,45 @@ Publishing stores the text, the template and the color on the server. The photo 
 The editor keeps the draft, the photo and the published invitation's management secret in the browser's local storage, so a reload restores them.
 A lost management link cannot be recovered.
 
+## Product facts
+
+Site copy, template text and UI strings make only the claims in this section.
+When the code changes one of these facts, update this section and every page that states it in the same pull request.
+
+The promises:
+
+- Petalpost is free. It has no paid plan, no paywall at export and no watermark on the PNG.
+- Hosts and guests need no account and no email address.
+- The site sets no cookies and loads nothing from another origin except Vercel Web Analytics, which sets no cookie.
+- The photo never leaves the host's browser.
+- The site is in English and Romanian. Botez, Cununie and Moț exist only in Romanian.
+
+A host can:
+
+- choose a template, add a photo, names, a date, a time, a venue, an address and a note, and pick one of six accent colors;
+- download the invitation as a PNG with the photo;
+- publish the invitation and get an invitation link and a management link;
+- publish changes from the browser that published the invitation, which keeps the link and the replies;
+- see every reply and the totals on the management page, and delete the invitation with all its replies.
+
+A host cannot:
+
+- put the photo on the published invitation, which shows the template art instead;
+- recover a lost management link;
+- edit or delete a single reply;
+- publish changes from another browser, because only the publishing browser keeps the management secret;
+- start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
+- publish more than 20 invitations from one IP address in a day;
+- keep an invitation longer than 90 days after its event date, or 90 days after its last change when it has no date.
+
+A guest can:
+
+- open the invitation link in any browser, add the event to a calendar and open the address on a map;
+- reply with a name of up to 80 characters, whether the party attends and a party size of up to 10;
+- view, change or withdraw that reply through the reply edit link.
+
+A guest cannot see other guests' replies or the totals.
+
 ## Project structure
 
 - `public/` holds every file the site serves, laid out as its URLs:
@@ -148,6 +187,35 @@ Each worktree runs it on a port between 4400 and 4999 that is derived from the w
 When another program already uses the port, the server exits with a message that names the port, and the run fails.
 Browser tests open paths such as `/editor.html`, and lint rejects a local address with a port in a browser test.
 The tests fail when a page breaks the Content-Security-Policy.
+
+### Page languages
+
+`ROUTE_PAIRS` in `public/js/i18n.js` pairs each English page with its Romanian page, and `en: null` or `ro: null` marks a page that exists in one language.
+`alternatesFor` in the same file builds the hreflang alternate links from those pairs, and the language switch links come from `languageSwitchHref`.
+`pnpm pages` writes the alternate links into every page.
+
+### Add an occasion
+
+1. Add the occasion's first template as [Add a template](#add-a-template) describes, with the new category name in `category`.
+2. For a Romanian occasion, add the category to `RO_CATEGORIES` in `public/js/templates.js` at its place in the Romanian order. The English order follows the order of each category's first template in `TEMPLATES`.
+3. Add the category's label to `CATEGORY_LABELS` in `public/js/i18n.js` for each language that shows it.
+4. Add a route to `ROUTE_PAIRS` in `public/js/i18n.js` with a `key`, the page file for each language, `null` for a language without the occasion, and `indexed: true`.
+5. Add the page copy to `scripts/occasions.js`, `scripts/occasions-ro.js` or both, keyed by the category: `file`, `heading`, `description`, `lead` and `sections`. The heading is plain text without `<` or `&`. A Romanian description holds one of the Romanian search phrases from `check-site.js`.
+6. Run `pnpm pages`. It writes the occasion page, and the occasion links, footers, galleries, template counts, structured data and sitemap entries of the other pages.
+7. Update the tests that name occasions: the category order check in `check-invite.js` for a Romanian occasion, and in `browser.spec.js` the Romanian gallery filter counts and the list of pages that load their icons. Add the page to a page list in `layout.spec.js`.
+
+`check-site.js` fails when a category has no label or no page copy, and when the new page has no breadcrumb, alternate links or sitemap entry.
+
+### Add a template
+
+1. Add an entry to `TEMPLATES` in `public/js/templates.js` with `id`, `name`, `category`, `tagline`, `frame`, `titleFont`, `colors`, `defaults` and `art`. Published invitations store the id, so never change it after release. Sample text that `defaults` leaves out comes from the category's first template.
+2. For a template in one language only, set `locales`, such as `locales: ['ro']`, and write `name`, `tagline` and `defaults` in that language.
+3. For a template in both languages, add its Romanian `name`, `tagline` and `defaults` to `RO_TEMPLATE_COPY` in `public/js/templates-ro.js`, keyed by the id.
+4. For a new `frame` or `titleFont` value, add the `.frame-<frame>` or `.font-<titleFont>` rule to `public/css/styles.css`.
+5. Run `pnpm pages`. It writes the template into the galleries of the home page and the occasion page, and updates the template counts.
+6. Update the tests that count templates: the Romanian gallery filter counts in `browser.spec.js`, and for a Moț template the id list in `check-invite.js` and the Moț picker and gallery tests in `browser.spec.js`.
+
+`check-contrast.js` fails when the template's colors or an accent swatch on its background drop below 4.5:1, `check-invite.js` fails when a template in both languages has no Romanian copy, and `check-site.js` fails when a frame or font has no CSS rule.
 
 ### Tooling notes
 

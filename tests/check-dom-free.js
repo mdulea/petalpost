@@ -1,6 +1,6 @@
 // Fails when a DOM-free module fails to load in Node or references the browser globals document or window.
 // DOM_FREE is the list of DOM-free modules: the browser, scripts/ and server/ share them, and the Node checks run them.
-// Run: node tests/check-dom-free.js
+// Run: pnpm exec node tests/check-dom-free.js
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';

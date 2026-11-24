@@ -10,6 +10,9 @@
 README.md sections, by need:
 
 - project, setup, commands, layout, generated pages -> Overview, Installation, Run, Development, Project structure
+- claims in site copy: free, no account, no watermark, host + guest abilities -> Product facts
+- page language pairs, hreflang alternate links -> Page languages
+- new occasion -> Add an occasion; new template -> Add a template
 - worktrees, branches, checks, pull requests, merges, commit + pull request messages -> Workflow
 - env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED`; database, migrations -> Deployment, Database
 - line endings, dependency upgrades, install errors -> Tooling notes
@@ -17,7 +20,8 @@ README.md sections, by need:
 
 ## Code
 
-- commands via `pnpm` only; global Node.js install forbidden
+- commands via `pnpm` only; tools via `pnpm exec <tool>`, e.g. `pnpm exec node tests/check-site.js`; never `npx` or plain `node`; global Node.js install forbidden
+- site copy == pages, `scripts/occasions*.js`, template text, UI strings in `public/js/i18n.js`: the Writing output rules for human-facing prose apply; claims only from README Product facts
 - plain JavaScript; JSDoc types only where inference fails, e.g. DOM lookup element types; TypeScript strict off
 - module/function comments state contract; follow existing pattern
 - DOM-free logic -> a module in `DOM_FREE` of `tests/check-dom-free.js`, so `tests/` checks run in Node
