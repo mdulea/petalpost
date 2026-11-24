@@ -1243,6 +1243,14 @@ div.banner-art {
   font-weight: 700;
   font-size: 15px;
 }
+.field-error {
+  color: var(--rose-deep);
+  font-size: 14px;
+  font-weight: 700;
+}
+.input[aria-invalid='true'] {
+  border-color: var(--rose-deep);
+}
 /* A row of fields keeps the spacing of a single field, whether its fields sit side by side or stack. */
 .field-row {
   display: grid;

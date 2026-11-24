@@ -247,7 +247,7 @@ async function getReply({ db, request, ids: [eventId, id] }) {
 async function putReply({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
   const body = await readBody(request);
-  const reply = makeReply(body);
+  const { reply } = makeReply(body);
   if (!reply) throw new Refusal(400, 'reply');
   return db.transaction(async (tx) => {
     // The event row lock serializes the count and insert below across concurrent replies to one event.

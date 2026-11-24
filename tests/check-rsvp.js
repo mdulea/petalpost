@@ -1,8 +1,8 @@
-// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply and link fragment
+// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, link fragment
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
 // reach only their own event or reply; reply totals; reply withdrawal, its stale version and its repeat; deletion
-// with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields; the daily
+// with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a reply without an answer; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
@@ -36,40 +36,52 @@ const SECRET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234';
 
 test('a reply keeps the trimmed name, the answer and the party size', () => {
   assert.deepEqual(makeReply({ name: '  Zoë 🎂 ', attending: true, partySize: 3 }), {
-    name: 'Zoë 🎂',
-    attending: true,
-    partySize: 3,
+    reply: { name: 'Zoë 🎂', attending: true, partySize: 3 },
+    invalid: [],
   });
 });
 
 test('a declined reply has a party size of 0', () => {
   assert.deepEqual(makeReply({ name: 'Sam', attending: false, partySize: 0 }), {
-    name: 'Sam',
-    attending: false,
-    partySize: 0,
+    reply: { name: 'Sam', attending: false, partySize: 0 },
+    invalid: [],
   });
 });
 
 test('a name of 80 code points is accepted, counting each emoji once', () => {
-  assert.equal(makeReply({ name: '🎂'.repeat(80), attending: true, partySize: 1 })?.name, '🎂'.repeat(80));
+  assert.equal(makeReply({ name: '🎂'.repeat(80), attending: true, partySize: 1 }).reply?.name, '🎂'.repeat(80));
 });
 
+// Each invalid reply with the fields it reports, in form order.
 const invalidReplies = {
-  'an empty name': { name: '   ', attending: true, partySize: 1 },
-  'a name of 81 code points': { name: 'a'.repeat(81), attending: true, partySize: 1 },
-  'a control character in the name': { name: 'Sam\nLee', attending: true, partySize: 1 },
-  'a name that is not text': { name: 5, attending: true, partySize: 1 },
-  'an answer that is not a boolean': { name: 'Sam', attending: 'yes', partySize: 1 },
-  'an attending party of 0': { name: 'Sam', attending: true, partySize: 0 },
-  'an attending party of 11': { name: 'Sam', attending: true, partySize: 11 },
-  'a fractional party size': { name: 'Sam', attending: true, partySize: 1.5 },
-  'a party size given as text': { name: 'Sam', attending: true, partySize: '2' },
-  'a declined reply with guests': { name: 'Sam', attending: false, partySize: 1 },
+  'an empty name': { source: { name: '   ', attending: true, partySize: 1 }, invalid: ['name'] },
+  'a name of 81 code points': { source: { name: 'a'.repeat(81), attending: true, partySize: 1 }, invalid: ['name'] },
+  'a control character in the name': { source: { name: 'Sam\nLee', attending: true, partySize: 1 }, invalid: ['name'] },
+  'a name that is not text': { source: { name: 5, attending: true, partySize: 1 }, invalid: ['name'] },
+  'an answer that is not a boolean': {
+    source: { name: 'Sam', attending: 'yes', partySize: 1 },
+    invalid: ['attending'],
+  },
+  'an attending party of 0': { source: { name: 'Sam', attending: true, partySize: 0 }, invalid: ['partySize'] },
+  'an attending party of 11': { source: { name: 'Sam', attending: true, partySize: 11 }, invalid: ['partySize'] },
+  'a fractional party size': { source: { name: 'Sam', attending: true, partySize: 1.5 }, invalid: ['partySize'] },
+  'a party size given as text': { source: { name: 'Sam', attending: true, partySize: '2' }, invalid: ['partySize'] },
+  'a declined reply with guests': { source: { name: 'Sam', attending: false, partySize: 1 }, invalid: ['partySize'] },
+  'an empty name and an attending party of 0': {
+    source: { name: '', attending: true, partySize: 0 },
+    invalid: ['name', 'partySize'],
+  },
+  'no answer and no party size': {
+    source: { name: 'Sam', attending: null, partySize: Number.NaN },
+    invalid: ['attending', 'partySize'],
+  },
 };
-for (const [label, source] of Object.entries(invalidReplies)) {
-  test(`a reply with ${label} is refused`, () => assert.equal(makeReply(source), null));
+for (const [label, { source, invalid }] of Object.entries(invalidReplies)) {
+  test(`a reply with ${label} is refused and reports ${invalid.join(' and ')}`, () =>
+    assert.deepEqual(makeReply(source), { reply: null, invalid }));
 }
-test('a missing reply is refused', () => assert.equal(makeReply(null), null));
+test('a missing reply is refused and reports every field', () =>
+  assert.deepEqual(makeReply(null), { reply: null, invalid: ['name', 'attending', 'partySize'] }));
 
 test('a management link fragment gives the event id and secret', () => {
   assert.deepEqual(readCredential(`#${ID}.${SECRET}`, ''), { id: ID, secret: SECRET });
@@ -448,6 +460,7 @@ test('malformed requests get their status and an error message', async () => {
     'a field that is not text': [400, event, put(withField({ venue: 7 }), auth)],
     'a reply with an empty name': [400, reply, put({ ...sam, name: ' ' }, bearer(newSecret()))],
     'a reply with a party of 11': [400, reply, put({ ...sam, partySize: 11 }, bearer(newSecret()))],
+    'a reply without an answer': [400, reply, put({ ...sam, attending: undefined }, bearer(newSecret()))],
     'a withdrawal without a version': [400, reply, { ...put({}, bearer(newSecret())), method: 'DELETE' }],
     'a withdrawal without Authorization': [401, reply, { ...put({ version: 1 }), method: 'DELETE' }],
   };
