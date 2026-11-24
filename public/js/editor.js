@@ -1,4 +1,5 @@
 import './icons.js';
+import './language-banner.js';
 import { UI, accentLabel, categoryLabel, localeOf, pageLang } from './i18n.js';
 import { ACCENTS, categoriesFor, getTemplate, renderInvite, templatesFor } from './templates.js';
 import { mountInvites } from './mount.js';
