@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "check": "pnpm test && pnpm typecheck && pnpm test:browser",
+    "check": "pnpm check:fast && pnpm test:browser",
+    "check:fast": "pnpm test && pnpm typecheck",
     "dev": "node scripts/server.js --port 3000",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

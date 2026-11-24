@@ -102,6 +102,7 @@ A lost management link cannot be recovered.
 | Task           | Command                                |
 | -------------- | -------------------------------------- |
 | All checks     | `pnpm check`                           |
+| Fast checks    | `pnpm check:fast`                      |
 | Test suite     | `pnpm test`                            |
 | One check file | `pnpm exec node tests/check-invite.js` |
 | Lint           | `pnpm lint`                            |
