@@ -128,7 +128,7 @@ A guest cannot see other guests' replies or the totals.
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `browser-port.js` picks the port that the browser tests run the server on.
   - `build.js` copies `public/` into `dist/`, which Vercel serves.
-  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries, template counts and occasion links, every page footer and `sitemap.xml`. It fills the regions between `<!-- generated:NAME -->` markers. `lastmod.json` keeps each indexed page's sitemap date with a fingerprint of its content. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
+  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries and occasion links, every page footer and `sitemap.xml`. It fills the regions between `<!-- generated:NAME -->` markers. `lastmod.json` keeps each indexed page's sitemap date with a fingerprint of its content. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
   - `shot.js` writes a PNG of a page or of one element on it.
@@ -202,7 +202,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 3. Add the category's label to `CATEGORY_LABELS` in `public/js/i18n.js` for each language that shows it.
 4. Add a route to `ROUTE_PAIRS` in `public/js/i18n.js` with a `key`, the page file for each language, `null` for a language without the occasion, and `indexed: true`.
 5. Add the page copy to `scripts/occasions.js`, `scripts/occasions-ro.js` or both, keyed by the category: `file`, `heading`, `description`, `lead` and `sections`. The heading is plain text without `<` or `&`. A Romanian description holds one of the Romanian search phrases from `check-site.js`.
-6. Run `pnpm pages`. It writes the occasion page, and the occasion links, footers, galleries, template counts, structured data and sitemap entries of the other pages.
+6. Run `pnpm pages`. It writes the occasion page, and the occasion links, footers, galleries, structured data and sitemap entries of the other pages.
 7. Update the tests that name occasions: the category order check in `check-invite.js` for a Romanian occasion, and in `browser.spec.js` the Romanian gallery filter counts and the list of pages that load their icons. Add the page to a page list in `layout.spec.js`.
 
 `check-site.js` fails when a category has no label or no page copy, and when the new page has no breadcrumb, alternate links or sitemap entry.
@@ -213,7 +213,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 2. For a template in one language only, set `locales`, such as `locales: ['ro']`, and write `name`, `tagline` and `defaults` in that language.
 3. For a template in both languages, add its Romanian `name`, `tagline` and `defaults` to `RO_TEMPLATE_COPY` in `public/js/templates-ro.js`, keyed by the id.
 4. For a new `frame` or `titleFont` value, add the `.frame-<frame>` or `.font-<titleFont>` rule to `public/css/styles.css`.
-5. Run `pnpm pages`. It writes the template into the galleries of the home page and the occasion page, and updates the template counts.
+5. Run `pnpm pages`. It writes the template into the galleries of the home page and the occasion page.
 6. Update the tests that count templates: the Romanian gallery filter counts in `browser.spec.js`, and for a Moț template the id list in `check-invite.js` and the Moț picker and gallery tests in `browser.spec.js`.
 
 `check-contrast.js` fails when the template's colors or an accent swatch on its background drop below 4.5:1, `check-invite.js` fails when a template in both languages has no Romanian copy, and `check-site.js` fails when a frame or font has no CSS rule.
