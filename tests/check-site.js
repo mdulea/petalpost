@@ -132,7 +132,8 @@ test('every indexed page has an og:title equal to its title and an og:descriptio
   };
   const mismatched = pages.flatMap(({ file, html }) =>
     Object.entries(copies)
-      .filter(([, [copy, source]]) => !attr(html, copy) || attr(html, copy) !== attr(html, source))
+      .map(([name, [copy, source]]) => [name, attr(html, copy), attr(html, source)])
+      .filter(([, copy, source]) => !copy || copy !== source)
       .map(([name]) => `${file}: ${name}`),
   );
   assert.deepEqual(mismatched, []);
@@ -463,9 +464,9 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
 // The first test that needs the server starts it, so it listens only after every top-level line has run, and a run
 // filtered to other tests never starts it. A server started at top level kept the process alive when a later top-level
 // line threw. A server started in a before hook kept a filtered run alive, because the after hook ran before it listened.
-let shared;
-const localUrl = async () => (await (shared ??= startServer({ port: 0, memory: true }))).url;
-after(async () => (await shared)?.close());
+let localServer;
+const localUrl = async () => (await (localServer ??= startServer({ port: 0, memory: true }))).url;
+after(async () => (await localServer)?.close());
 const fetchLocal = async (path) => fetch(new URL(path, await localUrl()), { redirect: 'manual' });
 
 // Another worktree's server, or any other program, can hold the port. The server then refuses to start instead of
