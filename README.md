@@ -66,9 +66,9 @@ A lost management link cannot be recovered.
 
 - `public/` holds every file the site serves, laid out as its URLs:
   - `index.html` is the landing page, `editor.html` is the editor and the guest view, and `manage.html` is the host's management page.
-  - `birthday-invitations.html` and the five other `*-invitations.html` pages show one occasion's templates and advice. `pnpm pages` generates them; do not edit them by hand.
+  - The occasion pages show one occasion's templates and advice. `pnpm pages` generates one page for each entry in `scripts/occasions.js` and `scripts/occasions-ro.js`, at the file that the entry names, such as `birthday-invitations.html`. Do not edit them by hand.
   - `invitation-wording.html` and `when-to-send-invitations.html` are the guides, and `about.html`, `privacy.html`, `terms.html` and `404.html` are the remaining pages.
-  - `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, the generated `ro/invitatii-*.html` occasion pages, the hand-written guides `ro/text-invitatii.html`, `ro/cand-sa-trimiti-invitatiile.html` and `ro/invitatii-digitale-sau-tiparite.html`, which is the only guide without an English pair, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
+  - `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, the Romanian occasion pages, the hand-written guides `ro/text-invitatii.html`, `ro/cand-sa-trimiti-invitatiile.html` and `ro/invitatii-digitale-sau-tiparite.html`, which is the only guide without an English pair, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
   - `js/` holds the page scripts:
     - `templates.js` is the template catalog and the `renderInvite` renderer.
     - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.

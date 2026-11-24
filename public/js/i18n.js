@@ -100,8 +100,6 @@ export const CATEGORY_LABELS = {
     Brunch: 'Brunch',
     Graduation: 'Graduation',
     Housewarming: 'Housewarming',
-    Botez: 'Botez',
-    Cununie: 'Cununie',
   },
   ro: {
     Wedding: 'Nuntă',
