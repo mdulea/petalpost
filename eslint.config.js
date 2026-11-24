@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['public/vendor/', 'dist/', '.pglite/', '.worktrees/', 'tests/results/'] },
+  { ignores: ['public/vendor/', 'dist/', '.pglite/', '.worktrees/'] },
   js.configs.recommended,
   {
     // Destructuring a key next to a rest element drops that key from the copy, as shareLink does with photoY.

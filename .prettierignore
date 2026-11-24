@@ -7,4 +7,3 @@ pnpm-lock.yaml
 dist/
 .pglite/
 .worktrees/
-tests/results/

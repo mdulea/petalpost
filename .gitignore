@@ -21,6 +21,3 @@ Thumbs.db
 # Build output and the local database
 dist/
 .pglite/
-
-# Playwright output
-tests/results/

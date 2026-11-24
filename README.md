@@ -92,7 +92,7 @@ A lost management link cannot be recovered.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
-  - Playwright writes its output to `tests/results/`, which git ignores.
+  - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each push and pull request.
 - `docs/petalpost-flow.html` is a diagram of the site flow, and `docs/decisions/` holds the recorded decisions.
 - The root keeps the configs that ESLint, TypeScript, Playwright, pnpm and Vercel look for there, `package.json` with the Prettier settings, and `README.md`, `AGENTS.md` and `GLOSSARY.md`.
