@@ -2,7 +2,6 @@ import './icons.js';
 import './language-banner.js';
 import { UI, categoryLabel, localeOf, normalizeLang } from './i18n.js';
 import {
-  ACCENTS,
   BANNER_TEMPLATE,
   categoriesFor,
   getTemplate,
@@ -44,8 +43,6 @@ mountInvites(
   pickLink,
   `${renderInvite(pick, makeInviteData(pick, undefined, lang), { decorative: true, locale })}<div><strong>${pick.name}</strong><span>${pick.tagline}</span></div>`,
 );
-
-document.getElementById('accentCount').textContent = String(ACCENTS.length);
 
 const banner = getTemplate(BANNER_TEMPLATE, lang);
 mountInvites(

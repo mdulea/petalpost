@@ -247,7 +247,6 @@ const REGIONS = {
     return occasionLinks(categoriesFor(lang), lang);
   },
   footer: (file) => footer(fileLang(file)),
-  templateCount: (file) => `<span class="stat-number" id="templateCount">${templatesFor(fileLang(file)).length}</span>`,
 };
 
 const header = (file, lang) => {

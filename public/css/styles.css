@@ -568,26 +568,6 @@ p {
   font-size: 14px;
 }
 
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.stat-number {
-  font-family: var(--font-display);
-  font-size: 44px;
-  line-height: 1;
-  padding: 12px 16px;
-  border: 1.5px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
-}
-.stat p {
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.4;
-}
-
 .widget-rose {
   background: var(--rose-soft);
   border-color: var(--rose-line);
@@ -724,26 +704,23 @@ p {
   gap: clamp(16px, 2vw, 28px);
 }
 
+/* The artwork panel is the card's only frame; the title and caption sit on the page background. */
 .card {
   position: relative;
   display: flex;
   flex-direction: column;
   border-radius: 26px;
-  background: var(--surface);
-  border: 1.5px solid var(--line);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  transition:
-    transform 0.3s var(--ease),
-    box-shadow 0.3s var(--ease);
+  transition: transform 0.3s var(--ease);
 }
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-lift);
 }
 .card-art {
-  padding: 22px 22px 0;
+  padding: 22px;
+  border-radius: 26px;
+  border: 1.5px solid var(--line);
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  overflow: hidden;
 }
 .card-art .invite-wrap {
   max-width: 260px;
@@ -758,7 +735,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 20px 20px;
+  padding: 14px 4px 0;
 }
 .card-body h3 {
   font-size: 21px;
@@ -820,7 +797,6 @@ p {
   counter-reset: step;
 }
 .step {
-  position: relative;
   padding: 28px;
   border-radius: 26px;
   background: var(--surface);
@@ -830,18 +806,12 @@ p {
 .step::before {
   counter-increment: step;
   content: counter(step);
-  position: absolute;
-  top: 22px;
-  right: 24px;
+  display: block;
+  margin-bottom: 12px;
   font-family: var(--font-display);
-  font-size: 44px;
-  color: var(--line);
-}
-.step .feature-icon {
-  margin-bottom: 18px;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  font-size: 52px;
+  line-height: 1;
+  color: var(--rose-deep);
 }
 .step h3 {
   font-size: 24px;
