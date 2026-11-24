@@ -1664,6 +1664,11 @@ textarea.input {
 #noReplies {
   margin-bottom: 16px;
 }
+.reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 @media (max-width: 900px) {
   .manage-body {
     grid-template-columns: 1fr;

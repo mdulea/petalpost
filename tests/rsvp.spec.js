@@ -1,7 +1,9 @@
 // Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the post-RSVP prompt or the management page break in Chromium against the real API of
 // scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
 // link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; a guest's note, which the edit link loads
-// and the management page shows under its reply as text with its line breaks; the invitation link and a guessed
+// and the management page shows under its reply as text with its line breaks; the replies CSV download with its
+// byte order mark, file name, columns, answers, browser time zone times, empty "Changed" cell, formula apostrophe
+// and quoting, with no totals row, in English with commas and in Romanian with semicolons; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
 // the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
 // after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer; a confirmed
@@ -25,9 +27,9 @@ function watch(page) {
   return problems;
 }
 
-// A page in a browser context of its own, as on another device.
-async function newBrowser(browser) {
-  const page = await (await browser.newContext()).newPage();
+// A page in a browser context of its own, as on another device. options are Playwright context options.
+async function newBrowser(browser, options = {}) {
+  const page = await (await browser.newContext(options)).newPage();
   return { page, problems: watch(page) };
 }
 
@@ -121,6 +123,59 @@ test('a guest note loads through the edit link, and the host sees it under the r
   expect(await shown.innerText()).toBe(note);
   await expect(shown.locator('b')).toHaveCount(0);
   expect([...host.problems, ...sam.problems, ...samLater.problems, ...ana.problems]).toEqual([]);
+});
+
+// The year-month-day hours:minutes of each minute from start to end in timeZone, as the CSV writes its times.
+function minutesIn(timeZone, start, end) {
+  const format = new Intl.DateTimeFormat('sv-SE', { timeZone, dateStyle: 'short', timeStyle: 'short' });
+  const minutes = new Set();
+  for (let t = start - (start % 60000); t <= end; t += 60000) minutes.add(format.format(t));
+  return [...minutes];
+}
+
+// Clicks Download CSV on the management page and returns the file name and the file text with its byte order mark.
+async function downloadCsv(page) {
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#downloadCsv')]);
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return { name: download.suggestedFilename(), bytes: Buffer.concat(chunks) };
+}
+
+test('the host downloads every reply as a CSV file in the browser time zone', async ({ browser }) => {
+  // A time zone 14 hours ahead of UTC, so a time in the server's UTC would show another hour.
+  const timeZone = 'Pacific/Kiritimati';
+  const host = await newBrowser(browser, { timezoneId: timeZone });
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const start = Date.now();
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: '=1+1', partySize: 2, note: 'No nuts, please.\nWe say "hi" at 3.' });
+  const ana = await newBrowser(browser);
+  await ana.page.goto(invitation);
+  await reply(ana.page, { name: 'Ana', partySize: 1 });
+  await reply(ana.page, { name: 'Ana Ștefănescu', attending: false });
+
+  await host.page.goto(manage);
+  await expect(host.page.locator('#responseList li')).toHaveCount(2);
+  const { name, bytes } = await downloadCsv(host.page);
+  const minutes = minutesIn(timeZone, start, Date.now());
+  const time = `(?:${minutes.join('|')})`;
+  expect({
+    name,
+    bom: [...bytes.subarray(0, 3)],
+    rows: bytes.subarray(3).toString('utf8').split('\r\n'),
+  }).toEqual({
+    name: `petalpost-replies-${minutes.at(-1).slice(0, 10)}.csv`,
+    bom: [0xef, 0xbb, 0xbf],
+    rows: [
+      'Name,Attending,Party size,Note,Replied,Changed',
+      expect.stringMatching(new RegExp(`^'=1\\+1,Yes,2,"No nuts, please\\.\\nWe say ""hi"" at 3\\.",${time},$`)),
+      expect.stringMatching(new RegExp(`^Ana Ștefănescu,No,0,,${time},${time}$`)),
+      '',
+    ],
+  });
+  expect([...host.problems, ...sam.problems, ...ana.problems]).toEqual([]);
 });
 
 test('a guest withdraws a reply after confirming, and a new send makes a separate reply under a new link', async ({
@@ -663,8 +718,9 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   const guest = await newBrowser(browser);
   await guest.page.goto(invitation);
   await expect(guest.page.locator('h1')).toHaveText('Botezul lui Matei');
-  await guest.page.fill('#guestName', 'Andrei');
+  await guest.page.fill('#guestName', 'Ștefan');
   await guest.page.fill('#partySize', '2');
+  await guest.page.fill('#guestNote', 'Venim; mulțumim!');
   await guest.page.click('#sendReply');
   await expect(guest.page.locator('#rsvpStatus')).toHaveText('Răspunsul tău a fost salvat. Gazda îl poate vedea acum.');
   await expect(guest.page.locator('#replyCta a')).toHaveAttribute('href', '/ro/#templates');
@@ -672,7 +728,17 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await host.page.goto(manage);
   expect(await managed(host.page)).toEqual({
     totals: expect.stringMatching(/1\s+răspuns[\s\S]*1\s+confirmare[\s\S]*0\s+refuzuri[\s\S]*2\s+persoane confirmate/i),
-    replies: [expect.stringMatching(/Andrei[\s\S]*Da, 2 persoane/)],
+    replies: [expect.stringMatching(/Ștefan[\s\S]*Da, 2 persoane/)],
+  });
+  const { name, bytes } = await downloadCsv(host.page);
+  expect({ name, bom: [...bytes.subarray(0, 3)], rows: bytes.subarray(3).toString('utf8').split('\r\n') }).toEqual({
+    name: expect.stringMatching(/^petalpost-raspunsuri-\d{4}-\d{2}-\d{2}\.csv$/),
+    bom: [0xef, 0xbb, 0xbf],
+    rows: [
+      'Nume;Participă;Persoane;Notă;A răspuns;Modificat',
+      expect.stringMatching(/^Ștefan;Da;2;"Venim; mulțumim!";\d{4}-\d{2}-\d{2} \d{2}:\d{2};$/),
+      '',
+    ],
   });
 
   const stranger = await newBrowser(browser);

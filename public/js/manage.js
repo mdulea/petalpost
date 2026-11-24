@@ -1,12 +1,13 @@
 // Entry module of manage.html and ro/manage.html, the host's page for one published event. The management link
 // manage.html#<id>.<secret> is the only credential; the page shows the invitation, the reply totals and list,
-// and the invitation link, and deletes the event on request.
+// and the invitation link, downloads the replies as a CSV file, and deletes the event on request.
 import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { eventLink, makeInviteData } from './invite.js';
 import { createClient, readCredential } from './rsvp.js';
+import { repliesCsv, repliesCsvName } from './csv.js';
 
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
@@ -17,6 +18,8 @@ const cred = readCredential(location.hash, '');
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
 const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
+// The replies of the last load, which the CSV download writes.
+let loadedReplies = [];
 
 // A heading and message for a page that cannot show the event, such as after a failed load or a deletion.
 function showOnly(heading, message) {
@@ -75,6 +78,7 @@ function showEvent({ t, d, responses, totals }) {
       ),
     );
   document.getElementById('noReplies').hidden = responses.length > 0;
+  loadedReplies = responses;
   eventLinkInput.value = eventLink(location.origin, cred.id, lang);
 }
 
@@ -94,6 +98,15 @@ async function load() {
 }
 
 document.getElementById('refresh').addEventListener('click', load);
+
+// The browser builds the file from the loaded replies, so the download sends nothing to the server.
+document.getElementById('downloadCsv').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([repliesCsv(loadedReplies, lang)], { type: 'text/csv;charset=utf-8' }));
+  link.download = repliesCsvName(lang, new Date());
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+});
 
 document.getElementById('copyEventLink').addEventListener('click', async () => {
   try {

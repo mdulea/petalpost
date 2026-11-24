@@ -44,9 +44,14 @@
             <ul class="totals" id="totals"></ul>
             <ul class="reply-list" id="responseList"></ul>
             <p class="hint" id="noReplies" hidden>Încă nu există răspunsuri.</p>
-            <button class="btn btn-ghost btn-small" type="button" id="refresh">
-              <svg class="icon"><use href="#i-reset" /></svg>Reîmprospătează
-            </button>
+            <div class="reply-actions">
+              <button class="btn btn-ghost btn-small" type="button" id="refresh">
+                <svg class="icon"><use href="#i-reset" /></svg>Reîmprospătează
+              </button>
+              <button class="btn btn-ghost btn-small" type="button" id="downloadCsv">
+                <svg class="icon"><use href="#i-download" /></svg>Descarcă CSV
+              </button>
+            </div>
           </section>
 
           <section class="panel" aria-labelledby="h-share">

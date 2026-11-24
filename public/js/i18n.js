@@ -231,6 +231,14 @@ export const UI = {
       incompleteHeading: 'This management link is incomplete',
       incompleteMessage: 'This management link is incomplete. Open the whole link from where you saved it.',
     },
+    // Excel in English uses a comma between values.
+    csv: {
+      separator: ',',
+      columns: ['Name', 'Attending', 'Party size', 'Note', 'Replied', 'Changed'],
+      yes: 'Yes',
+      no: 'No',
+      file: 'petalpost-replies',
+    },
     rsvp: {
       offline: 'Petalpost could not be reached. Check your connection and try again.',
       unexpected: 'Something went wrong on the server. Try again in a minute.',
@@ -335,6 +343,14 @@ export const UI = {
       deletedMessage: 'Invitația și toate răspunsurile au fost șterse de pe Petalpost.',
       incompleteHeading: 'Acest link de administrare este incomplet',
       incompleteMessage: 'Acest link de administrare este incomplet. Deschide linkul întreg de unde l-ai salvat.',
+    },
+    // Excel in Romanian uses the comma as the decimal mark and a semicolon between values.
+    csv: {
+      separator: ';',
+      columns: ['Nume', 'Participă', 'Persoane', 'Notă', 'A răspuns', 'Modificat'],
+      yes: 'Da',
+      no: 'Nu',
+      file: 'petalpost-raspunsuri',
     },
     rsvp: {
       offline: 'Petalpost nu a putut fi contactat. Verifică conexiunea și încearcă din nou.',
