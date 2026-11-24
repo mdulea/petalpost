@@ -251,6 +251,11 @@
             <label for="partySize">Număr de persoane, inclusiv tu</label>
             <input class="input" type="number" id="partySize" name="partySize" min="1" value="1" />
           </div>
+          <div class="field">
+            <label for="guestNote">Notă (opțional)</label>
+            <textarea class="input" id="guestNote" name="note" aria-describedby="guestNoteHint"></textarea>
+            <span class="hint" id="guestNoteHint">Restricții alimentare sau un mesaj. Doar gazda îl vede.</span>
+          </div>
           <button class="btn btn-primary" type="submit" id="sendReply">
             <svg class="icon"><use href="#i-send" /></svg>Trimite răspunsul
           </button>

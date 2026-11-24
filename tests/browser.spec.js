@@ -274,23 +274,31 @@ test('the hero sample link opens a client-only sample guest invitation with loca
   expect(problems).toEqual([]);
 });
 
-// The reply form's invalid fields: each name in invalid has aria-invalid and its error as its description, and every
-// other field has neither.
+// The note hint in each page language, the note field's description before any counter or error.
+const NOTE_HINTS = {
+  en: 'Dietary needs or a message. Visible only to the host.',
+  ro: 'Restricții alimentare sau un mesaj. Doar gazda îl vede.',
+};
+
+// The reply form's invalid fields: each name in invalid has aria-invalid and its error as its description after any
+// hint, and every other field has neither, only its hint.
 async function expectFieldErrors(page, invalid) {
+  const noteHint = NOTE_HINTS[await page.locator('html').getAttribute('lang')];
   const fields = {
-    '#guestName': 'name',
-    '[role="radiogroup"]': 'attending',
-    '#partySize': 'partySize',
+    '#guestName': ['name', ''],
+    '[role="radiogroup"]': ['attending', ''],
+    '#partySize': ['partySize', ''],
+    '#guestNote': ['note', noteHint],
   };
-  for (const [selector, field] of Object.entries(fields)) {
+  for (const [selector, [field, hint]] of Object.entries(fields)) {
     const locator = page.locator(`#rsvpForm ${selector}`);
     if (field in invalid) {
       await expect(locator).toHaveAttribute('aria-invalid', 'true');
-      await expect(locator).toHaveAccessibleDescription(invalid[field]);
+      await expect(locator).toHaveAccessibleDescription([hint, invalid[field]].filter(Boolean).join(' '));
       await expect(page.getByText(invalid[field], { exact: true })).toBeVisible();
     } else {
       await expect(locator).not.toHaveAttribute('aria-invalid');
-      await expect(locator).toHaveAccessibleDescription('');
+      await expect(locator).toHaveAccessibleDescription(hint);
     }
   }
 }
@@ -342,14 +350,47 @@ test('the Romanian reply form shows its field errors in Romanian', { tag: '@webk
   await expectFieldErrors(page, { name: 'Scrie-ți numele.', attending: 'Alege dacă participi.' });
 });
 
+// The form limits typing to 300 characters, so the test sets a longer note from script, as a paste extension could.
+const setNote = (page, note) =>
+  page.locator('#guestNote').evaluate((el, value) => {
+    /** @type {HTMLTextAreaElement} */ (el).value = value;
+  }, note);
+
+test(
+  'a note over 300 characters shows its error under the note in English and Romanian',
+  { tag: '@webkit' },
+  async ({ page }) => {
+    const problems = watch(page);
+    await page.goto('editor.html?view=1&sample=1');
+    await expect(page.locator('#guestNote')).toHaveAccessibleName('Note (optional)');
+    await page.fill('#guestName', 'Alex');
+    await setNote(page, 'x'.repeat(301));
+    await page.click('#sendReply');
+    await expectFieldErrors(page, { note: 'Use at most 300 characters.' });
+    await expect(page.locator('#guestNote')).toBeFocused();
+    await setNote(page, 'x'.repeat(300));
+    await page.click('#sendReply');
+    await expectFieldErrors(page, {});
+    await expect(page.locator('#rsvpStatus')).toContainText('Nothing was sent');
+
+    await page.goto('ro/editor.html?view=1&sample=1');
+    await expect(page.locator('#guestNote')).toHaveAccessibleName('Notă (opțional)');
+    await page.fill('#guestName', 'Ana');
+    await setNote(page, 'x'.repeat(301));
+    await page.click('#sendReply');
+    await expectFieldErrors(page, { note: 'Folosește cel mult 300 de caractere.' });
+    expect(problems).toEqual([]);
+  },
+);
+
 // The counter of a limited field: hidden with an empty live region up to 80% of the limit, then the text left as the
-// field's description, and in the live region only at the limit.
-async function expectCounter(page, field, length, text, { announced = false } = {}) {
+// field's description after any hint, and in the live region only at the limit.
+async function expectCounter(page, field, length, text, { announced = false, hint = '' } = {}) {
   await page.fill(field, 'x'.repeat(length));
   const counter = page.locator(`${field} + .counter`);
   if (text) await expect(counter).toHaveText(text);
   else await expect(counter).toBeHidden();
-  await expect(page.locator(field)).toHaveAccessibleDescription(text);
+  await expect(page.locator(field)).toHaveAccessibleDescription([hint, text].filter(Boolean).join(' '));
   await expect(page.locator('#limitAlert')).toHaveText(announced ? text : '');
 }
 
@@ -385,6 +426,16 @@ test('the guest name counts the characters left in English and Romanian', async 
   await expectCounter(page, '#guestName', 80, 'Mai rămân 0', { announced: true });
   await page.goto('ro/editor.html?t=birthday');
   await expectCounter(page, '#message', 100, 'Mai rămân 10');
+});
+
+// The note's counter follows its hint in the description.
+test('the guest note counts the characters left after its hint in English and Romanian', async ({ page }) => {
+  await page.goto('editor.html?view=1&sample=1');
+  await expectCounter(page, '#guestNote', 240, '', { hint: NOTE_HINTS.en });
+  await expectCounter(page, '#guestNote', 241, '59 left', { hint: NOTE_HINTS.en });
+  await expectCounter(page, '#guestNote', 300, '0 left', { hint: NOTE_HINTS.en, announced: true });
+  await page.goto('ro/editor.html?view=1&sample=1');
+  await expectCounter(page, '#guestNote', 299, 'Mai rămâne 1', { hint: NOTE_HINTS.ro });
 });
 
 test('the link preview generator draws the hero templates in English and Romanian', async ({ page }) => {

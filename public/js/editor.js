@@ -103,9 +103,9 @@ function commit() {
 }
 
 // A limited text field takes its limit as maxLength and shows the characters left below it once its text passes 80%
-// of the limit. The counter is the field's description, so a screen reader reads it with the field. The shared live
-// region announces the counter only when typing reaches the limit. Every other change clears it, so the next arrival
-// announces and a script that sets field values leaves no stale text.
+// of the limit. The counter joins the field's description after any hint, so a screen reader reads it with the field.
+// The shared live region announces the counter only when typing reaches the limit. Every other change clears it, so
+// the next arrival announces and a script that sets field values leaves no stale text.
 const limitAlert = document.createElement('p');
 limitAlert.className = 'visually-hidden';
 limitAlert.id = 'limitAlert';
@@ -121,7 +121,10 @@ function addCounter(input, limit) {
   counter.className = 'counter';
   counter.id = `${input.id}Count`;
   input.after(counter);
-  input.setAttribute('aria-describedby', counter.id);
+  input.setAttribute(
+    'aria-describedby',
+    [input.getAttribute('aria-describedby'), counter.id].filter(Boolean).join(' '),
+  );
   counters.set(input, counter);
   input.addEventListener('input', () => {
     showCounts();
@@ -486,7 +489,9 @@ const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById(
 const sendReply = /** @type {HTMLButtonElement} */ (document.getElementById('sendReply'));
 const nameInput = /** @type {HTMLInputElement} */ (document.getElementById('guestName'));
 const partySizeInput = /** @type {HTMLInputElement} */ (document.getElementById('partySize'));
+const noteInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('guestNote'));
 addCounter(nameInput, REPLY_LIMITS.name);
+addCounter(noteInput, REPLY_LIMITS.note);
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
@@ -498,9 +503,9 @@ function attendingChecked() {
   return checked ? checked.value === 'yes' : null;
 }
 
-// Each reply field shows its own error in a message below it, which joins the field's description after any counter.
-// The answer's field is its radio group, and focus goes to the group's first choice.
-const replyErrors = copy.replyErrors(REPLY_LIMITS.partySize);
+// Each reply field shows its own error in a message below it, which joins the field's description after any hint and
+// counter. The answer's field is its radio group, and focus goes to the group's first choice.
+const replyErrors = copy.replyErrors(REPLY_LIMITS);
 /** @type {Record<string, {field: Element, focusTarget: HTMLElement}>} */
 const replyControls = {
   name: { field: nameInput, focusTarget: nameInput },
@@ -509,6 +514,7 @@ const replyControls = {
     focusTarget: rsvpForm.querySelector('input[name="attending"]'),
   },
   partySize: { field: partySizeInput, focusTarget: partySizeInput },
+  note: { field: noteInput, focusTarget: noteInput },
 };
 const replyFields = REPLY_FIELDS.map((name) => {
   const { field, focusTarget } = replyControls[name];
@@ -517,21 +523,18 @@ const replyFields = REPLY_FIELDS.map((name) => {
   message.id = `${name}Error`;
   message.hidden = true;
   field.closest('.field').append(message);
-  return { name, field, focusTarget, message };
+  return { name, field, focusTarget, message, describedBy: field.getAttribute('aria-describedby') };
 });
 
 // Marks the fields named in invalid, clears the others and focuses the first invalid field.
 function showReplyErrors(invalid) {
-  for (const { name, field, message } of replyFields) {
+  for (const { name, field, message, describedBy } of replyFields) {
     const isInvalid = invalid.includes(name);
     message.hidden = !isInvalid;
     message.textContent = isInvalid ? replyErrors[name] : '';
     if (isInvalid) field.setAttribute('aria-invalid', 'true');
     else field.removeAttribute('aria-invalid');
-    const ids = [];
-    const counter = counters.get(/** @type {HTMLInputElement} */ (field));
-    if (counter) ids.push(counter.id);
-    if (isInvalid) ids.push(message.id);
+    const ids = [describedBy, isInvalid ? message.id : null].filter(Boolean);
     if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
     else field.removeAttribute('aria-describedby');
   }
@@ -550,6 +553,7 @@ function fillReply(reply) {
   );
   answer.checked = true;
   if (reply.attending) partySizeInput.value = String(reply.partySize);
+  noteInput.value = reply.note;
   syncPartySize();
   showCounts();
 }
@@ -570,6 +574,7 @@ rsvpForm.addEventListener('submit', async (e) => {
     name: nameInput.value,
     attending,
     partySize: attending ? Number(partySizeInput.value) : 0,
+    note: noteInput.value,
   });
   showReplyErrors(invalid);
   if (!reply) {

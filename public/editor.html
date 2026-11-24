@@ -249,6 +249,11 @@
             <label for="partySize">People in your party, you included</label>
             <input class="input" type="number" id="partySize" name="partySize" min="1" value="1" />
           </div>
+          <div class="field">
+            <label for="guestNote">Note (optional)</label>
+            <textarea class="input" id="guestNote" name="note" aria-describedby="guestNoteHint"></textarea>
+            <span class="hint" id="guestNoteHint">Dietary needs or a message. Visible only to the host.</span>
+          </div>
           <button class="btn btn-primary" type="submit" id="sendReply">
             <svg class="icon"><use href="#i-send" /></svg>Send reply
           </button>

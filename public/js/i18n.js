@@ -180,10 +180,11 @@ export const UI = {
       eventLinkCopied: 'Invitation link copied. Paste it into a message to your guests.',
       eventLinkShared: 'Invitation link shared.',
       manageLinkCopied: 'Management link copied. Keep it somewhere private.',
-      replyErrors: (max) => ({
+      replyErrors: (limits) => ({
         name: 'Enter your name.',
         attending: 'Choose whether you will attend.',
-        partySize: `Enter a number from 1 to ${max}.`,
+        partySize: `Enter a number from 1 to ${limits.partySize}.`,
+        note: `Use at most ${limits.note} characters.`,
       }),
       sampleReply:
         'Sample reply checked locally. Nothing was sent. Use Make your own to collect real replies and track headcount.',
@@ -284,10 +285,11 @@ export const UI = {
       eventLinkCopied: 'Linkul invitației a fost copiat. Trimite-l într-un mesaj invitaților.',
       eventLinkShared: 'Linkul invitației a fost distribuit.',
       manageLinkCopied: 'Linkul de administrare a fost copiat. Păstrează-l într-un loc privat.',
-      replyErrors: (max) => ({
+      replyErrors: (limits) => ({
         name: 'Scrie-ți numele.',
         attending: 'Alege dacă participi.',
-        partySize: `Scrie un număr de la 1 la ${max}.`,
+        partySize: `Scrie un număr de la 1 la ${limits.partySize}.`,
+        note: `Folosește cel mult ${limits.note} de caractere.`,
       }),
       sampleReply:
         'Răspunsul demonstrativ a fost verificat local. Nimic nu a fost trimis. Apasă „Creează invitația ta” pentru răspunsuri reale.',
@@ -359,9 +361,9 @@ export const UI = {
 /**
  * Localized API error strings for server/api.js.
  * @param {string} lang
- * @param {{ replyNameLimit: number, partySizeLimit: number, dailyEvents: number, eventResponses: number }} limits
+ * @param {{ replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number, eventResponses: number }} limits
  */
-export function apiMessages(lang, { replyNameLimit, partySizeLimit, dailyEvents, eventResponses }) {
+export function apiMessages(lang, { replyNameLimit, partySizeLimit, replyNoteLimit, dailyEvents, eventResponses }) {
   if (normalizeLang(lang) === 'ro') {
     return {
       storage: 'Stocarea nu este disponibilă acum. Nimic nu a fost modificat. Încearcă din nou peste un minut.',
@@ -373,7 +375,7 @@ export function apiMessages(lang, { replyNameLimit, partySizeLimit, dailyEvents,
       body: 'Cererea nu a putut fi citită.',
       version: 'Versiunea trebuie să fie un număr întreg pozitiv.',
       invite: 'Invitația conține câmpuri lipsă, prea lungi sau nepermise.',
-      reply: `Introdu un nume de cel mult ${replyNameLimit} de caractere, un răspuns și un număr de persoane între 1 și ${partySizeLimit} dacă participi.`,
+      reply: `Introdu un nume de cel mult ${replyNameLimit} de caractere, un răspuns și un număr de persoane între 1 și ${partySizeLimit} dacă participi. Nota poate avea cel mult ${replyNoteLimit} de caractere.`,
       eventMissing: 'Această invitație nu există. Este posibil să fi fost ștearsă.',
       replyMissing: 'Acest răspuns nu există. Este posibil să fi fost retras sau șters împreună cu invitația.',
       eventForbidden: 'Acest link nu oferă acces la această invitație.',
@@ -395,7 +397,7 @@ export function apiMessages(lang, { replyNameLimit, partySizeLimit, dailyEvents,
     body: 'The request could not be read.',
     version: 'The version must be a positive whole number.',
     invite: 'The invitation has fields that are missing, too long or not allowed.',
-    reply: `Enter a name of up to ${replyNameLimit} characters, an answer, and a party size from 1 to ${partySizeLimit} when attending.`,
+    reply: `Enter a name of up to ${replyNameLimit} characters, an answer, and a party size from 1 to ${partySizeLimit} when attending. A note can have up to ${replyNoteLimit} characters.`,
     eventMissing: 'This invitation does not exist. It may have been deleted.',
     replyMissing: 'This reply does not exist. It may have been withdrawn or deleted with the invitation.',
     eventForbidden: 'This link does not give access to this invitation.',

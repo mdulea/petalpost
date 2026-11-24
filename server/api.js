@@ -8,8 +8,8 @@
 // GET /api/events/{id}                     public; {t, d}
 // DELETE /api/events/{id}                  management secret; removes the event and its responses
 // GET /api/events/{id}/responses           management secret; {t, d, version, responses, totals}
-// PUT /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, version?}
-// GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, version}
+// PUT /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note?, version?}
+// GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note, version}
 // DELETE /api/events/{id}/responses/{rid}  edit secret; {version} withdraws the reply; 204, also when it is gone
 // GET /api/retention                       public; deletes expired events and their responses; {deleted}
 //
@@ -33,6 +33,7 @@ const MAX_BODY = 8 * 1024;
 const LIMITS = {
   replyNameLimit: REPLY_LIMITS.name,
   partySizeLimit: REPLY_LIMITS.partySize,
+  replyNoteLimit: REPLY_LIMITS.note,
   dailyEvents: DAILY_EVENTS,
   eventResponses: EVENT_RESPONSES,
 };
@@ -201,7 +202,7 @@ async function listResponses({ db, request, ids: [id] }) {
   const secret = bearer(request);
   const event = await ownedEvent(db, id, secret, { lock: false });
   const { rows } = await db.query(
-    `select name, attending, party_size, created_at, updated_at from responses
+    `select name, attending, party_size, note, created_at, updated_at from responses
      where event_id = $1 order by created_at, updated_at`,
     [id],
   );
@@ -209,6 +210,7 @@ async function listResponses({ db, request, ids: [id] }) {
     name: r.name,
     attending: r.attending,
     partySize: r.party_size,
+    note: r.note,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   }));
@@ -220,7 +222,7 @@ async function listResponses({ db, request, ids: [id] }) {
 async function ownedReply(tx, eventId, id, secret) {
   const reply = (
     await tx.query(
-      'select event_id, secret_hash, name, attending, party_size, version from responses where id = $1 for update',
+      'select event_id, secret_hash, name, attending, party_size, note, version from responses where id = $1 for update',
       [id],
     )
   ).rows[0];
@@ -231,7 +233,7 @@ async function ownedReply(tx, eventId, id, secret) {
   return reply;
 }
 
-const replyOf = (row) => ({ name: row.name, attending: row.attending, partySize: row.party_size });
+const replyOf = (row) => ({ name: row.name, attending: row.attending, partySize: row.party_size, note: row.note });
 
 async function getReply({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
@@ -260,9 +262,9 @@ async function putReply({ db, request, ids: [eventId, id] }) {
         throw new Refusal(409, 'replyChanged', { version: existing.version, ...replyOf(existing) });
       }
       await tx.query(
-        `update responses set name = $2, attending = $3, party_size = $4, version = version + 1, updated_at = now()
-         where id = $1`,
-        [id, reply.name, reply.attending, reply.partySize],
+        `update responses set name = $2, attending = $3, party_size = $4, note = $5, version = version + 1,
+         updated_at = now() where id = $1`,
+        [id, reply.name, reply.attending, reply.partySize, reply.note],
       );
       return json(200, { version: existing.version + 1, created: false });
     }
@@ -271,8 +273,9 @@ async function putReply({ db, request, ids: [eventId, id] }) {
       .rows[0];
     if (count >= EVENT_RESPONSES) throw new Refusal(429, 'eventFull');
     await tx.query(
-      'insert into responses (id, event_id, secret_hash, name, attending, party_size) values ($1, $2, $3, $4, $5, $6)',
-      [id, eventId, hash(secret), reply.name, reply.attending, reply.partySize],
+      `insert into responses (id, event_id, secret_hash, name, attending, party_size, note)
+       values ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, eventId, hash(secret), reply.name, reply.attending, reply.partySize, reply.note],
     );
     return json(201, { version: 1, created: true });
   });

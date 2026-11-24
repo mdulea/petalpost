@@ -2,24 +2,26 @@
 // server/api.js share it and tests/check-rsvp.js runs it in Node.
 import { UI, normalizeLang } from './i18n.js';
 
-export const REPLY_LIMITS = { name: 80, partySize: 10 };
+export const REPLY_LIMITS = { name: 80, partySize: 10, note: 300 };
 
 // Ids are 16 random bytes and secrets 32, both base64url without padding.
 export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 // The fields of a reply, in the order the reply form shows them.
-export const REPLY_FIELDS = ['name', 'attending', 'partySize'];
+export const REPLY_FIELDS = ['name', 'attending', 'partySize', 'note'];
 
-// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize} becomes
+// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize, note} becomes
 // {reply, invalid}. reply is the valid reply, or null when invalid lists the invalid fields in REPLY_FIELDS order.
 // The name is trimmed and holds 1 to 80 code points without control characters. An attending guest brings
 // a party of 1 to 10 people; a declined reply has a party size of exactly 0. Without a valid answer, the party size
-// only has to be a whole number.
+// only has to be a whole number. The note is optional and defaults to empty. It is trimmed, its line breaks become
+// \n, and it holds at most 300 code points without control characters other than \n.
 export function makeReply(source) {
-  const { name, attending, partySize } = source && typeof source === 'object' ? source : {};
+  const { name, attending, partySize, note = '' } = source && typeof source === 'object' ? source : {};
   const trimmed = typeof name === 'string' ? name.trim() : '';
   const length = [...trimmed].length;
+  const noteText = typeof note === 'string' ? note.replace(/\r\n?/g, '\n').trim() : '';
   const isInvalid = {
     name: length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed),
     attending: typeof attending !== 'boolean',
@@ -27,9 +29,10 @@ export function makeReply(source) {
       !Number.isInteger(partySize) ||
       (attending === true && (partySize < 1 || partySize > REPLY_LIMITS.partySize)) ||
       (attending === false && partySize !== 0),
+    note: typeof note !== 'string' || [...noteText].length > REPLY_LIMITS.note || /(?!\n)\p{Cc}/u.test(noteText),
   };
   const invalid = REPLY_FIELDS.filter((field) => isInvalid[field]);
-  return { reply: invalid.length ? null : { name: trimmed, attending, partySize }, invalid };
+  return { reply: invalid.length ? null : { name: trimmed, attending, partySize, note: noteText }, invalid };
 }
 
 // Totals for the host: responses counts every reply, yes and no count the answers,
@@ -130,12 +133,12 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     loadEvent: (id) => call('GET', eventPath(id)),
     // Removes the event and every reply to it; data is null.
     deleteEvent: (cred) => call('DELETE', eventPath(cred.id), cred.secret),
-    // data is {t, d, version, responses: [{name, attending, partySize, createdAt, updatedAt}], totals}.
+    // data is {t, d, version, responses: [{name, attending, partySize, note, createdAt, updatedAt}], totals}.
     loadResponses: (cred) => call('GET', `${eventPath(cred.id)}/responses`, cred.secret),
-    // Creates the guest's reply {name, attending, partySize}, or updates it when cred.version is set.
+    // Creates the guest's reply {name, attending, partySize, note}, or updates it when cred.version is set.
     // data is {version, created}.
     saveReply: (eventId, cred, reply) => save(replyPath(eventId, cred.id), cred, reply),
-    // data is {name, attending, partySize, version}.
+    // data is {name, attending, partySize, note, version}.
     loadReply: (eventId, cred) => call('GET', replyPath(eventId, cred.id), cred.secret),
     // Removes the guest's reply at cred.version; a reply that is already gone counts as withdrawn. data is null.
     withdrawReply: (eventId, cred) =>
