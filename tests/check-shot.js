@@ -1,7 +1,7 @@
 // Fails when pnpm shot does not write a PNG of the element that the selector matches, does not write a PNG of the full
 // page without a selector or for a path without its leading slash, or, for a selector that matches nothing, exits with
 // status 0, prints no message naming the selector, writes a file or keeps running. Fails too when it accepts a path
-// on another origin. Each case runs the command on its own free port with Chromium.
+// on another origin, an empty selector or a path that answers 404. Each case runs the command on its own free port with Chromium.
 // Run: node tests/check-shot.js
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -34,14 +34,37 @@ test('a selector gives a PNG of that element, smaller than the viewport', () => 
   assert.ok(size.width < 1280 && size.height < 720, `${size.width}x${size.height} is not the element`);
 });
 
-test('no selector gives a PNG of the full page, taller than the viewport, for a path without its leading slash', () => {
+test('no selector gives a PNG of the full page, taller than the viewport', () => {
   const file = join(dir, 'page.png');
-  const result = shot('about.html', file);
+  const result = shot('/about.html', file);
   assert.equal(result.status, 0, result.stderr);
   const size = pngSize(file);
   assert.ok(size, 'not a PNG');
   assert.equal(size.width, 1280);
   assert.ok(size.height > 720, `${size.height} is not the full page`);
+});
+
+test('a path without its leading slash opens the same page', () => {
+  const file = join(dir, 'brand-slashless.png');
+  const result = shot('index.html', '.brand', file);
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(pngSize(file), 'not a PNG');
+});
+
+test('a path that answers 404 exits non-zero with its status and writes no file', () => {
+  const file = join(dir, 'not-found.png');
+  const result = shot('/no-such-page.html', file);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /no-such-page\.html answers with status 404/);
+  assert.equal(existsSync(file), false);
+});
+
+test('an empty selector exits non-zero instead of writing the full page', () => {
+  const file = join(dir, 'empty.png');
+  const result = shot('/', '', file);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /selector is empty/);
+  assert.equal(existsSync(file), false);
 });
 
 test('a selector that matches nothing exits non-zero with a message and writes no file', () => {

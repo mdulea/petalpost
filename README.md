@@ -126,7 +126,7 @@ Run it before `check`. `check` reports formatting and lint errors and never rewr
 `shot` writes a PNG of a page, or of the first element that a CSS selector matches, such as `pnpm shot editor.html "#previewCard" card.png` for a template's artwork.
 Without a selector, it writes the full page.
 It starts `scripts/server.js` on a free port with an in-memory database, so it runs next to `pnpm dev` and the browser checks, and Chromium renders the page at 1280 by 720.
-When the selector matches nothing, it writes no file and exits with status 1.
+When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
 `test` runs the Prettier format check, ESLint and the contrast, DOM-free, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
