@@ -301,7 +301,13 @@ test('the local server answers / and /ro/ with their index.html and pages by the
   ]);
 });
 
-const nonSitePaths = ['/package.json', '/server/api.js', '/migrations/001_rsvp.sql', '/scripts/build.js', '/README.md'];
+const nonSitePaths = [
+  '/package.json',
+  '/server/api.js',
+  '/server/migrations/001_rsvp.sql',
+  '/scripts/build.js',
+  '/README.md',
+];
 for (const path of [
   '/editor',
   '/ro/editor',
