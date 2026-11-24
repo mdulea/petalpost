@@ -1,5 +1,5 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
-// link preview metadata, invite records, storage writes, the stored published event identity, template switching,
+// link preview metadata, invite records, the characters left in a limited field, storage writes, the stored published event identity, template switching,
 // template ids, Romanian localization coverage, the Romanian occasion order, Romanian-only occasions kept out of the English
 // catalog, 24-hour time formatting, the calendar file, the report link or the choice of when the Romanian language banner
 // shows and where it links break.
@@ -167,6 +167,11 @@ check(
   ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, { t: 'birthday', d: { ...birthday.defaults, title: long } })) }).d
     .title,
   long.slice(0, ctx.FIELD_LIMITS.title),
+);
+check(
+  'a field shows no count up to 80% of its limit and the characters left above it',
+  [0, 40, 41, 50].map((length) => ctx.charsLeft('x'.repeat(length), 50)),
+  [null, null, 9, 0],
 );
 check(
   'every template sample fits its limits',

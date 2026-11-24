@@ -154,6 +154,7 @@ export const UI = {
     },
     editor: {
       defaultSwatch: 'Template default',
+      charsLeft: (n) => `${n} left`,
       chooseImage: 'Choose an image file, such as JPG, PNG or HEIC exported to JPG.',
       imageRefused: 'That image could not be read. Try a JPG or PNG.',
       photoAdded:
@@ -257,6 +258,7 @@ export const UI = {
     },
     editor: {
       defaultSwatch: 'Culoarea modelului',
+      charsLeft: (n) => (n === 1 ? 'Mai rămâne 1' : `Mai rămân ${n}`),
       chooseImage: 'Alege un fișier imagine, precum JPG, PNG sau HEIC exportat ca JPG.',
       imageRefused: 'Imaginea nu a putut fi citită. Încearcă un fișier JPG sau PNG.',
       photoAdded:
