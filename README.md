@@ -79,7 +79,8 @@ A lost management link cannot be recovered.
     - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
   - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
   - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
-  - `og-image.png`, `ro/og-image.png`, `favicon.svg`, `robots.txt` and `sitemap.xml` are the remaining site files.
+  - `sitemap.xml` lists the indexed pages. `pnpm pages` generates it; do not edit it by hand.
+  - `og-image.png`, `ro/og-image.png`, `favicon.svg` and `robots.txt` are the remaining site files.
 - `types/globals.d.ts` declares the types of the `htmlToImage` and analytics globals for the type check.
 - `api/index.js` is the Vercel Function for `/api/`, `/e/{id}` and `/ro/e/{id}` paths. Vercel requires it in `api/`.
 - `server/` holds the server code. `server/api.js` routes, validates and stores the requests, `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
@@ -87,7 +88,7 @@ A lost management link cannot be recovered.
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `browser-port.js` picks the port that the browser tests run the server on.
   - `build.js` copies `public/` into `dist/`, which Vercel serves.
-  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries, template counts and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
+  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries, template counts and occasion links, every page footer and `sitemap.xml`. It fills the regions between `<!-- generated:NAME -->` markers. `lastmod.json` keeps each indexed page's sitemap date with a fingerprint of its content. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
 - `tests/` holds the checks that `pnpm check` runs:
@@ -184,13 +185,18 @@ Enable Web Analytics in the Vercel project dashboard before deploying.
 The contact address is `contact@petalpost.ro`.
 To change it, replace `CONTACT` in `public/js/invite.js`, which also addresses the report link, and the address in the body of `public/about.html`, run `pnpm pages`, then run `pnpm exec node tests/check-site.js`.
 
-If the production domain changes, update the canonical and Open Graph URLs in the hand-written pages, `robots.txt` and `sitemap.xml`, then run `pnpm pages`, which takes the origin from the `index.html` canonical.
+If the production domain changes, update the canonical and Open Graph URLs in the hand-written pages and `robots.txt`, then run `pnpm pages`, which takes the origin from the `index.html` canonical.
 Then run `pnpm exec node tests/check-site.js` to find any copy you missed.
 
 ### Search indexing
 
 `sitemap.xml` lists every page whose robots tag allows indexing, each with a `<lastmod>` date.
-When you change a page's content, set its `lastmod` to that day; leave it alone for layout or code changes, since Google ignores `lastmod` dates that change without content changes.
+`pnpm pages` writes it from the indexed pages, so run `pnpm pages` after you change a page or add one.
+Google ignores `lastmod` dates that change without content changes, so a page's date moves only when its content changes.
+The content of a hand-written page is its text outside the generated regions, and the content of an occasion page is its copy in `scripts/occasions.js` or `scripts/occasions-ro.js`.
+`scripts/lastmod.json` keeps each page's date with a fingerprint of that content, and `pnpm pages` gives a page with a new fingerprint today's date.
+A change inside a generated region, such as a new footer link, or a whitespace change leaves every date alone.
+`check-site.js` fails when `sitemap.xml` or `scripts/lastmod.json` differs from the `pnpm pages` output, so a content change without `pnpm pages` fails the checks.
 `vercel.json` redirects `/index.html` to `/` with a 301, so the home page has one URL; link to `/`, never to `index.html`.
 Google Search Console verifies `petalpost.ro` as a Domain property through a `google-site-verification` TXT record in the domain's DNS, which Vercel hosts. It covers every subdomain and protocol, so no page carries a verification tag.
 
