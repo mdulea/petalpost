@@ -22,7 +22,7 @@ const args = process.argv.slice(2);
 if (args.length < 2 || args.length > 3) fail(USAGE);
 const [path, selector, file] = args.length === 3 ? args : [args[0], undefined, args[1]];
 if (selector === '') fail(`The selector is empty. Leave it out to write the full page. ${USAGE}`);
-// Git Bash rewrites an argument that starts with / into a Windows path, such as C:/Program Files/Git/editor.html,
+// Git Bash rewrites an argument that starts with / into a Windows path under its install directory,
 // which resolves to another origin. A path without the leading / resolves against the site root too.
 if (new URL(path, 'http://localhost/').origin !== 'http://localhost') {
   fail(`${path} is not a path on the site. Write it without the leading /, such as editor.html or ro/.`);
