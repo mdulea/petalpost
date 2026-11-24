@@ -135,8 +135,9 @@ test('every English and Romanian occasion has page text and all page text names 
   assert.deepEqual(Object.keys(OCCASIONS_RO).sort(), [...categoriesFor('ro')].sort());
 });
 
-// Romanian hosts search for free online invitations sent on WhatsApp that collect replies.
-const RO_SEARCH_PHRASES = ['gratuit', 'online', 'WhatsApp', 'confirmare'];
+// The search phrases from issue #27, as case-insensitive stems. The ro/index.html title, description and lead together
+// hold all of them, and each Romanian occasion description holds at least one.
+const RO_SEARCH_PHRASES = ['gratuit', 'online', 'whatsapp', 'confirmare'];
 
 test('ro/index.html title, description and lead together use every Romanian search phrase', () => {
   const html = read('ro/index.html');
@@ -144,7 +145,9 @@ test('ro/index.html title, description and lead together use every Romanian sear
     attr(html, /<title>([^<]+)<\/title>/),
     attr(html, /<meta\s+name="description"\s+content="([^"]+)"/),
     attr(html, /<p class="lead">([\s\S]+?)<\/p>/),
-  ].join(' ');
+  ]
+    .join(' ')
+    .toLowerCase();
   assert.deepEqual(
     RO_SEARCH_PHRASES.filter((phrase) => !text.includes(phrase)),
     [],
@@ -154,7 +157,7 @@ test('ro/index.html title, description and lead together use every Romanian sear
 test('every Romanian occasion description uses a Romanian search phrase', () => {
   assert.deepEqual(
     Object.values(OCCASIONS_RO)
-      .filter((o) => !RO_SEARCH_PHRASES.some((phrase) => o.description.includes(phrase)))
+      .filter((o) => !RO_SEARCH_PHRASES.some((phrase) => o.description.toLowerCase().includes(phrase)))
       .map((o) => o.file),
     [],
   );
