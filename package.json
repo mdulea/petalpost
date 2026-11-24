@@ -15,7 +15,7 @@
     "check": "pnpm check:fast && pnpm test:browser",
     "check:fast": "pnpm test && pnpm typecheck",
     "dev": "node scripts/server.js --port 3000",
-    "format": "prettier --write .",
+    "fix": "prettier --write . && eslint --fix .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "migrate": "node server/migrate.js",

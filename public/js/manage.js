@@ -2,13 +2,13 @@
 // manage.html#<id>.<secret> is the only credential; the page shows the invitation, the reply totals and list,
 // and the invitation link, and deletes the event on request.
 import './icons.js';
-import { UI, localeOf, pageLang } from './i18n.js';
+import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
 import { eventLink, makeInviteData } from './invite.js';
 import { createClient, readCredential } from './rsvp.js';
 
-const lang = pageLang();
+const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
 const copy = UI[lang].manage;
 

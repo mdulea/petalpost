@@ -1,7 +1,7 @@
 // Browser-only module. It puts the Romanian language banner above the site header when romanianBannerHref in i18n.js
 // allows it. The entry modules page.js, landing.js and editor.js import it, and privacy.html and terms.html load it
 // directly. Closing the banner hides it on every page; when the browser blocks storage, it hides it on this page only.
-import { pageLang, romanianBannerHref } from './i18n.js';
+import { normalizeLang, romanianBannerHref } from './i18n.js';
 
 const CLOSED_KEY = 'petalpost:ro-banner-closed';
 
@@ -32,7 +32,7 @@ function rememberClosed(storage) {
 
 const storage = storageOrNull();
 const href = romanianBannerHref({
-  lang: pageLang(),
+  lang: normalizeLang(document.documentElement.lang),
   languages: navigator.languages?.length ? navigator.languages : [navigator.language],
   alternate:
     /** @type {HTMLLinkElement | null} */ (document.querySelector('link[rel="alternate"][hreflang="ro"]'))?.href ??

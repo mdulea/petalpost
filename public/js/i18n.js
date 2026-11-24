@@ -1,13 +1,10 @@
 // Locale metadata, route pairings and UI copy shared by browser modules, static page generation and the RSVP API.
-// No DOM writes, so Node scripts and server/api.js import it directly.
+// No DOM access, so Node scripts and server/api.js import it directly; tests/check-dom-free.js enforces it.
 
 export const LANGS = ['en', 'ro'];
 
 /** @param {string} [lang] */
 export const normalizeLang = (lang) => (typeof lang === 'string' && lang.toLowerCase().startsWith('ro') ? 'ro' : 'en');
-
-// Reads <html lang="..."> in a browser; defaults to English in Node.
-export const pageLang = () => (typeof document === 'object' ? normalizeLang(document.documentElement.lang) : 'en');
 
 /** @param {string} [lang] */
 export const localeOf = (lang) => (normalizeLang(lang) === 'ro' ? 'ro-RO' : 'en-US');

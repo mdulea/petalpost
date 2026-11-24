@@ -86,7 +86,7 @@ A lost management link cannot be recovered.
 - `scripts/` holds the scripts a developer runs:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `build.js` copies `public/` into `dist/`, which Vercel serves.
-  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
+  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries, template counts and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
 - `tests/` holds the checks that `pnpm check` runs:
@@ -106,7 +106,7 @@ A lost management link cannot be recovered.
 | Test suite     | `pnpm test`                            |
 | One check file | `pnpm exec node tests/check-invite.js` |
 | Lint           | `pnpm lint`                            |
-| Format         | `pnpm format`                          |
+| Format and fix | `pnpm fix`                             |
 | Format check   | `pnpm format:check`                    |
 | Type check     | `pnpm typecheck`                       |
 | Browser tests  | `pnpm test:browser`                    |
@@ -116,15 +116,19 @@ A lost management link cannot be recovered.
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
 
+`fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
+Run it before `check`. `check` reports formatting and lint errors and never rewrites a file.
+
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
 
-`test` runs the Prettier format check, ESLint and the contrast, invite, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the contrast, DOM-free, invite, paths, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
 `test:browser` starts `scripts/server.js` on port 4321 with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
 Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
-The run fails when another program already uses port 4321.
+When another program already uses port 4321, such as another worktree's run, the server exits with a message that names the port, and the run fails.
+Set `BROWSER_CHECK_PORT` to run the browser checks on another port, such as `BROWSER_CHECK_PORT=4322 pnpm test:browser`.
 The tests fail when a page breaks the Content-Security-Policy.
 
 ### Tooling notes
