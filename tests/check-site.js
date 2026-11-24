@@ -366,8 +366,9 @@ test('every page starts with a skip link to its main element', () => {
   assert.deepEqual(missing, []);
 });
 
-// landing.js writes the template and accent counts; the HTML text is what shows before it runs.
-test('index.html and ro/index.html show the template and accent counts that landing.js writes', () => {
+// pnpm pages writes the template count and landing.js writes the accent count; the HTML text is what shows before
+// landing.js runs.
+test('index.html and ro/index.html show the template count of their catalog and the accent count', () => {
   for (const [file, lang] of [
     ['index.html', 'en'],
     ['ro/index.html', 'ro'],

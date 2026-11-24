@@ -86,7 +86,7 @@ A lost management link cannot be recovered.
 - `scripts/` holds the scripts a developer runs:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `build.js` copies `public/` into `dist/`, which Vercel serves.
-  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
+  - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries, template counts and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
 - `tests/` holds the checks that `pnpm check` runs:

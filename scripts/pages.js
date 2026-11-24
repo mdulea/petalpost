@@ -1,7 +1,8 @@
 // Generates the site HTML that crawlers must read without running JavaScript, from the template catalog,
 // scripts/occasions.js and scripts/occasions-ro.js: one page per occasion in English and Romanian, and the
 // regions between <!-- generated:NAME --> and <!-- /generated:NAME --> markers in public/ and public/ro/ pages, which
-// are the hreflang links, JSON-LD structured data, landing galleries, occasion links and every page footer.
+// are the hreflang links, JSON-LD structured data, landing galleries, landing template counts, occasion links and every
+// page footer.
 // generatePages() resolves a Map from file path relative to public/ to its content, formatted with Prettier;
 // check-site.js fails when a committed file differs from it.
 // Run: pnpm pages, which writes the files.
@@ -239,6 +240,7 @@ const REGIONS = {
     return occasionLinks(categoriesFor(lang), lang);
   },
   footer: (file) => footer(fileLang(file)),
+  templateCount: (file) => `<span class="stat-number" id="templateCount">${templatesFor(fileLang(file)).length}</span>`,
 };
 
 const header = (file, lang) => {
