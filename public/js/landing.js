@@ -1,4 +1,5 @@
 import './icons.js';
+import './language-banner.js';
 import { UI, categoryLabel, localeOf, pageLang } from './i18n.js';
 import {
   ACCENTS,
