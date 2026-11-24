@@ -1447,6 +1447,46 @@ textarea.input {
   }
 }
 
+/* The landing pages' Create invite bar. js/landing.js sets data-shown while neither the hero button nor the footer is
+   on screen. Hidden, the bar sits below the screen and leaves the tab order once it has slid out. */
+.sticky-cta {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  /* Also while the bar is hidden: the bar can appear during the browser's focus scroll. */
+  html:has(.sticky-cta) {
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  .sticky-cta {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    /* The insets keep the button clear of the notch and above the home indicator. */
+    padding-top: 12px;
+    padding-right: calc(var(--gutter) + env(safe-area-inset-right));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding-left: calc(var(--gutter) + env(safe-area-inset-left));
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition:
+      transform 0.2s var(--ease),
+      visibility 0.2s;
+  }
+  .sticky-cta[data-shown] {
+    transform: none;
+    visibility: visible;
+  }
+  .sticky-cta .btn {
+    width: 100%;
+  }
+}
+
 @media (max-width: 420px) {
   .field-row {
     grid-template-columns: 1fr;
@@ -1670,6 +1710,9 @@ textarea.input {
   }
   .fan-in .invite-wrap {
     animation: none;
+  }
+  .sticky-cta {
+    transition: none;
   }
   .pill,
   .btn,

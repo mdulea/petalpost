@@ -91,3 +91,29 @@ filters.addEventListener('click', (e) => {
   const button = /** @type {HTMLElement} */ (/** @type {Element} */ (e.target).closest('.filter'));
   if (button) applyFilter(button.dataset.filter);
 });
+
+// Below 640px, css/styles.css shows the Create invite bar while it has data-shown, which it gets while neither the
+// hero button nor the footer is on screen. The browser scrolls a focused control into view only when it is off
+// screen, so a control under the bar stays hidden; this scrolls a keyboard-focused control above the bar after the
+// browser's own scroll, and again when the bar appears.
+const stickyCta = document.getElementById('stickyCta');
+const onScreen = new Map();
+const barObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) onScreen.set(entry.target, entry.isIntersecting);
+  const shown = ![...onScreen.values()].some(Boolean);
+  stickyCta.toggleAttribute('data-shown', shown);
+  if (shown) keepFocusAboveBar();
+});
+barObserver.observe(document.querySelector('.hero .btn-primary'));
+barObserver.observe(document.querySelector('.site-footer'));
+
+function keepFocusAboveBar() {
+  const focused = document.activeElement;
+  if (!stickyCta.hasAttribute('data-shown') || !stickyCta.offsetHeight) return;
+  if (!focused?.matches(':focus-visible') || stickyCta.contains(focused)) return;
+  // The bar may still be sliding in, so its top comes from its height, not its current box.
+  const top = innerHeight - stickyCta.offsetHeight;
+  const rect = focused.getBoundingClientRect();
+  if (rect.bottom > top && rect.top < innerHeight) scrollBy({ top: rect.bottom - top + 16, behavior: 'instant' });
+}
+document.addEventListener('focusin', () => requestAnimationFrame(keepFocusAboveBar));
