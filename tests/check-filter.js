@@ -9,10 +9,15 @@ import { fileURLToPath } from 'node:url';
 
 const TIMEOUT_MS = 60000;
 
+// Under node --test, NODE_TEST_CONTEXT makes a child report in the runner's binary protocol, so the child runs
+// without it and prints the text summary.
+const { NODE_TEST_CONTEXT, ...env } = process.env;
+
 // A hook or server that outlives the filtered tests keeps the child alive, and the timeout fails the case.
 const runFiltered = (file, pattern) =>
   spawnSync(process.execPath, [`--test-name-pattern=${pattern}`, fileURLToPath(new URL(file, import.meta.url))], {
     encoding: 'utf8',
+    env,
     timeout: TIMEOUT_MS,
   });
 
