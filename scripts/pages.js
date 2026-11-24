@@ -375,7 +375,7 @@ export const contentFingerprint = (text) => {
 
 // The new ledger from the fingerprint of each indexed page: an unchanged page keeps its date, a changed or new page
 // gets today, and a page missing from fingerprints leaves the ledger. Keys are sorted, so the output is stable.
-export function datePages(fingerprints, ledger, today) {
+export function nextLedger(fingerprints, ledger, today) {
   const next = {};
   for (const file of [...fingerprints.keys()].sort()) {
     const fingerprint = fingerprints.get(file);
@@ -389,6 +389,7 @@ export function datePages(fingerprints, ledger, today) {
 const localDate = (date = new Date()) =>
   [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((n) => String(n).padStart(2, '0')).join('-');
 
+// The sitemap.xml text for a list of {loc, lastmod} entries, in list order.
 const sitemap = (urls) => `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(({ loc, lastmod }) => `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>\n`).join('')}</urlset>
@@ -397,12 +398,12 @@ ${urls.map(({ loc, lastmod }) => `  <url><loc>${loc}</loc><lastmod>${lastmod}</l
 export async function generatePages() {
   const raw = new Map();
   // The occasion copy is the content of a generated occasion page.
-  const occasionCopy = new Map();
+  const occasionContent = new Map();
   for (const lang of ['en', 'ro']) {
     for (const c of categoriesFor(lang)) {
       const occasion = OCCASIONS_BY_LANG[lang][c];
       raw.set(occasion.file, occasionPage(c, lang));
-      occasionCopy.set(occasion.file, JSON.stringify(occasion));
+      occasionContent.set(occasion.file, JSON.stringify(occasion));
     }
   }
   for (const file of siteHtmlFiles().filter((f) => !raw.has(f))) {
@@ -418,11 +419,14 @@ export async function generatePages() {
   for (const file of siteHtmlFiles()) {
     const html = pages.get(file) ?? read(file);
     if (!/<meta name="robots" content="index/.test(html)) continue;
-    fingerprints.set(file, contentFingerprint(occasionCopy.get(file) ?? html));
-    locs.set(file, html.match(/<link rel="canonical" href="([^"]+)"/)[1]);
+    fingerprints.set(file, contentFingerprint(occasionContent.get(file) ?? html));
+    const canonical = html.match(/<link rel="canonical" href="([^"]+)"/);
+    if (!canonical)
+      throw new Error(`${file} allows indexing but has no canonical link, so the sitemap cannot list it.`);
+    locs.set(file, canonical[1]);
   }
   const ledgerUrl = new URL(LEDGER, repo);
-  const ledger = datePages(
+  const ledger = nextLedger(
     fingerprints,
     existsSync(ledgerUrl) ? JSON.parse(readFileSync(ledgerUrl, 'utf8')) : {},
     localDate(),
