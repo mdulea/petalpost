@@ -168,7 +168,7 @@ export const OCCASIONS_RO = {
       {
         heading: 'Ce să pui pe o invitație de zi de naștere',
         intro: [
-          'Invitații caută imediat trei informații: al cui este ziua, când are loc petrecerea și unde trebuie să ajungă. Trecerea numelui în titlu, de exemplu „Maria împlinește 7 ani”, răspunde din prima secundă.',
+          'Invitații caută imediat trei informații: a cui este ziua, când are loc petrecerea și unde trebuie să ajungă. Trecerea numelui în titlu, de exemplu „Maria împlinește 7 ani”, răspunde din prima secundă.',
         ],
         list: [
           '<strong>Sărbătoritul și vârsta.</strong> Pentru copii și aniversări rotunde, vârsta dă tonul. Pentru adulți poți scrie simplu „Hai să o sărbătorim pe Dana”.',
