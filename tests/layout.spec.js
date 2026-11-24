@@ -196,12 +196,13 @@ test('the About page, both guides and an occasion page fit every viewport', asyn
   }
 });
 
-test('the Romanian landing, editor, occasion and guide pages fit every viewport', async ({ page }) => {
+test('the Romanian landing, editor, occasion and two guide pages fit every viewport', async ({ page }) => {
   for (const path of [
     '/ro/',
     '/ro/editor.html?t=botez-porumbel',
     '/ro/invitatii-botez.html',
     '/ro/text-invitatii.html',
+    '/ro/invitatii-digitale-sau-tiparite.html',
   ]) {
     await page.goto(path);
     await checkAllViewports(page);

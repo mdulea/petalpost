@@ -50,8 +50,10 @@ const PAGE_COPY = {
     footerNavLabel: 'Footer',
     footerOccasions: 'Occasions',
     footerGuides: 'Guides',
-    footerWord: { href: '/invitation-wording.html', label: 'Invitation wording' },
-    footerWhen: { href: '/when-to-send-invitations.html', label: 'When to send invitations' },
+    footerGuideLinks: [
+      { href: '/invitation-wording.html', label: 'Invitation wording' },
+      { href: '/when-to-send-invitations.html', label: 'When to send invitations' },
+    ],
     footerSite: 'Petalpost',
     footerHome: { href: '/', label: 'Home' },
     footerEditor: { href: '/editor.html', label: 'Make an invite' },
@@ -83,8 +85,11 @@ const PAGE_COPY = {
     footerNavLabel: 'Subsol',
     footerOccasions: 'Ocazii',
     footerGuides: 'Ghiduri',
-    footerWord: { href: '/ro/text-invitatii.html', label: 'Texte pentru invitații' },
-    footerWhen: { href: '/ro/cand-sa-trimiti-invitatiile.html', label: 'Când să trimiți invitațiile' },
+    footerGuideLinks: [
+      { href: '/ro/text-invitatii.html', label: 'Texte pentru invitații' },
+      { href: '/ro/cand-sa-trimiti-invitatiile.html', label: 'Când să trimiți invitațiile' },
+      { href: '/ro/invitatii-digitale-sau-tiparite.html', label: 'Invitații digitale sau tipărite' },
+    ],
     footerSite: 'Petalpost',
     footerHome: { href: '/ro/', label: 'Acasă' },
     footerEditor: { href: '/ro/editor.html', label: 'Creează invitație' },
@@ -147,8 +152,7 @@ const footer = (lang) => {
       </div>
       <div class="footer-group">
         <p class="footer-title">${copy.footerGuides}</p>
-        <a href="${copy.footerWord.href}">${copy.footerWord.label}</a>
-        <a href="${copy.footerWhen.href}">${copy.footerWhen.label}</a>
+        ${copy.footerGuideLinks.map(({ href, label }) => `<a href="${href}">${label}</a>`).join('\n')}
       </div>
       <div class="footer-group">
         <p class="footer-title">${copy.footerSite}</p>
