@@ -1,6 +1,9 @@
 // Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and template, the editor preview, the draft reload, the guest view, the sample guest invitation, the calendar download, the photo
-// upload and its notice, the delivery actions under the preview, the PNG download or the link preview generator breaks in
-// Chromium, or a page breaks the Content-Security-Policy.
+// upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
+// Romanian language banner breaks in Chromium, or a page breaks the Content-Security-Policy. The banner checks fail when
+// it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
+// English browser or on a page without a pair, a close does not last across pages, a close with blocked storage breaks
+// the page, or it writes a cookie, requests another origin or changes the canonical and hreflang links.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
@@ -198,4 +201,99 @@ test('the Romanian editor uses Romanian samples, 24-hour times and isolated draf
   await page.reload();
   await expect(page.locator('#title')).toHaveValue('Botezul lui Ștefan');
   expect(problems).toEqual([]);
+});
+
+// Paired English pages and the Romanian page each banner link opens.
+const PAIRED = [
+  ['/', '/ro/'],
+  ['/editor.html?t=wedding', '/ro/editor.html'],
+  ['/wedding-invitations.html', '/ro/invitatii-nunta.html'],
+  ['/privacy.html', '/ro/confidentialitate.html'],
+  ['/terms.html', '/ro/termeni.html'],
+];
+const BANNER_TEXT = 'Această pagină este disponibilă și în română.';
+
+// The canonical and alternate links of the page head, which the banner must leave as the server sent them.
+const headLinks = (page) =>
+  page.$$eval('link[rel="canonical"], link[rel="alternate"]', (links) => links.map((l) => l.outerHTML));
+
+test.describe('a Romanian browser', () => {
+  test.use({ locale: 'ro-RO' });
+
+  for (const [path, target] of PAIRED) {
+    test(`sees the Romanian banner on ${path} and its link opens ${target}`, async ({ page, context, browser }) => {
+      const problems = watch(page);
+      const origins = new Set();
+      page.on('request', (req) => origins.add(new URL(req.url()).origin));
+      await page.goto(path);
+      const banner = page.locator('.lang-banner');
+      await expect(banner).toHaveText(new RegExp(BANNER_TEXT));
+      await expect(banner).toHaveAttribute('lang', 'ro');
+      expect(await page.evaluate(() => document.querySelector('.lang-banner').nextElementSibling.className)).toBe(
+        'site-header',
+      );
+      expect(page.url()).toContain(path);
+
+      const english = await (await browser.newContext({ locale: 'en-US' })).newPage();
+      await english.goto(path);
+      expect(await headLinks(page)).toEqual(await headLinks(english));
+
+      await banner.getByRole('link', { name: 'Deschide în română' }).click();
+      await expect(page).toHaveURL(new URL(target, page.url()).href);
+      await expect(page.locator('.lang-banner')).toHaveCount(0);
+      expect(await context.cookies()).toEqual([]);
+      expect([...origins]).toEqual([new URL(page.url()).origin]);
+      expect(problems).toEqual([]);
+    });
+  }
+
+  for (const path of ['/manage.html', '/missing-page']) {
+    test(`sees no banner on ${path}, which has no Romanian pair`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator('.site-header')).toBeVisible();
+      await expect(page.locator('.lang-banner')).toHaveCount(0);
+    });
+  }
+
+  test('keeps the banner closed after a reload and on another English page', async ({ page }) => {
+    const problems = watch(page);
+    await page.goto('/wedding-invitations.html');
+    await page.getByRole('button', { name: 'Închide' }).click();
+    await expect(page.locator('.lang-banner')).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('.site-header')).toBeVisible();
+    await expect(page.locator('.lang-banner')).toHaveCount(0);
+    await page.goto('/');
+    await expect(page.locator('#gallery .card').first()).toBeVisible();
+    await expect(page.locator('.lang-banner')).toHaveCount(0);
+    expect(problems).toEqual([]);
+  });
+
+  test('closes the banner for the current page when storage is blocked', async ({ page }) => {
+    await page.addInitScript(() =>
+      Object.defineProperty(window, 'localStorage', {
+        get() {
+          throw new DOMException('Storage is blocked', 'SecurityError');
+        },
+      }),
+    );
+    const problems = watch(page);
+    await page.goto('/editor.html?t=wedding');
+    await page.getByRole('button', { name: 'Închide' }).click();
+    await expect(page.locator('.lang-banner')).toHaveCount(0);
+    await page.fill('#title', 'Ana and Luca');
+    await expect(page.locator('#previewCard .invite-title')).toHaveText('Ana and Luca');
+    await page.reload();
+    await expect(page.locator('.lang-banner')).toBeVisible();
+    expect(problems).toEqual([]);
+  });
+});
+
+test('an English browser sees no Romanian banner on a paired English page', async ({ browser }) => {
+  const page = await (await browser.newContext({ locale: 'en-US' })).newPage();
+  for (const [path] of PAIRED) {
+    await page.goto(path);
+    await expect(page.locator('.site-header')).toBeVisible();
+    await expect(page.locator('.lang-banner')).toHaveCount(0);
+  }
 });

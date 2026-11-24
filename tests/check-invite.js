@@ -1,12 +1,14 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, invite records, storage writes, the stored published event identity, template switching,
 // template ids, Romanian localization coverage, the Romanian occasion order, Romanian-only occasions kept out of the English
-// catalog, 24-hour time formatting, the calendar file or the report link break.
+// catalog, 24-hour time formatting, the calendar file, the report link or the choice of when the Romanian language banner
+// shows and where it links break.
 // Run: node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as templates from '../public/js/templates.js';
 import * as invite from '../public/js/invite.js';
+import { romanianBannerHref } from '../public/js/i18n.js';
 
 const ctx = { ...templates, ...invite };
 
@@ -850,3 +852,21 @@ check(
   ],
   [EVENT_ID, true],
 );
+
+// The banner shows on an English page with a Romanian alternate, to a browser that prefers Romanian, until it is closed.
+test('the Romanian language banner links the Romanian alternate only for Romanian browsers on open English pages', () => {
+  const page = {
+    lang: 'en',
+    languages: ['en-US', 'ro-RO'],
+    alternate: 'https://www.petalpost.ro/ro/invitatii-nunta.html',
+    closed: false,
+  };
+  assert.equal(romanianBannerHref(page), '/ro/invitatii-nunta.html');
+  assert.equal(romanianBannerHref({ ...page, languages: ['ro'] }), '/ro/invitatii-nunta.html');
+  assert.equal(romanianBannerHref({ ...page, alternate: 'https://www.petalpost.ro/ro/' }), '/ro/');
+  assert.equal(romanianBannerHref({ ...page, languages: ['en-US'] }), null);
+  assert.equal(romanianBannerHref({ ...page, languages: [] }), null);
+  assert.equal(romanianBannerHref({ ...page, lang: 'ro' }), null);
+  assert.equal(romanianBannerHref({ ...page, alternate: null }), null);
+  assert.equal(romanianBannerHref({ ...page, closed: true }), null);
+});
