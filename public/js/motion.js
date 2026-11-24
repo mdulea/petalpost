@@ -17,5 +17,5 @@ export function animate(elements, keyframes, options) {
   stopMotion(elements);
   if (reducedMotion.matches) return Promise.resolve();
   const animations = elements.map((element) => element.animate(keyframes, options));
-  return Promise.allSettled(animations.map((animation) => animation.finished)).then(() => undefined);
+  return Promise.allSettled(animations.map((animation) => animation.finished));
 }

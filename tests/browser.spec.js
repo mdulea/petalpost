@@ -45,7 +45,8 @@ test('the landing filter shows only the chosen occasion', async ({ page }) => {
   );
 });
 
-// Records each Web Animations API call on a gallery card as {category, keyframes, duration} in window.cardAnimations.
+// Records each Web Animations API call on a gallery card as {category, keyframes, duration, startedAt} in
+// window.cardAnimations, where startedAt is the performance.now() time of the call.
 const recordCardAnimations = (page) =>
   page.addInitScript(() => {
     const record = /** @type {any} */ (window);
@@ -57,6 +58,7 @@ const recordCardAnimations = (page) =>
           category: /** @type {HTMLElement} */ (this).dataset.category,
           keyframes,
           duration: typeof options === 'number' ? options : options?.duration,
+          startedAt: performance.now(),
         });
       }
       return animate.call(this, keyframes, options);
@@ -75,18 +77,25 @@ test('a category change fades the cards out over 150ms, then fades the new cards
   await page.click('.filter[data-filter="Wedding"]');
   await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Wedding'));
   await expect.poll(() => runningGalleryAnimations(page)).toBe(0);
-  const calls = await cardAnimations(page);
-  const out = calls.filter((call) => call.duration === 150);
-  const into = calls.filter((call) => call.duration === 200);
-  expect(out).toHaveLength(templatesFor('en').length);
-  expect(out.map((call) => call.keyframes)).toEqual(out.map(() => [{ opacity: 1 }, { opacity: 0 }]));
-  expect(into.map((call) => call.category)).toEqual(into.map(() => 'Wedding'));
-  expect(into).toHaveLength(countOf('Wedding'));
-  expect(into[0].keyframes).toEqual([
-    { opacity: 0, transform: 'translateY(8px)' },
-    { opacity: 1, transform: 'none' },
-  ]);
-  expect(calls).toHaveLength(out.length + into.length);
+  const animations = await cardAnimations(page);
+  const fadeOut = animations.filter((call) => call.duration === 150);
+  const fadeIn = animations.filter((call) => call.duration === 200);
+  expect(fadeOut.map((call) => call.keyframes)).toEqual(
+    Array(templatesFor('en').length).fill([{ opacity: 1 }, { opacity: 0 }]),
+  );
+  expect(fadeIn.map((call) => [call.category, call.keyframes])).toEqual(
+    Array(countOf('Wedding')).fill([
+      'Wedding',
+      [
+        { opacity: 0, transform: 'translateY(8px)' },
+        { opacity: 1, transform: 'none' },
+      ],
+    ]),
+  );
+  expect(animations).toHaveLength(fadeOut.length + fadeIn.length);
+  // The fade-in starts once the fade-out has run its 150ms.
+  const lastFadeOut = Math.max(...fadeOut.map((call) => call.startedAt));
+  expect(Math.min(...fadeIn.map((call) => call.startedAt)) - lastFadeOut).toBeGreaterThanOrEqual(140);
 });
 
 // The clicks land in one task, before any fade finishes, so only the last category may fade in.
@@ -100,13 +109,12 @@ test('rapid category clicks end on the last category chosen with no animation le
   });
   await expect.poll(() => runningGalleryAnimations(page)).toBe(0);
   const fadedIn = (await cardAnimations(page)).filter((call) => call.duration === 200).map((call) => call.category);
-  expect(fadedIn).toEqual(fadedIn.map(() => 'Birthday'));
-  expect(fadedIn).toHaveLength(countOf('Birthday'));
+  expect(fadedIn).toEqual(Array(countOf('Birthday')).fill('Birthday'));
   await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Birthday'));
   const shown = await page
     .locator('#gallery .card:visible')
     .evaluateAll((cards) => cards.map((card) => [card.dataset.category, getComputedStyle(card).opacity]));
-  expect(shown).toEqual(shown.map(() => ['Birthday', '1']));
+  expect(shown).toEqual(Array(countOf('Birthday')).fill(['Birthday', '1']));
 });
 
 test('under reduced motion a category change switches the cards without animation', async ({ page }) => {

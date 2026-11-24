@@ -65,22 +65,21 @@ filters.innerHTML = ['All', ...categories]
   .join('');
 
 const cards = /** @type {HTMLElement[]} */ ([...gallery.querySelectorAll('.card')]);
-let filterRun = 0;
+let filterClicks = 0;
 
 // The shown cards fade out over 150ms, then the chosen category's cards fade in and rise 8px over 200ms. A later
 // filter click cancels both steps, so the gallery always ends on the last category chosen.
 async function applyFilter(category) {
-  const run = (filterRun += 1);
+  const click = (filterClicks += 1);
   filters
     .querySelectorAll('.filter')
     .forEach((/** @type {HTMLElement} */ b) => b.setAttribute('aria-pressed', String(b.dataset.filter === category)));
-  const shown = cards.filter((card) => !card.hidden);
-  stopMotion(cards);
+  const outgoing = cards.filter((card) => !card.hidden);
   // The outgoing cards keep opacity 0 after the fade until they are hidden or fade back in.
-  await animate(shown, [{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-in', fill: 'forwards' });
-  if (run !== filterRun) return;
+  await animate(outgoing, [{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-in', fill: 'forwards' });
+  if (click !== filterClicks) return;
   for (const card of cards) card.hidden = category !== 'All' && card.dataset.category !== category;
-  stopMotion(shown);
+  stopMotion(outgoing);
   animate(
     cards.filter((card) => !card.hidden),
     [
