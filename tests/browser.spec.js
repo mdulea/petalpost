@@ -62,6 +62,7 @@ for (const path of [
   'ro/invitatii-cununie.html',
   'ro/invitatii-mot.html',
   'ro/text-invitatii.html',
+  'ro/invitatii-digitale-sau-tiparite.html',
   'ro/despre.html',
 ]) {
   test(`${path} loads its icons without errors`, async ({ page }) => {

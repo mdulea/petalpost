@@ -12,7 +12,7 @@ export const pageLang = () => (typeof document === 'object' ? normalizeLang(docu
 /** @param {string} [lang] */
 export const localeOf = (lang) => (normalizeLang(lang) === 'ro' ? 'ro-RO' : 'en-US');
 
-// Every English and Romanian page and its reciprocal alternate. Occasions unique to Romanian have en: null.
+// Every English and Romanian page and its reciprocal alternate. Occasions and guides unique to Romanian have en: null.
 export const ROUTE_PAIRS = [
   { key: 'home', en: 'index.html', ro: 'ro/index.html', indexed: true },
   { key: 'editor', en: 'editor.html', ro: 'ro/editor.html', indexed: true },
@@ -33,6 +33,7 @@ export const ROUTE_PAIRS = [
     ro: 'ro/cand-sa-trimiti-invitatiile.html',
     indexed: true,
   },
+  { key: 'digital-or-printed', en: null, ro: 'ro/invitatii-digitale-sau-tiparite.html', indexed: true },
   { key: 'about', en: 'about.html', ro: 'ro/despre.html', indexed: true },
   { key: 'privacy', en: 'privacy.html', ro: 'ro/confidentialitate.html', indexed: true },
   { key: 'terms', en: 'terms.html', ro: 'ro/termeni.html', indexed: true },
