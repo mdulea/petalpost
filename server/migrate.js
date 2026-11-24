@@ -1,10 +1,10 @@
-// The schema migrations in migrations/*.sql apply once each, in name order, and schema_migrations records them.
+// The schema migrations in server/migrations/*.sql apply once each, in name order, and schema_migrations records them.
 // A file holds statements that each end with a semicolon at the end of a line.
 // Run: DATABASE_URL_UNPOOLED=<url> pnpm migrate
 import { readdir, readFile } from 'node:fs/promises';
 import { connect } from './postgres.js';
 
-const DIR = new URL('../migrations/', import.meta.url);
+const DIR = new URL('./migrations/', import.meta.url);
 
 // db has the Database shape of server/postgres.js. Each file applies in its own transaction.
 // Returns the names of the files applied by this call, in order.

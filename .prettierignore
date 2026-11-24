@@ -1,5 +1,5 @@
 # Third-party library, kept byte-for-byte as published.
-vendor/
+public/vendor/
 pnpm-lock.yaml
 .pnpm-store/
 .npm-cache/
@@ -7,5 +7,3 @@ pnpm-lock.yaml
 dist/
 .pglite/
 .worktrees/
-test-results/
-playwright-report/

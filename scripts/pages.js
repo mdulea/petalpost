@@ -1,21 +1,28 @@
 // Generates the site HTML that crawlers must read without running JavaScript, from the template catalog,
 // scripts/occasions.js and scripts/occasions-ro.js: one page per occasion in English and Romanian, and the
-// regions between <!-- generated:NAME --> and <!-- /generated:NAME --> markers in root and ro/ pages, which
+// regions between <!-- generated:NAME --> and <!-- /generated:NAME --> markers in public/ and public/ro/ pages, which
 // are the hreflang links, landing galleries, occasion links and every page footer.
-// generatePages() resolves a Map from repository-relative file path to its content, formatted with Prettier;
+// generatePages() resolves a Map from file path relative to public/ to its content, formatted with Prettier;
 // check-site.js fails when a committed file differs from it.
 // Run: pnpm pages, which writes the files.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
-import { alternatesFor, canonicalPath, categoryLabel, fileLang, languageSwitchHref, localeOf } from '../js/i18n.js';
-import { CONTACT, editorUrl, makeInviteData } from '../js/invite.js';
-import { categoriesFor, popularTemplatesFor, renderInvite, templatesFor } from '../js/templates.js';
+import {
+  alternatesFor,
+  canonicalPath,
+  categoryLabel,
+  fileLang,
+  languageSwitchHref,
+  localeOf,
+} from '../public/js/i18n.js';
+import { CONTACT, editorUrl, makeInviteData } from '../public/js/invite.js';
+import { categoriesFor, popularTemplatesFor, renderInvite, templatesFor } from '../public/js/templates.js';
 import { OCCASIONS } from './occasions.js';
 import { OCCASIONS_RO } from './occasions-ro.js';
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../public/', import.meta.url);
 const read = (file) => readFileSync(new URL(file, root), 'utf8');
 
 // Every absolute URL derives from the index.html canonical, so changing the production origin starts there.

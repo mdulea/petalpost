@@ -1,5 +1,5 @@
 // Guest replies, private links and the RSVP API client. It has no DOM access, because the browser and
-// server/api.js share it and scripts/check-rsvp.js runs it in Node.
+// server/api.js share it and tests/check-rsvp.js runs it in Node.
 import { UI, normalizeLang } from './i18n.js';
 
 export const REPLY_LIMITS = { name: 80, partySize: 10 };

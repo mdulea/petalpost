@@ -1,7 +1,7 @@
 ## Invariants
 
 - always: fonts + code self-hosted; pages load nothing external except Vercel's `/_vercel/insights/script.js`
-- forbidden: edit `vendor/` (byte-for-byte as published); commit `.env.local` or other `.env.*`
+- forbidden: edit `public/vendor/` (byte-for-byte as published); commit `.env.local` or other `.env.*`
 - ask first: changing production domain `https://www.petalpost.ro`
 - NEVER skip/disable/delete failing checks to pass
 
@@ -20,21 +20,21 @@ README.md sections, by need:
 - commands via `pnpm` only; global Node.js install forbidden
 - plain JavaScript; JSDoc types only where inference fails, e.g. DOM lookup element types; TypeScript strict off
 - module/function comments state contract; follow existing pattern
-- DOM-free logic -> `js/invite.js` or `js/templates.js`, so `scripts/` checks run in Node
+- DOM-free logic -> `public/js/invite.js` or `public/js/templates.js`, so `tests/` checks run in Node
 - new dependency -> justify
 
 ## Testing
 
-- behavior change -> add/update `node:test` checks in `scripts/`; test added to `scripts/check-*.js` or `scripts/*.spec.js` -> update header comment listing checks
+- behavior change -> add/update `node:test` checks in `tests/`; test added to `tests/check-*.js` or `tests/*.spec.js` -> update header comment listing checks
 - before finishing: `pnpm check` passes
 
 ## Gotchas
 
-- `scripts/server.js` matches Vercel: `vercel.json` headers; clean URLs off so `/editor.html` loads without redirect; `/` -> `index.html`, `/ro/` -> `ro/index.html`; dir listings off; `/api/*`, `/e/{id}`, `/ro/e/{id}` -> PGlite, never Neon; `check-site.js` checks it
+- `scripts/server.js` matches Vercel: `vercel.json` headers; clean URLs off so `/editor.html` loads without redirect; serves `public/`; `/` -> `public/index.html`, `/ro/` -> `public/ro/index.html`; dir listings off; `/api/*`, `/e/{id}`, `/ro/e/{id}` -> PGlite, never Neon; `check-site.js` checks it
 - inline scripts blocked by CSP -> page scripts in files; inline `style` attributes allowed for `renderInvite`
 - package store: `.pnpm-store/` inside repo
-- `js/analytics.js` == classic script; ESLint `sourceType: 'script'`
-- new page-level global from classic script -> declare in `js/globals.d.ts` + ESLint globals
+- `public/js/analytics.js` == classic script; ESLint `sourceType: 'script'`
+- new page-level global from classic script -> declare in `types/globals.d.ts` + ESLint globals
 
 ## Workflow
 
@@ -42,6 +42,7 @@ README Workflow == procedure; agent limits:
 
 - work + commit only in own worktree; main checkout + other agents' worktrees forbidden, except post-merge cleanup
 - push + open pull request only when user says branch ready
+- T3 `pull_request_*` tools read main checkout branch -> from `.worktrees/` push + open via `gh pr create`
 - merge -> only on request
 - after own pull request merges -> in main checkout `git pull --ff-only`, then `pnpm worktree remove <type>-<task>`; unasked
 - `pnpm migrate` against Neon forbidden

@@ -1,5 +1,5 @@
 // The text of each occasion page that scripts/pages.js generates, keyed by template category.
-// Every category in js/templates.js needs an entry; check-site.js fails when one is missing.
+// Every category in public/js/templates.js needs an entry; check-site.js fails when one is missing.
 // A section renders intro, list, quotes, then paragraphs. Its strings are trusted HTML written here, so they may hold links and inline markup.
 
 export const OCCASIONS = {

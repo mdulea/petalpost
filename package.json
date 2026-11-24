@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "check": "pnpm test && pnpm typecheck && pnpm test:browser",
+    "check": "pnpm check:fast && pnpm test:browser",
+    "check:fast": "pnpm test && pnpm typecheck",
     "dev": "node scripts/server.js --port 3000",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -20,9 +21,13 @@
     "migrate": "node server/migrate.js",
     "pages": "node scripts/pages.js",
     "typecheck": "tsc -p .",
-    "test": "pnpm format:check && pnpm lint && node --test scripts/check-*.js",
+    "test": "pnpm format:check && pnpm lint && node --test tests/check-*.js",
     "test:browser": "playwright test",
     "worktree": "node scripts/worktree.js"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "printWidth": 120
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16",

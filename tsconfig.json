@@ -7,7 +7,8 @@
     "target": "esnext",
     "module": "nodenext",
     "lib": ["esnext", "dom", "dom.iterable"],
-    "types": ["node", "emscripten"]
+    "types": ["node", "emscripten"],
+    "rootDirs": [".", "public"]
   },
-  "include": ["js", "scripts", "server", "api", "eslint.config.js", "playwright.config.js"]
+  "include": ["public/js", "types", "scripts", "tests", "server", "api", "eslint.config.js", "playwright.config.js"]
 }

@@ -4,7 +4,7 @@
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { HERO_TEMPLATES, RO_HERO_TEMPLATES, templatesFor } from '../js/templates.js';
+import { HERO_TEMPLATES, RO_HERO_TEMPLATES, templatesFor } from '../public/js/templates.js';
 
 // Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
 function watch(page) {

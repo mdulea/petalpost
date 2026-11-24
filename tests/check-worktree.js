@@ -3,8 +3,9 @@
 // that is not lowercase and hyphenated, runs while the main checkout has uncommitted changes, or when pnpm worktree
 // remove leaves the worktree, an empty .worktrees directory, its local branch, its remote branch or its
 // remote-tracking branch behind. Each case runs the command against a throwaway repository
-// with a local bare origin and skips the dependency install.
-// Run: node scripts/check-worktree.js
+// with a local bare origin and skips the dependency install. Fails too when a GIT_DIR inherited from a git hook or
+// git rebase --exec redirects these git calls away from the throwaway repository.
+// Run: node tests/check-worktree.js
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -13,13 +14,18 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
 
-const SCRIPT = fileURLToPath(new URL('./worktree.js', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../scripts/worktree.js', import.meta.url));
 const temps = [];
 after(() => temps.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+
+// A git hook or git rebase --exec sets GIT_DIR and GIT_INDEX_FILE, which would point every git call here at the
+// repository running the checks. Dropping every GIT_ variable keeps the calls on the throwaway repository.
+const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
 
 const git = (cwd, ...args) =>
   execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], {
     cwd,
+    env,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
@@ -44,13 +50,26 @@ const setup = () => {
   return { dir, origin, main };
 };
 
-const worktree = (cwd, ...args) => spawnSync(process.execPath, [SCRIPT, ...args], { cwd, encoding: 'utf8' });
+const worktree = (cwd, ...args) => spawnSync(process.execPath, [SCRIPT, ...args], { cwd, env, encoding: 'utf8' });
 
 test('add creates branch feat/guest-list and worktree .worktrees/feat-guest-list', () => {
   const { main } = setup();
   const result = worktree(main, 'add', 'feat', 'guest-list', '--no-install');
   assert.equal(result.status, 0, result.stderr);
   assert.equal(git(join(main, '.worktrees', 'feat-guest-list'), 'branch', '--show-current'), 'feat/guest-list');
+});
+
+test('the checks leave the repository named by an inherited GIT_DIR untouched', () => {
+  const { main: decoy } = setup();
+  const before = git(decoy, 'rev-parse', 'HEAD');
+  const result = spawnSync(
+    process.execPath,
+    ['--test', '--test-name-pattern=^add creates branch', fileURLToPath(import.meta.url)],
+    // NODE_TEST_CONTEXT would make the nested run report to this one instead of exiting with its own status.
+    { env: { ...env, NODE_TEST_CONTEXT: undefined, GIT_DIR: join(decoy, '.git') }, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.deepEqual([git(decoy, 'rev-parse', 'HEAD'), git(decoy, 'status', '--porcelain')], [before, '']);
 });
 
 test('add starts the branch from the latest origin/main when local main is behind', () => {

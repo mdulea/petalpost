@@ -21,9 +21,9 @@
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
 // or 409 with the error and the current record when the version is stale.
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { apiMessages, normalizeLang } from '../js/i18n.js';
-import { readPublished } from '../js/invite.js';
-import { ID_PATTERN, makeReply, REPLY_LIMITS, SECRET_PATTERN, tally } from '../js/rsvp.js';
+import { apiMessages, normalizeLang } from '../public/js/i18n.js';
+import { readPublished } from '../public/js/invite.js';
+import { ID_PATTERN, makeReply, REPLY_LIMITS, SECRET_PATTERN, tally } from '../public/js/rsvp.js';
 
 const RETENTION_DAYS = 90;
 const DAILY_EVENTS = 20;
