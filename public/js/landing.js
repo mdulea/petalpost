@@ -1,6 +1,6 @@
 import './icons.js';
 import './language-banner.js';
-import { UI, categoryLabel, localeOf, pageLang } from './i18n.js';
+import { UI, categoryLabel, localeOf, normalizeLang } from './i18n.js';
 import {
   ACCENTS,
   BANNER_TEMPLATE,
@@ -13,7 +13,7 @@ import {
 import { mountInvites } from './mount.js';
 import { editorUrl, makeInviteData } from './invite.js';
 
-const lang = pageLang();
+const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
 const copy = UI[lang].landing;
 const catalog = templatesFor(lang);

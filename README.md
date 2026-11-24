@@ -121,7 +121,7 @@ Run it before `check`, which only checks formatting and lint and never rewrites 
 
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
 
-`test` runs the Prettier format check, ESLint and the contrast, invite, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the contrast, DOM-free, invite, paths, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
