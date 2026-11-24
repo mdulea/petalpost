@@ -106,7 +106,7 @@ A lost management link cannot be recovered.
 | Test suite     | `pnpm test`                            |
 | One check file | `pnpm exec node tests/check-invite.js` |
 | Lint           | `pnpm lint`                            |
-| Format         | `pnpm format`                          |
+| Format and fix | `pnpm fix`                             |
 | Format check   | `pnpm format:check`                    |
 | Type check     | `pnpm typecheck`                       |
 | Browser tests  | `pnpm test:browser`                    |
@@ -115,6 +115,9 @@ A lost management link cannot be recovered.
 | Migrations     | `pnpm migrate`                         |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
+
+`fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
+Run it before `check`, which only checks formatting and lint and never rewrites a file.
 
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
 

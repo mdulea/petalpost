@@ -26,7 +26,7 @@ README.md sections, by need:
 ## Testing
 
 - behavior change -> add/update `node:test` checks in `tests/`; test added to `tests/check-*.js` or `tests/*.spec.js` -> update header comment listing checks
-- before finishing: `pnpm check` passes
+- before finishing: `pnpm fix`, then `pnpm check` passes
 
 ## Gotchas
 
