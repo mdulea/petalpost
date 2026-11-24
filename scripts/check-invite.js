@@ -4,8 +4,8 @@
 // Run: node scripts/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import * as templates from '../js/templates.js';
-import * as invite from '../js/invite.js';
+import * as templates from '../public/js/templates.js';
+import * as invite from '../public/js/invite.js';
 
 const ctx = { ...templates, ...invite };
 

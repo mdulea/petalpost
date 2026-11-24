@@ -8,7 +8,7 @@ node_modules/
 .prettierignore
 eslint.config.js
 tsconfig.json
-js/globals.d.ts
+types/
 .env
 .env.*
 # The build runs scripts/build.js on Vercel; the other scripts are local tooling.

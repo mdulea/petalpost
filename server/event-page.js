@@ -2,14 +2,14 @@
 // per-event Open Graph metadata built from the event's title, date, time and venue, noindex so personal invites stay
 // out of search engines, and cache-control: no-store so edits and deletions take effect immediately.
 import { readFileSync } from 'node:fs';
-import { localeOf, normalizeLang } from '../js/i18n.js';
-import { eventPreviewMeta, makeInviteData } from '../js/invite.js';
-import { ID_PATTERN } from '../js/rsvp.js';
-import { escapeHtml, getTemplate } from '../js/templates.js';
+import { localeOf, normalizeLang } from '../public/js/i18n.js';
+import { eventPreviewMeta, makeInviteData } from '../public/js/invite.js';
+import { ID_PATTERN } from '../public/js/rsvp.js';
+import { escapeHtml, getTemplate } from '../public/js/templates.js';
 
 const DEFAULT_TEMPLATES = {
-  en: readFileSync(new URL('../editor.html', import.meta.url), 'utf8'),
-  ro: readFileSync(new URL('../ro/editor.html', import.meta.url), 'utf8'),
+  en: readFileSync(new URL('../public/editor.html', import.meta.url), 'utf8'),
+  ro: readFileSync(new URL('../public/ro/editor.html', import.meta.url), 'utf8'),
 };
 
 const FALLBACK_META = {

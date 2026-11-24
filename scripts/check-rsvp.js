@@ -14,8 +14,8 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { after, test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
-import { getTemplate } from '../js/templates.js';
-import { eventLink, makeInviteData } from '../js/invite.js';
+import { getTemplate } from '../public/js/templates.js';
+import { eventLink, makeInviteData } from '../public/js/invite.js';
 import {
   createClient,
   editorPage,
@@ -25,7 +25,7 @@ import {
   newSecret,
   readCredential,
   responseLink,
-} from '../js/rsvp.js';
+} from '../public/js/rsvp.js';
 import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';

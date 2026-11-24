@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
-import * as ctx from '../js/templates.js';
+import * as ctx from '../public/js/templates.js';
 
 const lum = (hex) => {
   const [r, g, b] = [1, 3, 5]
@@ -31,7 +31,7 @@ for (const t of ctx.TEMPLATES) {
   });
 }
 
-const css = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../public/css/styles.css', import.meta.url), 'utf8');
 const tokens = Object.fromEntries(
   [...css.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6});/gi)].map(([, name, hex]) => [name, hex]),
 );

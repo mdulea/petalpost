@@ -1,5 +1,7 @@
 // Draws the link preview card for og-card.html (?lang=ro for Romanian); the page saves it as og-image.png.
 // An external module, because the Content-Security-Policy that pnpm dev sends blocks inline scripts.
+// The imports are relative to its URL, /scripts/og-card.js, so ../js/ is public/js/. rootDirs in tsconfig.json
+// resolves them the same way for the type check.
 import '../js/icons.js';
 import { localeOf, normalizeLang } from '../js/i18n.js';
 import { getTemplate, heroTemplatesFor, renderInvite } from '../js/templates.js';

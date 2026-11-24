@@ -1,4 +1,4 @@
-// The local server for pnpm dev and the browser checks, in place of Vercel. It serves the site files that buildSite
+// The local server for pnpm dev and the browser checks, in place of Vercel. It serves the files in public/ that buildSite
 // copies, with the vercel.json headers on every path and its redirects, / as index.html, no clean URLs, no directory
 // listing and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
 // /api paths go to createApi and /e paths go to createEventPage over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
@@ -13,7 +13,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
-import { isSiteFile } from './build.js';
+import { SITE } from './build.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -38,8 +38,8 @@ const REDIRECTS = VERCEL.redirects.map((rule) => ({ ...rule, pattern: new RegExp
 // files, because the README steps for og-image.png and the browser checks open it from this server.
 const LOCAL_TOOLS = ['scripts/og-card.html', 'scripts/og-card.js'];
 
-// The file a static path names, or null. A path that leaves the root, has a dot segment, or is neither a site file
-// nor a local tool names no file.
+// The file a static path names, or null. A local tool path names its file in the repository, and any other path
+// names a file in public/. A path that leaves its directory or has a dot segment names no file.
 async function staticFile(pathname) {
   let path;
   try {
@@ -49,9 +49,9 @@ async function staticFile(pathname) {
   }
   const segments = path.split(/[/\\]/).slice(1);
   if (segments.some((s) => s.startsWith('.'))) return null;
-  if (!isSiteFile(segments.join('/')) && !LOCAL_TOOLS.includes(segments.join('/'))) return null;
-  const file = join(root, ...segments);
-  if (!file.startsWith(root.endsWith(sep) ? root : root + sep)) return null;
+  const dir = LOCAL_TOOLS.includes(segments.join('/')) ? root : SITE;
+  const file = join(dir, ...segments);
+  if (!file.startsWith(dir.endsWith(sep) ? dir : dir + sep)) return null;
   const info = await stat(file).catch(() => null);
   return info?.isFile() ? file : null;
 }
@@ -100,7 +100,7 @@ export async function startServer({ port, memory = false, dailyEvents }) {
     }
     const file = await staticFile(url.pathname);
     const status = file ? 200 : 404;
-    const path = file ?? join(root, '404.html');
+    const path = file ?? join(SITE, '404.html');
     headers['content-type'] = TYPES[extname(path)] ?? 'application/octet-stream';
     res.writeHead(status, headers);
     res.end(req.method === 'HEAD' ? undefined : await readFile(path));

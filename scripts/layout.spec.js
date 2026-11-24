@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-const CSS = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
+const CSS = readFileSync(new URL('../public/css/styles.css', import.meta.url), 'utf8');
 const BREAKPOINTS = [...CSS.matchAll(/\((max|min)-width:\s*(\d+)px\)/g)].flatMap(([, side, px]) =>
   side === 'max' ? [Number(px), Number(px) + 1] : [Number(px) - 1, Number(px)],
 );

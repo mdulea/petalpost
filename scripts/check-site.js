@@ -8,19 +8,19 @@ import { join, relative, sep } from 'node:path';
 import { after, test } from 'node:test';
 import { buildSite } from './build.js';
 import { startServer } from './server.js';
-import { alternatesFor, canonicalPath, fileLang } from '../js/i18n.js';
-import { EDITABLE } from '../js/invite.js';
-import { ACCENTS, TEMPLATES, categoriesFor, templatesFor } from '../js/templates.js';
+import { alternatesFor, canonicalPath, fileLang } from '../public/js/i18n.js';
+import { EDITABLE } from '../public/js/invite.js';
+import { ACCENTS, TEMPLATES, categoriesFor, templatesFor } from '../public/js/templates.js';
 import { OCCASIONS } from './occasions.js';
 import { OCCASIONS_RO } from './occasions-ro.js';
 import { ORIGIN, generatePages } from './pages.js';
 
-const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+const read = (file) => readFileSync(new URL(`../public/${file}`, import.meta.url), 'utf8');
 const attr = (html, pattern) => (html.match(pattern) || [])[1];
 
 const allHtmlFiles = [
-  ...readdirSync(new URL('..', import.meta.url)).filter((file) => file.endsWith('.html')),
-  ...readdirSync(new URL('../ro', import.meta.url))
+  ...readdirSync(new URL('../public/', import.meta.url)).filter((file) => file.endsWith('.html')),
+  ...readdirSync(new URL('../public/ro', import.meta.url))
     .filter((file) => file.endsWith('.html'))
     .map((file) => `ro/${file}`),
 ];
@@ -50,12 +50,12 @@ for (const { file, html } of pages) {
     assert.equal(ogUrl, canonical);
     assert.deepEqual(parseAlternates(html), alternatesFor(file, ORIGIN));
     assert.ok(
-      existsSync(new URL(`..${new URL(ogImage).pathname}`, import.meta.url)),
+      existsSync(new URL(`../public${new URL(ogImage).pathname}`, import.meta.url)),
       `og:image ${ogImage} has no file`,
     );
     const icon = attr(html, /<link rel="icon" href="([^"]+)"/);
     const iconPath = icon ? new URL(icon, `http://site/${file}`).pathname.slice(1) : '';
-    assert.ok(icon && existsSync(new URL(`../${iconPath}`, import.meta.url)), 'missing favicon link or file');
+    assert.ok(icon && existsSync(new URL(`../public/${iconPath}`, import.meta.url)), 'missing favicon link or file');
   });
 }
 
@@ -166,7 +166,7 @@ test('no page loads a resource from another origin', () => {
 });
 
 test('no script writes a cookie', () => {
-  const writers = readdirSync(new URL('../js', import.meta.url)).filter(
+  const writers = readdirSync(new URL('../public/js', import.meta.url)).filter(
     (file) => file.endsWith('.js') && /document\.cookie|cookieStore/.test(read(`js/${file}`)),
   );
   assert.deepEqual(writers, []);
@@ -253,7 +253,7 @@ test('index.html and ro/index.html show the template and accent counts that land
 
 // vendor/ stays byte-for-byte as published. Replacing the library means updating this hash and THIRD_PARTY_NOTICES.txt.
 test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-to-image.js', () => {
-  const bytes = readFileSync(new URL('../vendor/html-to-image.js', import.meta.url));
+  const bytes = readFileSync(new URL('../public/vendor/html-to-image.js', import.meta.url));
   assert.equal(
     createHash('sha256').update(bytes).digest('hex'),
     '0181b9a4ea3351540751b2e72b6baecb5c2297093fcb0bd2af94fc531cb0fbda',
@@ -262,12 +262,14 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
 
 // scripts/server.js runs pnpm dev and the browser checks in place of Vercel, so it must answer like production:
 // the vercel.json headers on every path, / and /ro/ as index.html, no clean URLs, no directory listing, 404.html for
-// unknown paths, no dotfiles, no file outside the buildSite allowlist, /api paths through the API and /e/{id} or
+// unknown paths, no dotfiles, no file outside public/, /api paths through the API and /e/{id} or
 // /ro/e/{id} through the dynamic event page.
 const local = await startServer({ port: 0, memory: true });
 after(() => local.close());
 const fetchLocal = (path) => fetch(new URL(path, local.url), { redirect: 'manual' });
-const vercelHeaders = JSON.parse(read('vercel.json')).headers.flatMap((rule) => rule.headers);
+const vercelHeaders = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).headers.flatMap(
+  (rule) => rule.headers,
+);
 
 for (const path of [
   '/',
