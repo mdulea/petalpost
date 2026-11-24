@@ -179,7 +179,11 @@ export const UI = {
       eventLinkCopied: 'Invitation link copied. Paste it into a message to your guests.',
       eventLinkShared: 'Invitation link shared.',
       manageLinkCopied: 'Management link copied. Keep it somewhere private.',
-      replyInvalid: (max) => `Enter your name, and a party size from 1 to ${max} when you come.`,
+      replyErrors: (max) => ({
+        name: 'Enter your name.',
+        attending: 'Choose whether you will attend.',
+        partySize: `Enter a number from 1 to ${max}.`,
+      }),
       sampleReply:
         'Sample reply checked locally. Nothing was sent. Use Make your own to collect real replies and track headcount.',
       sendingReply: 'Sending your reply.',
@@ -278,7 +282,11 @@ export const UI = {
       eventLinkCopied: 'Linkul invitației a fost copiat. Trimite-l într-un mesaj invitaților.',
       eventLinkShared: 'Linkul invitației a fost distribuit.',
       manageLinkCopied: 'Linkul de administrare a fost copiat. Păstrează-l într-un loc privat.',
-      replyInvalid: (max) => `Introdu numele tău și un număr de persoane de la 1 la ${max} dacă participi.`,
+      replyErrors: (max) => ({
+        name: 'Scrie-ți numele.',
+        attending: 'Alege dacă participi.',
+        partySize: `Scrie un număr de la 1 la ${max}.`,
+      }),
       sampleReply:
         'Răspunsul demonstrativ a fost verificat local. Nimic nu a fost trimis. Apasă „Creează invitația ta” pentru răspunsuri reale.',
       sendingReply: 'Se trimite răspunsul.',

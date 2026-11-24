@@ -18,10 +18,16 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${port}/` },
   // WebKit is Safari's engine, which sizes date, time and other native controls differently from Chromium.
   // Linux WebKit resizes about ten times slower than Chromium. With two workers, a viewport sweep takes up to 36
-  // seconds there, so the default 30-second timeout fails it.
+  // seconds there, so the default 30-second timeout fails it. WebKit runs the layout suite and every test tagged
+  // @webkit; grep matches the file name and the tags in each test's title path.
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'webkit', testMatch: 'layout.spec.js', timeout: 120000, use: { ...devices['iPhone 15'] } },
+    {
+      name: 'webkit',
+      grep: [/layout\.spec\.js/, /@webkit/],
+      timeout: 120000,
+      use: { ...devices['iPhone 15'] },
+    },
   ],
   // A port of its own and no reuse: another program on the port, such as another worktree's server, fails the run
   // instead of being tested in place of scripts/server.js. With no url, Playwright skips its own port probe, so

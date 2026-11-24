@@ -452,8 +452,44 @@ const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
 const withdrawButton = /** @type {HTMLButtonElement} */ (document.getElementById('withdrawReply'));
 
-const attendingChecked = () =>
-  /** @type {HTMLInputElement} */ (rsvpForm.querySelector('input[name="attending"]:checked')).value === 'yes';
+// The checked answer as a boolean, or null when no choice is checked.
+function attendingChecked() {
+  const checked = /** @type {HTMLInputElement} */ (rsvpForm.querySelector('input[name="attending"]:checked'));
+  return checked ? checked.value === 'yes' : null;
+}
+
+// Each reply field shows its own error in a message below it, which becomes the field's description. The answer's
+// field is its radio group, and focus goes to the group's first choice.
+const replyErrors = copy.replyErrors(REPLY_LIMITS.partySize);
+const replyFields = Object.entries({
+  name: [nameInput, nameInput],
+  attending: [rsvpForm.querySelector('[role="radiogroup"]'), rsvpForm.querySelector('input[name="attending"]')],
+  partySize: [partySizeInput, partySizeInput],
+}).map(([name, [field, focusTarget]]) => {
+  const message = document.createElement('p');
+  message.className = 'field-error';
+  message.id = `${name}Error`;
+  message.hidden = true;
+  field.closest('.field').append(message);
+  return { name, field, focusTarget: /** @type {HTMLElement} */ (focusTarget), message };
+});
+
+// Marks the fields named in invalid, clears the others and focuses the first invalid field.
+function showReplyErrors(invalid) {
+  for (const { name, field, message } of replyFields) {
+    const isInvalid = invalid.includes(name);
+    message.hidden = !isInvalid;
+    message.textContent = isInvalid ? replyErrors[name] : '';
+    if (isInvalid) {
+      field.setAttribute('aria-invalid', 'true');
+      field.setAttribute('aria-describedby', message.id);
+    } else {
+      field.removeAttribute('aria-invalid');
+      field.removeAttribute('aria-describedby');
+    }
+  }
+  replyFields.find(({ name }) => invalid.includes(name))?.focusTarget.focus();
+}
 
 // A declined reply has no party; the size input keeps its number for a change of mind.
 function syncPartySize() {
@@ -482,13 +518,14 @@ rsvpForm.addEventListener('change', syncPartySize);
 rsvpForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const attending = attendingChecked();
-  const reply = makeReply({
+  const { reply, invalid } = makeReply({
     name: nameInput.value,
     attending,
     partySize: attending ? Number(partySizeInput.value) : 0,
   });
+  showReplyErrors(invalid);
   if (!reply) {
-    rsvpStatus.textContent = copy.replyInvalid(REPLY_LIMITS.partySize);
+    rsvpStatus.textContent = '';
     return;
   }
   if (state.sample) {

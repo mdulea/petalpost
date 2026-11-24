@@ -8,18 +8,26 @@ export const REPLY_LIMITS = { name: 80, partySize: 10 };
 export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-// The only constructor for a reply: untrusted {name, attending, partySize} becomes a valid reply, or null.
+// The only constructor for a reply: untrusted {name, attending, partySize} becomes {reply, invalid}. reply is the
+// valid reply, or null when invalid lists the invalid fields in form order: 'name', 'attending', 'partySize'.
 // The name is trimmed and holds 1 to 80 code points without control characters. An attending guest brings
-// a party of 1 to 10 people; a declined reply has a party size of exactly 0.
+// a party of 1 to 10 people; a declined reply has a party size of exactly 0. Without a valid answer, the party size
+// only has to be a whole number.
 export function makeReply(source) {
-  if (!source || typeof source !== 'object') return null;
-  const { name, attending, partySize } = source;
-  if (typeof name !== 'string' || typeof attending !== 'boolean' || !Number.isInteger(partySize)) return null;
-  const trimmed = name.trim();
+  const { name, attending, partySize } = source && typeof source === 'object' ? source : {};
+  const trimmed = typeof name === 'string' ? name.trim() : '';
   const length = [...trimmed].length;
-  if (length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed)) return null;
-  if (attending ? partySize < 1 || partySize > REPLY_LIMITS.partySize : partySize !== 0) return null;
-  return { name: trimmed, attending, partySize };
+  const invalid = [];
+  if (length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed)) invalid.push('name');
+  if (typeof attending !== 'boolean') invalid.push('attending');
+  if (
+    !Number.isInteger(partySize) ||
+    (attending === true && (partySize < 1 || partySize > REPLY_LIMITS.partySize)) ||
+    (attending === false && partySize !== 0)
+  ) {
+    invalid.push('partySize');
+  }
+  return { reply: invalid.length ? null : { name: trimmed, attending, partySize }, invalid };
 }
 
 // Totals for the host: responses counts every reply, yes and no count the answers,

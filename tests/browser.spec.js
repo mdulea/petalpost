@@ -1,6 +1,6 @@
-// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, the calendar download, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
-// Romanian language banner breaks in Chromium, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
+// Romanian language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
 // English browser or on a page without a pair, a close does not last across pages, a close with blocked storage breaks
 // the page, or it writes a cookie, requests another origin or changes the canonical and hreflang links.
@@ -174,7 +174,7 @@ test('the hero sample link opens a client-only sample guest invitation with loca
   expect(await readFile(await (await download).path(), 'utf8')).toContain(`SUMMARY:${sampleTitle}`);
 
   await page.click('#sendReply');
-  await expect(page.locator('#rsvpStatus')).toContainText('Enter your name');
+  await expect(page.locator('#guestName')).toHaveAccessibleDescription('Enter your name.');
   await expect(page.locator('#replySaved')).toBeHidden();
 
   await page.fill('#guestName', 'Alex');
@@ -186,6 +186,74 @@ test('the hero sample link opens a client-only sample guest invitation with loca
   expect(apiRequests).toEqual([]);
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
   expect(problems).toEqual([]);
+});
+
+// The reply form's invalid fields: each name in invalid has aria-invalid and its error as its description, and every
+// other field has neither.
+async function expectFieldErrors(page, invalid) {
+  const fields = {
+    '#guestName': 'name',
+    '[role="radiogroup"]': 'attending',
+    '#partySize': 'partySize',
+  };
+  for (const [selector, field] of Object.entries(fields)) {
+    const locator = page.locator(`#rsvpForm ${selector}`);
+    if (field in invalid) {
+      await expect(locator).toHaveAttribute('aria-invalid', 'true');
+      await expect(locator).toHaveAccessibleDescription(invalid[field]);
+      await expect(page.getByText(invalid[field], { exact: true })).toBeVisible();
+    } else {
+      await expect(locator).not.toHaveAttribute('aria-invalid');
+      await expect(locator).not.toHaveAttribute('aria-describedby');
+    }
+  }
+}
+
+// Unchecks both answers, a state the form only reaches when a script or extension changes it.
+const clearAnswer = (page) =>
+  page.locator('#rsvpForm input[name="attending"]').evaluateAll((radios) => {
+    for (const radio of /** @type {HTMLInputElement[]} */ (radios)) radio.checked = false;
+  });
+
+test(
+  'an invalid reply shows an error under each invalid field, focuses the first and clears each fixed one',
+  { tag: '@webkit' },
+  async ({ page }) => {
+    const problems = watch(page);
+    await page.goto('editor.html?view=1&sample=1');
+    await page.fill('#partySize', '0');
+    await page.click('#sendReply');
+    await expectFieldErrors(page, { name: 'Enter your name.', partySize: 'Enter a number from 1 to 10.' });
+    await expect(page.locator('#guestName')).toBeFocused();
+    await expect(page.locator('#rsvpStatus')).toBeEmpty();
+
+    await page.fill('#guestName', 'Alex');
+    await page.click('#sendReply');
+    await expectFieldErrors(page, { partySize: 'Enter a number from 1 to 10.' });
+    await expect(page.locator('#partySize')).toBeFocused();
+
+    await clearAnswer(page);
+    await page.click('#sendReply');
+    await expectFieldErrors(page, { attending: 'Choose whether you will attend.' });
+    await expect(page.locator('#rsvpForm input[name="attending"]').first()).toBeFocused();
+
+    await page.check('#rsvpForm input[name="attending"][value="yes"]');
+    await page.fill('#partySize', '2');
+    await page.click('#sendReply');
+    await expectFieldErrors(page, {});
+    await expect(page.locator('#rsvpStatus')).toContainText('Nothing was sent');
+    expect(problems).toEqual([]);
+  },
+);
+
+test('the Romanian reply form shows its field errors in Romanian', { tag: '@webkit' }, async ({ page }) => {
+  await page.goto('ro/editor.html?view=1&sample=1');
+  await page.fill('#partySize', '11');
+  await page.click('#sendReply');
+  await expectFieldErrors(page, { name: 'Scrie-ți numele.', partySize: 'Scrie un număr de la 1 la 10.' });
+  await clearAnswer(page);
+  await page.click('#sendReply');
+  await expectFieldErrors(page, { name: 'Scrie-ți numele.', attending: 'Alege dacă participi.' });
 });
 
 test('the link preview generator draws the hero templates in English and Romanian', async ({ page }) => {
