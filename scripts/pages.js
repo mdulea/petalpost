@@ -1,7 +1,7 @@
 // Generates the site HTML that crawlers must read without running JavaScript, from the template catalog,
 // scripts/occasions.js and scripts/occasions-ro.js: one page per occasion in English and Romanian, and the
 // regions between <!-- generated:NAME --> and <!-- /generated:NAME --> markers in public/ and public/ro/ pages, which
-// are the hreflang links, landing galleries, occasion links and every page footer.
+// are the hreflang links, JSON-LD structured data, landing galleries, occasion links and every page footer.
 // generatePages() resolves a Map from file path relative to public/ to its content, formatted with Prettier;
 // check-site.js fails when a committed file differs from it.
 // Run: pnpm pages, which writes the files.
@@ -16,6 +16,7 @@ import {
   fileLang,
   languageSwitchHref,
   localeOf,
+  routeForFile,
 } from '../public/js/i18n.js';
 import { CONTACT, editorUrl, makeInviteData } from '../public/js/invite.js';
 import { categoriesFor, popularTemplatesFor, renderInvite, templatesFor } from '../public/js/templates.js';
@@ -65,6 +66,7 @@ const PAGE_COPY = {
     switchShort: 'RO',
     switchLabel: 'Română',
     switchLang: 'ro',
+    currency: 'USD',
     ogLocale: 'en_US',
     ogImage: `${ORIGIN}/og-image.png`,
     ogImageAlt: 'Petalpost: three hand-drawn invitation cards beside the words Your day, your invite.',
@@ -101,6 +103,7 @@ const PAGE_COPY = {
     switchShort: 'EN',
     switchLabel: 'English',
     switchLang: 'en',
+    currency: 'RON',
     ogLocale: 'ro_RO',
     ogImage: `${ORIGIN}/ro/og-image.png`,
     ogImageAlt: 'Petalpost: trei invitații ilustrate alături de mesajul Ziua ta, invitația ta.',
@@ -111,6 +114,60 @@ const hreflangLinks = (file) =>
   alternatesFor(file, ORIGIN)
     .map(({ hreflang, href }) => `<link rel="alternate" hreflang="${hreflang}" href="${href}" />`)
     .join('\n    ');
+
+// A JSON-LD block. Its script type makes it a data block that the browser never runs, so script-src 'self' allows it.
+// Escaping < keeps a value from closing the script element.
+const jsonLd = (data) =>
+  `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', ...data }).replace(/</g, '\\u003c')}</script>`;
+
+// Describes Petalpost as a free web application on the home page in lang, under that page's meta description.
+const webApplication = (lang, description) =>
+  jsonLd({
+    '@type': 'WebApplication',
+    name: 'Petalpost',
+    url: `${ORIGIN}${PAGE_COPY[lang].footerHome.href}`,
+    inLanguage: lang,
+    description,
+    applicationCategory: 'LifestyleApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: PAGE_COPY[lang].currency },
+  });
+
+// Two levels: the home page in the page's language, then the page itself under its heading.
+// The heading is plain text; markup or an entity would reach crawlers verbatim, so it throws.
+const breadcrumb = (lang, heading, url) => {
+  if (/[<&]/.test(heading)) throw new Error(`breadcrumb heading "${heading}" is not plain text`);
+  return jsonLd({
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: PAGE_COPY[lang].footerHome.label,
+        item: `${ORIGIN}${PAGE_COPY[lang].footerHome.href}`,
+      },
+      { '@type': 'ListItem', position: 2, name: heading, item: url },
+    ],
+  });
+};
+
+// Fills the structured region of a hand-written page: a WebApplication on the home pages, a breadcrumb on the guides.
+// It reads the committed meta description or h1, so the JSON-LD repeats the visible text. Any other page throws.
+const structuredData = (file, html) => {
+  const lang = fileLang(file);
+  const route = routeForFile(file);
+  if (route?.key === 'home') {
+    return webApplication(lang, html.match(/<meta\s+name="description"\s+content="([^"]+)"/)[1]);
+  }
+  if (route?.guide) {
+    const heading = html
+      .match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)[1]
+      .replace(/\s+/g, ' ')
+      .trim();
+    return breadcrumb(lang, heading, `${ORIGIN}${canonicalPath(file)}`);
+  }
+  throw new Error(`${file} has a structured-data region but is neither a home page nor a guide`);
+};
 
 const occasionLinks = (categories, lang) => {
   const occasions = OCCASIONS_BY_LANG[lang];
@@ -170,6 +227,7 @@ const footer = (lang) => {
 
 const REGIONS = {
   hreflang: (file) => hreflangLinks(file),
+  structured: structuredData,
   gallery: (file) => {
     const lang = fileLang(file);
     return templatesFor(lang)
@@ -228,6 +286,7 @@ function occasionPage(category, lang) {
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="${url}" />
     <!-- generated:hreflang -->${hreflangLinks(o.file)}<!-- /generated:hreflang -->
+    ${breadcrumb(lang, o.heading, url)}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Petalpost" />
     <meta property="og:locale" content="${copy.ogLocale}" />
@@ -277,10 +336,10 @@ function occasionPage(category, lang) {
 `;
 }
 
-// Replaces the content of every known marker region in html.
+// Replaces the content of every known marker region in html. A region reads the file name and the committed html.
 const fillRegions = (file, html) =>
   html.replace(/(<!-- generated:(\w+) -->)[\s\S]*?(<!-- \/generated:\2 -->)/g, (match, open, name, close) =>
-    REGIONS[name] ? `${open}${REGIONS[name](file)}${close}` : match,
+    REGIONS[name] ? `${open}${REGIONS[name](file, html)}${close}` : match,
   );
 
 function siteHtmlFiles() {
