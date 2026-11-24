@@ -143,7 +143,7 @@ const webApplication = (lang, description) =>
 
 // Two levels: the home page in the page's language, then the page itself under its heading.
 // The heading is plain text; markup or an entity would reach crawlers verbatim, so it throws.
-const breadcrumb = (lang, heading, url) => {
+export const breadcrumb = (lang, heading, url) => {
   if (/[<&]/.test(heading)) throw new Error(`breadcrumb heading "${heading}" is not plain text`);
   return jsonLd({
     '@type': 'BreadcrumbList',
@@ -161,7 +161,7 @@ const breadcrumb = (lang, heading, url) => {
 
 // Fills the structured region of a hand-written page: a WebApplication on the home pages, a breadcrumb on the guides.
 // It reads the committed meta description or h1, so the JSON-LD repeats the visible text. Any other page throws.
-const structuredData = (file, html) => {
+export const structuredData = (file, html) => {
   const lang = fileLang(file);
   const route = routeForFile(file);
   if (route?.key === 'home') {
