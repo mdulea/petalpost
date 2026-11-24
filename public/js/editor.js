@@ -104,7 +104,8 @@ function commit() {
 
 // A limited text field takes its limit as maxLength and shows the characters left below it once its text passes 80%
 // of the limit. The counter is the field's description, so a screen reader reads it with the field. The shared live
-// region announces the counter only when typing reaches the limit, and clears below it so the next arrival announces.
+// region announces the counter only when typing reaches the limit. Every other change clears it, so the next arrival
+// announces and a script that sets field values leaves no stale text.
 const limitAlert = document.createElement('p');
 limitAlert.className = 'visually-hidden';
 limitAlert.id = 'limitAlert';
@@ -113,6 +114,7 @@ document.body.append(limitAlert);
 /** @type {Map<HTMLInputElement | HTMLTextAreaElement, HTMLElement>} */
 const counters = new Map();
 
+// Gives input its limit, a counter after it as its description, and a counter refresh on each input event.
 function addCounter(input, limit) {
   input.maxLength = limit;
   const counter = document.createElement('span');
@@ -123,12 +125,13 @@ function addCounter(input, limit) {
   counters.set(input, counter);
   input.addEventListener('input', () => {
     showCounts();
-    limitAlert.textContent = input.value.length >= limit ? counter.textContent : '';
+    if (input.value.length >= limit) limitAlert.textContent = copy.charsLeft(0);
   });
 }
 
-// Writes each counter from its field's value; call after a script sets field values.
+// Writes each counter from its field's value and clears the live region; call after a script sets field values.
 function showCounts() {
+  limitAlert.textContent = '';
   counters.forEach((counter, input) => {
     const left = charsLeft(input.value, input.maxLength);
     counter.hidden = left === null;
@@ -525,8 +528,11 @@ function showReplyErrors(invalid) {
     message.textContent = isInvalid ? replyErrors[name] : '';
     if (isInvalid) field.setAttribute('aria-invalid', 'true');
     else field.removeAttribute('aria-invalid');
-    const described = [counters.get(/** @type {HTMLInputElement} */ (field))?.id, isInvalid && message.id];
-    if (described.some(Boolean)) field.setAttribute('aria-describedby', described.filter(Boolean).join(' '));
+    const ids = [];
+    const counter = counters.get(/** @type {HTMLInputElement} */ (field));
+    if (counter) ids.push(counter.id);
+    if (isInvalid) ids.push(message.id);
+    if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
     else field.removeAttribute('aria-describedby');
   }
   replyFields.find(({ name }) => invalid.includes(name))?.focusTarget.focus();

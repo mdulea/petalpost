@@ -1,8 +1,8 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
-// link preview metadata, invite records, the characters left in a limited field, storage writes, the stored published event identity, template switching,
-// template ids, Romanian localization coverage, the Romanian occasion order, Romanian-only occasions kept out of the English
-// catalog, 24-hour time formatting, the calendar file, the report link or the choice of when the Romanian language banner
-// shows and where it links break.
+// link preview metadata, invite records, the characters left in a limited field, storage writes, the stored published
+// event identity, template switching, template ids, Romanian localization coverage, the Romanian occasion order,
+// Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the calendar file, the report link
+// or the choice of when the Romanian language banner shows and where it links break.
 // Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
