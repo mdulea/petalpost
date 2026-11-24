@@ -114,7 +114,10 @@ export async function startServer({ port, memory = false, dailyEvents }) {
   try {
     await new Promise((done, fail) => {
       server.once('error', fail);
-      server.listen(port, 'localhost', () => done(undefined));
+      server.listen(port, 'localhost', () => {
+        server.off('error', fail);
+        done(undefined);
+      });
     });
   } catch (error) {
     await db.close();

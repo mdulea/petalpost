@@ -117,7 +117,7 @@ A lost management link cannot be recovered.
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
 
 `fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
-Run it before `check`, which only checks formatting and lint and never rewrites a file.
+Run it before `check`. `check` reports formatting and lint errors and never rewrites a file.
 
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
 

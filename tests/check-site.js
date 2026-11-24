@@ -408,12 +408,12 @@ const holdPort = async () => {
   await new Promise((done) => holder.listen(0, 'localhost', () => done(undefined)));
   return { holder, port: /** @type {import('node:net').AddressInfo} */ (holder.address()).port };
 };
-const portInUse = (port) => new RegExp(`port ${port}\\b.*BROWSER_CHECK_PORT`, 's');
+const portInUseMessage = (port) => new RegExp(`port ${port}\\b.*BROWSER_CHECK_PORT`, 's');
 
 test('startServer rejects a port in use with a message naming the port and the browser-check port variable', async () => {
   const { holder, port } = await holdPort();
   try {
-    await assert.rejects(startServer({ port, memory: true }), { message: portInUse(port) });
+    await assert.rejects(startServer({ port, memory: true }), { message: portInUseMessage(port) });
   } finally {
     holder.close();
   }
@@ -429,7 +429,7 @@ test('the server command exits with a non-zero status and the same message on a 
       );
     });
     assert.notEqual(code, 0);
-    assert.match(stderr, portInUse(port));
+    assert.match(stderr, portInUseMessage(port));
   } finally {
     holder.close();
   }
