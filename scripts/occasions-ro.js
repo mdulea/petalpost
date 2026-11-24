@@ -119,6 +119,45 @@ export const OCCASIONS_RO = {
       },
     ],
   },
+  Moț: {
+    file: 'ro/invitatii-mot.html',
+    heading: 'Invitații de moț',
+    description:
+      'Model ilustrat de invitație de moț cu foarfecă, șuviță de păr și fundă. Adaugă numele copilului, nașii și restaurantul, apoi trimite linkul pe WhatsApp.',
+    lead: 'Foarfecă, șuviță de păr legată cu fundă și steluțe aurii. Pentru ziua în care cel mic împlinește un an și i se taie moțul.',
+    sections: [
+      {
+        heading: 'Ce să treci pe invitația de moț',
+        intro: [
+          'Moțul se face de obicei la împlinirea unui an, cu nașii alături, așa că invitația are nevoie de câteva repere clare:',
+        ],
+        list: [
+          '<strong>Numele copilului.</strong> Pune-l în titlu, de exemplu „Moțul Sofiei” sau „Moțul lui Luca”.',
+          '<strong>Părinții și nașii.</strong> Nașii taie de obicei moțul, așa că trece-i alături de părinți în câmpul de gazde.',
+          '<strong>Restaurantul sau casa.</strong> Adresa completă apare pe invitație cu buton de hartă.',
+          '<strong>Ora petrecerii.</strong> Tăierea moțului și ruptul turtei au loc în timpul petrecerii, așa că spune în notă dacă vrei ca invitații să ajungă la timp pentru ele.',
+          '<strong>Termenul de confirmare.</strong> Cere confirmarea cu 2 săptămâni înainte, ca să știi câte locuri rezervi la restaurant.',
+        ],
+      },
+      {
+        heading: 'Idei de text pentru invitația de moț',
+        quotes: [
+          'Sofia împlinește un an! Vă invităm cu drag la tăierea moțului și la masa de sărbătoare.',
+          'Alături de nașii Ana și Bogdan, tăiem moțul lui Luca și rupem turta. Vă așteptăm să ne fiți aproape.',
+          'Primul an a trecut în zbor. Vino să alegem împreună viitorul lui Matei din tava cu obiecte.',
+        ],
+        paragraphs: [
+          'În notă poți spune ce urmează după tăierea moțului, de exemplu tortul sau alegerea obiectelor din tavă. Pentru alte formulări, vezi <a href="/ro/text-invitatii.html">ghidul de texte pentru invitații</a>.',
+        ],
+      },
+      {
+        heading: 'Când să trimiți invitațiile de moț',
+        paragraphs: [
+          'Trimite invitațiile de moț cu 4 până la 6 săptămâni înainte de petrecere, ca la botez, și cere confirmarea cu 2 săptămâni înainte. Vezi toate reperele în <a href="/ro/cand-sa-trimiti-invitatiile.html">când să trimiți invitațiile</a>.',
+        ],
+      },
+    ],
+  },
   Birthday: {
     file: 'ro/invitatii-zi-de-nastere.html',
     heading: 'Invitații de zi de naștere',

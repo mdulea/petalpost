@@ -1,4 +1,4 @@
-// Fails when the landing gallery or its occasion filter, a content page, the editor preview, the draft reload, the guest view, the sample guest invitation, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and template, the editor preview, the draft reload, the guest view, the sample guest invitation, the calendar download, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
 // Romanian language banner breaks in Chromium, or a page breaks the Content-Security-Policy. The banner checks fail when
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
@@ -48,6 +48,8 @@ test('the Romanian landing page shows every Romanian template and filters local 
   await expect(page.locator('#gallery .card:visible')).toHaveCount(4);
   await page.click('.filter[data-filter="Cununie"]');
   await expect(page.locator('#gallery .card:visible')).toHaveCount(4);
+  await page.click('.filter[data-filter="Moț"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(1);
   expect(problems).toEqual([]);
 });
 
@@ -58,6 +60,7 @@ for (const path of [
   'about.html',
   'ro/invitatii-botez.html',
   'ro/invitatii-cununie.html',
+  'ro/invitatii-mot.html',
   'ro/text-invitatii.html',
   'ro/invitatii-digitale-sau-tiparite.html',
   'ro/despre.html',
@@ -172,6 +175,17 @@ test('the link preview generator draws the hero templates in English and Romania
   await page.goto('scripts/og-card.html?lang=ro');
   await expect(page.locator('#fan .invite')).toHaveCount(RO_HERO_TEMPLATES.length);
   await expect(page.locator('#card h1')).toContainText('Ziua ta');
+  expect(problems).toEqual([]);
+});
+
+test('the Romanian editor shows the Moț tab after Botez and opens Foarfecă și șuviță', async ({ page }) => {
+  const problems = watch(page);
+  await page.goto('/ro/editor.html?t=mot-foarfeca');
+  const tabs = await page.locator('#pickerTabs .filter').evaluateAll((buttons) => buttons.map((b) => b.textContent));
+  expect(tabs.indexOf('Moț')).toBe(tabs.indexOf('Botez') + 1);
+  await expect(page.locator('#pickerTabs .filter[aria-pressed="true"]')).toHaveText('Moț');
+  await expect(page.locator('#picker .picker-name')).toHaveText(['Foarfecă și șuviță']);
+  await expect(page.locator('#previewCard .invite-title')).toHaveText('Moțul Sofiei');
   expect(problems).toEqual([]);
 });
 

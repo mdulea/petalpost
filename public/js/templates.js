@@ -1313,6 +1313,48 @@ export const TEMPLATES = [
     `),
   },
   {
+    id: 'mot-foarfeca',
+    name: 'Foarfecă și șuviță',
+    category: 'Moț',
+    locales: ['ro'],
+    tagline: 'Foarfecă, șuviță de păr și fundă de mătase.',
+    frame: 'circle',
+    titleFont: 'display',
+    colors: { bg: '#FBF3EC', ink: '#4E3A2E', accent: '#8A4B3A', soft: '#F3E2D4' },
+    defaults: {
+      eyebrow: 'Vă invităm cu drag la',
+      title: 'Moțul Sofiei',
+      hosts: 'părinții Irina & Mihai, nașii Ana & Bogdan',
+      date: '2027-09-18',
+      time: '13:00',
+      venue: 'Restaurant Livada',
+      address: 'Strada Livezii 14, Iași',
+      message: 'Tăiem moțul Sofiei și rupem turta deasupra capului ei, apoi sărbătorim la masă.',
+      rsvp: 'Confirmări până pe 4 septembrie',
+    },
+    art: svg(`
+      <g transform="translate(64 86) rotate(-28)">
+        <path d="M0 4L-12 -52Q-5 -51 4 -2Z" fill="#E4E8EC" stroke="#8C96A3" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M0 4L12 -52Q5 -51 -4 -2Z" fill="#D3D9DF" stroke="#8C96A3" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M-2 4L-9 22M2 4L9 22" stroke="#C98589" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="-13" cy="31" r="9" fill="none" stroke="#C98589" stroke-width="4"/>
+        <circle cx="13" cy="31" r="9" fill="none" stroke="#C98589" stroke-width="4"/>
+        <circle cx="0" cy="0" r="2.6" fill="#8C96A3"/>
+      </g>
+      <g fill="none" stroke-width="4.2" stroke-linecap="round">
+        <path d="M114 36Q126 54 118 76Q110 100 124 124Q130 134 122 138" stroke="#C99A66"/>
+        <path d="M120 34Q132 54 124 76Q116 100 130 122Q138 134 130 140" stroke="#DDB688"/>
+        <path d="M126 34Q138 54 130 76Q122 100 136 120Q144 132 138 138" stroke="#B4875A"/>
+        <path d="M132 36Q143 56 136 76Q129 98 141 116Q146 124 142 130" stroke="#D2A878"/>
+      </g>
+      <path d="M126 72Q106 56 103 71Q105 86 126 72Z" fill="#EDB3B4" stroke="#C98589" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M126 72Q146 56 149 71Q147 86 126 72Z" fill="#EDB3B4" stroke="#C98589" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M123 75L113 97M129 75L141 95" stroke="#E8A3A6" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="126" cy="73" r="4.6" fill="#C98589"/>
+      ${sparkle(70, 30, 5, '#E0B45C')}${sparkle(156, 44, 5, '#E0B45C')}${sparkle(158, 112, 4, '#C98589')}${sparkle(50, 124, 3.5, '#E0B45C')}
+    `),
+  },
+  {
     id: 'cununie-verighete',
     name: 'Verighete de aur',
     category: 'Cununie',
@@ -1462,6 +1504,7 @@ const RO_CATEGORIES = [
   'Wedding',
   'Cununie',
   'Botez',
+  'Moț',
   'Birthday',
   'Housewarming',
   'Graduation',
