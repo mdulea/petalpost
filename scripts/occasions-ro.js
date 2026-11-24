@@ -1,5 +1,6 @@
 // The text of each Romanian occasion page that scripts/pages.js generates, keyed by canonical template category.
 // Every category in categoriesFor('ro') needs an entry; check-site.js fails when one is missing.
+// Each description holds at least one Romanian search phrase from check-site.js, such as gratuit, online, WhatsApp or confirmare.
 // A section renders intro, list, quotes, then paragraphs. Its strings are trusted HTML written here, so they may hold links and inline markup.
 
 export const OCCASIONS_RO = {
@@ -7,7 +8,7 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-nunta.html',
     heading: 'Invitații de nuntă',
     description:
-      'Modele ilustrate de invitații de nuntă, de la flori și arcade de ceremonie până la seri de gală în catifea. Adaugă detaliile și trimite linkul.',
+      'Modele ilustrate de invitații de nuntă online, de la flori și arcade de ceremonie până la seri de gală în catifea. Trimite linkul pe WhatsApp și urmărește confirmările.',
     lead: 'Flori de grădină, arcade de ceremonie, tort cu etaje, măslin cu teracotă și seri de gală în catifea. Adaugă numele voastre, detaliile ceremoniei și o fotografie împreună.',
     sections: [
       {
@@ -44,7 +45,7 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-cununie.html',
     heading: 'Invitații de cununie civilă',
     description:
-      'Modele ilustrate de invitații de cununie civilă cu verighete, bujori și șampanie. Adaugă data, ora și adresa primăriei, apoi trimite linkul.',
+      'Invitații gratuite de cununie civilă cu verighete, bujori și șampanie. Adaugă data, ora și adresa primăriei, apoi trimite linkul cu confirmare de prezență.',
     lead: 'Verighete aurii, bujori de mai, cupe de șampanie și arcadă de seară. Personalizează invitația pentru Starea Civilă și trimite-o rapid pe WhatsApp.',
     sections: [
       {
@@ -118,11 +119,50 @@ export const OCCASIONS_RO = {
       },
     ],
   },
+  Moț: {
+    file: 'ro/invitatii-mot.html',
+    heading: 'Invitații de moț',
+    description:
+      'Model ilustrat de invitație de moț cu foarfecă, șuviță de păr și fundă. Adaugă numele copilului, nașii și restaurantul, apoi trimite linkul pe WhatsApp.',
+    lead: 'Foarfecă, șuviță de păr legată cu fundă și steluțe aurii. Pentru ziua în care cel mic împlinește un an și i se taie moțul.',
+    sections: [
+      {
+        heading: 'Ce să treci pe invitația de moț',
+        intro: [
+          'Moțul se face de obicei la împlinirea unui an, cu nașii alături, așa că invitația are nevoie de câteva repere clare:',
+        ],
+        list: [
+          '<strong>Numele copilului.</strong> Pune-l în titlu, de exemplu „Moțul Sofiei” sau „Moțul lui Luca”.',
+          '<strong>Părinții și nașii.</strong> Nașii taie de obicei moțul, așa că trece-i alături de părinți în câmpul de gazde.',
+          '<strong>Restaurantul sau casa.</strong> Adresa completă apare pe invitație cu buton de hartă.',
+          '<strong>Ora petrecerii.</strong> Tăierea moțului și ruptul turtei au loc în timpul petrecerii, așa că spune în notă dacă vrei ca invitații să ajungă la timp pentru ele.',
+          '<strong>Termenul de confirmare.</strong> Cere confirmarea cu 2 săptămâni înainte, ca să știi câte locuri rezervi la restaurant.',
+        ],
+      },
+      {
+        heading: 'Idei de text pentru invitația de moț',
+        quotes: [
+          'Sofia împlinește un an! Vă invităm cu drag la tăierea moțului și la masa de sărbătoare.',
+          'Alături de nașii Ana și Bogdan, tăiem moțul lui Luca și rupem turta. Vă așteptăm să ne fiți aproape.',
+          'Primul an a trecut în zbor. Vino să alegem împreună viitorul lui Matei din tava cu obiecte.',
+        ],
+        paragraphs: [
+          'În notă poți spune ce urmează după tăierea moțului, de exemplu tortul sau alegerea obiectelor din tavă. Pentru alte formulări, vezi <a href="/ro/text-invitatii.html">ghidul de texte pentru invitații</a>.',
+        ],
+      },
+      {
+        heading: 'Când să trimiți invitațiile de moț',
+        paragraphs: [
+          'Trimite invitațiile de moț cu 4 până la 6 săptămâni înainte de petrecere, ca la botez, și cere confirmarea cu 2 săptămâni înainte. Vezi toate reperele în <a href="/ro/cand-sa-trimiti-invitatiile.html">când să trimiți invitațiile</a>.',
+        ],
+      },
+    ],
+  },
   Birthday: {
     file: 'ro/invitatii-zi-de-nastere.html',
     heading: 'Invitații de zi de naștere',
     description:
-      'Modele ilustrate de invitații de zi de naștere cu baloane, tort, coifuri și cadouri. Adaugă fotografia și detaliile petrecerii, apoi trimite linkul.',
+      'Modele ilustrate gratuite de invitații de zi de naștere cu baloane, tort, coifuri și cadouri. Adaugă fotografia și detaliile petrecerii, apoi trimite linkul pe WhatsApp.',
     lead: 'Baloane, tort cu lumânări, coifuri de petrecere și cadouri. Alege un model, adaugă sărbătoritul și detaliile petrecerii, apoi trimite linkul.',
     sections: [
       {
@@ -162,7 +202,7 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-casa-noua.html',
     heading: 'Invitații de casă nouă',
     description:
-      'Modele ilustrate de invitații de casă nouă cu plante, chei noi și ferestre calde. Adaugă noua adresă și trimite linkul.',
+      'Invitații online de casă nouă cu plante, chei noi și ferestre calde. Adaugă noua adresă, trimite linkul și vezi cine confirmă că vine.',
     lead: 'Acoperiș cald, plante pe raft, chei noi și o pisică la fereastră. Invită prietenii să îți vadă noul loc.',
     sections: [
       {
@@ -196,7 +236,7 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-absolvire.html',
     heading: 'Invitații de absolvire',
     description:
-      'Modele ilustrate de invitații de absolvire cu tocă, diplomă, cărți și răsărit. Adaugă fotografia absolventului și trimite linkul.',
+      'Invitații de absolvire gratuite cu tocă, diplomă, cărți și răsărit. Adaugă fotografia absolventului și cere confirmarea prezenței la festivitate.',
     lead: 'Ciucure auriu, diplomă cu sigiliu, teanc de cărți și un răsărit luminos. Sărbătorește finalul liceului, facultății sau doctoratului.',
     sections: [
       {
@@ -234,7 +274,7 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-baby-shower.html',
     heading: 'Invitații de baby shower',
     description:
-      'Modele ilustrate de invitații de baby shower cu nori, rățușcă, iepuraș și ursuleț. Adaugă detaliile și trimite linkul.',
+      'Modele ilustrate de invitații de baby shower cu nori, rățușcă, iepuraș și ursuleț. Trimite invitația online pe WhatsApp și află cine vine.',
     lead: 'Nori somnoroși, rățușcă veselă, iepuraș și ursuleț cu balon. Anunță venirea pe lume a bebelușului cu o invitație caldă.',
     sections: [
       {
@@ -266,7 +306,7 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-brunch.html',
     heading: 'Invitații de brunch',
     description:
-      'Modele ilustrate de invitații de brunch cu clătite, citrice, ceainic și croissant. Adaugă detaliile și trimite linkul.',
+      'Invitații online de brunch cu clătite, citrice, ceainic și croissant. Adaugă detaliile și trimite linkul pe grupul de WhatsApp.',
     lead: 'Clătite pufoase, felii de citrice, ceai în grădină și cafea cu croissant. Pentru dimineți relaxate de weekend și ocazii speciale.',
     sections: [
       {

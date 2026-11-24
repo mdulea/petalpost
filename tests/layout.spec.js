@@ -1,5 +1,5 @@
 // Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, sample guest, invitation, management,
-// privacy, terms, About, guide or occasion page scrolls sideways, a form control leaves its panel,
+// privacy, terms, About, guide or occasion page, or an English page showing the Romanian language banner, scrolls sideways, a form control leaves its panel,
 // single-line inputs differ in height, fields sharing a row differ in top, height or overlap horizontally, the spacing between stacked
 // fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
 // size, or the Preview button covers a control that has keyboard focus.
@@ -196,12 +196,13 @@ test('the About page, both guides and an occasion page fit every viewport', asyn
   }
 });
 
-test('the Romanian landing, editor, occasion and guide pages fit every viewport', async ({ page }) => {
+test('the Romanian landing, editor, occasion and two guide pages fit every viewport', async ({ page }) => {
   for (const path of [
     '/ro/',
     '/ro/editor.html?t=botez-porumbel',
     '/ro/invitatii-botez.html',
     '/ro/text-invitatii.html',
+    '/ro/invitatii-digitale-sau-tiparite.html',
   ]) {
     await page.goto(path);
     await checkAllViewports(page);
@@ -226,4 +227,18 @@ test('the editor after publishing, the invitation with a saved reply and the man
   await page.goto(manage);
   await expect(page.locator('#responseList li')).toHaveCount(1);
   await checkAllViewports(page);
+});
+
+test.describe('a Romanian browser', () => {
+  test.use({ locale: 'ro-RO' });
+
+  test('sees the Romanian language banner fit every viewport on the landing, editor, occasion and privacy pages', async ({
+    page,
+  }) => {
+    for (const path of ['/', 'editor.html?t=birthday', 'wedding-invitations.html', 'privacy.html']) {
+      await page.goto(path);
+      await expect(page.locator('.lang-banner')).toBeVisible();
+      await checkAllViewports(page);
+    }
+  });
 });

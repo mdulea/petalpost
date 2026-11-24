@@ -12,7 +12,7 @@ export const pageLang = () => (typeof document === 'object' ? normalizeLang(docu
 /** @param {string} [lang] */
 export const localeOf = (lang) => (normalizeLang(lang) === 'ro' ? 'ro-RO' : 'en-US');
 
-// Every English and Romanian page and its reciprocal alternate. Occasions unique to Romanian have en: null.
+// Every English and Romanian page and its reciprocal alternate. Occasions and guides unique to Romanian have en: null.
 // guide: true marks the hand-written guides.
 export const ROUTE_PAIRS = [
   { key: 'home', en: 'index.html', ro: 'ro/index.html', indexed: true },
@@ -26,6 +26,7 @@ export const ROUTE_PAIRS = [
   { key: 'housewarming', en: 'housewarming-invitations.html', ro: 'ro/invitatii-casa-noua.html', indexed: true },
   { key: 'botez', en: null, ro: 'ro/invitatii-botez.html', indexed: true },
   { key: 'cununie', en: null, ro: 'ro/invitatii-cununie.html', indexed: true },
+  { key: 'mot', en: null, ro: 'ro/invitatii-mot.html', indexed: true },
   { key: 'wording', en: 'invitation-wording.html', ro: 'ro/text-invitatii.html', indexed: true, guide: true },
   {
     key: 'when-to-send',
@@ -34,6 +35,7 @@ export const ROUTE_PAIRS = [
     indexed: true,
     guide: true,
   },
+  { key: 'digital-or-printed', en: null, ro: 'ro/invitatii-digitale-sau-tiparite.html', indexed: true, guide: true },
   { key: 'about', en: 'about.html', ro: 'ro/despre.html', indexed: true },
   { key: 'privacy', en: 'privacy.html', ro: 'ro/confidentialitate.html', indexed: true },
   { key: 'terms', en: 'terms.html', ro: 'ro/termeni.html', indexed: true },
@@ -84,6 +86,15 @@ export function languageSwitchHref(file) {
   return other === 'ro' ? '/ro/' : '/';
 }
 
+// Path the Romanian language banner opens, or null when the banner stays hidden. It shows on an English page whose
+// head has a Romanian alternate, to a browser that lists Romanian among its preferred languages, until the visitor
+// closes it. alternate is that link's absolute href or null; the path keeps the link on the current origin.
+/** @param {{ lang: string, languages: readonly string[], alternate: string | null, closed: boolean }} page */
+export function romanianBannerHref({ lang, languages, alternate, closed }) {
+  if (lang !== 'en' || !alternate || closed || !languages.some((l) => normalizeLang(l) === 'ro')) return null;
+  return new URL(alternate).pathname;
+}
+
 export const CATEGORY_LABELS = {
   en: {
     Birthday: 'Birthday',
@@ -99,6 +110,7 @@ export const CATEGORY_LABELS = {
     Wedding: 'Nuntă',
     Cununie: 'Cununie',
     Botez: 'Botez',
+    Moț: 'Moț',
     Birthday: 'Zi de naștere',
     Housewarming: 'Casă nouă',
     Graduation: 'Absolvire',
