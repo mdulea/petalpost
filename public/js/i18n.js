@@ -82,6 +82,15 @@ export function languageSwitchHref(file) {
   return other === 'ro' ? '/ro/' : '/';
 }
 
+// Path the Romanian language banner opens, or null when the banner stays hidden. It shows on an English page whose
+// head has a Romanian alternate, to a browser that lists Romanian among its preferred languages, until the visitor
+// closes it. alternate is that link's absolute href or null; the path keeps the link on the current origin.
+/** @param {{ lang: string, languages: readonly string[], alternate: string | null, closed: boolean }} page */
+export function romanianBannerHref({ lang, languages, alternate, closed }) {
+  if (lang !== 'en' || !alternate || closed || !languages.some((l) => normalizeLang(l) === 'ro')) return null;
+  return new URL(alternate).pathname;
+}
+
 export const CATEGORY_LABELS = {
   en: {
     Birthday: 'Birthday',

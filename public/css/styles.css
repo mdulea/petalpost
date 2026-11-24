@@ -210,6 +210,23 @@ p {
   border-color: var(--sage-hover);
 }
 
+.lang-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 16px;
+  padding: 12px var(--gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--sage-soft);
+  color: var(--ink);
+}
+.lang-banner p {
+  margin: 0;
+  font-weight: 700;
+  text-align: center;
+}
+
 @media (max-width: 720px) {
   .nav .pill:not(.pill-cta):not(.pill-lang) {
     display: none;
