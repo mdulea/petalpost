@@ -311,7 +311,7 @@ const SCRIPT_CLOSE = 'Free </script><script>alert(1)</script>';
 
 test('a home page description containing </script> stays inside its JSON-LD block', () => {
   const block = structuredData(HOMES.en, `<meta name="description" content="${SCRIPT_CLOSE}" />`);
-  const json = block.slice(block.indexOf('>') + 1, -'</script>'.length);
+  const [, json] = block.match(/^<script type="application\/ld\+json">([\s\S]*)<\/script>$/);
   assert.ok(json.includes('\\u003c/script>'), block);
   assert.ok(!json.includes('<'), block);
   assert.equal(JSON.parse(json).description, SCRIPT_CLOSE);
