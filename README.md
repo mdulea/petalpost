@@ -89,6 +89,7 @@ A lost management link cannot be recovered.
   - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries, template counts and occasion links, and every page footer. It fills the regions between `<!-- generated:NAME -->` markers. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
+  - `shot.js` writes a PNG of a page or of one element on it.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
@@ -112,6 +113,7 @@ A lost management link cannot be recovered.
 | Browser tests  | `pnpm test:browser`                    |
 | Site build     | `pnpm build`                           |
 | Generate pages | `pnpm pages`                           |
+| Screenshot     | `pnpm shot <path> [<selector>] <file>` |
 | Migrations     | `pnpm migrate`                         |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
@@ -121,7 +123,13 @@ Run it before `check`. `check` reports formatting and lint errors and never rewr
 
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
 
-`test` runs the Prettier format check, ESLint and the contrast, DOM-free, invite, paths, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
+`shot` writes a PNG of a page, or of the first element that a CSS selector matches, such as `pnpm shot editor.html "#previewCard" card.png` for a template's artwork.
+Without a selector, it writes the full page.
+It starts `scripts/server.js` on a free port with an in-memory database, so it runs next to `pnpm dev` and the browser checks, and Chromium renders the page at 1280 by 720.
+When the selector matches nothing, it writes no file and exits with status 1.
+Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
+
+`test` runs the Prettier format check, ESLint and the contrast, DOM-free, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
