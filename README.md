@@ -113,6 +113,7 @@ A guest cannot see other guests' replies or the totals.
     - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
     - `rsvp.js` validates replies, builds and reads private links, and is the API client. It has no DOM access, so the server and the Node checks import it.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
+    - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
     - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page. `page.js` is the entry module of the occasion pages, the guides and the About page.
     - `icons.js` injects the inline SVG sprite.
     - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
