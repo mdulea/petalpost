@@ -751,10 +751,11 @@ check(
   ),
   [],
 );
+const roCategories = ctx.categoriesFor('ro');
 check(
   'the Romanian occasions put Moț right after Botez and the English catalog leaves Moț out',
   [
-    ctx.categoriesFor('ro').indexOf('Moț') - ctx.categoriesFor('ro').indexOf('Botez'),
+    roCategories.indexOf('Moț') - roCategories.indexOf('Botez'),
     ctx
       .templatesFor('ro')
       .filter((t) => t.category === 'Moț')

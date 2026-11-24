@@ -93,7 +93,6 @@ export const CATEGORY_LABELS = {
     Housewarming: 'Housewarming',
     Botez: 'Botez',
     Cununie: 'Cununie',
-    Moț: 'Moț',
   },
   ro: {
     Wedding: 'Nuntă',

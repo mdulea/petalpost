@@ -134,7 +134,7 @@ export const OCCASIONS_RO = {
           '<strong>Numele copilului.</strong> Pune-l în titlu, de exemplu „Moțul Sofiei” sau „Moțul lui Luca”.',
           '<strong>Părinții și nașii.</strong> Nașii taie de obicei moțul, așa că trece-i alături de părinți în câmpul de gazde.',
           '<strong>Restaurantul sau casa.</strong> Adresa completă apare pe invitație cu buton de hartă.',
-          '<strong>Ora petrecerii.</strong> Tăierea moțului și ruptul turtei au loc de obicei la începutul mesei, așa că invitații nu ar trebui să întârzie.',
+          '<strong>Ora petrecerii.</strong> Tăierea moțului și ruptul turtei au loc în timpul petrecerii, așa că spune în notă dacă vrei ca invitații să ajungă la timp pentru ele.',
           '<strong>Termenul de confirmare.</strong> Cere confirmarea cu 2 săptămâni înainte, ca să știi câte locuri rezervi la restaurant.',
         ],
       },
@@ -152,7 +152,7 @@ export const OCCASIONS_RO = {
       {
         heading: 'Când să trimiți invitațiile de moț',
         paragraphs: [
-          'Trimite invitațiile de moț cu 3 până la 4 săptămâni înainte de petrecere și cere confirmarea cu 2 săptămâni înainte. Dacă rudele vin din alt oraș, trimite-le linkul cu 6 săptămâni înainte. Vezi toate reperele în <a href="/ro/cand-sa-trimiti-invitatiile.html">când să trimiți invitațiile</a>.',
+          'Trimite invitațiile de moț cu 4 până la 6 săptămâni înainte de petrecere, ca la botez, și cere confirmarea cu 2 săptămâni înainte. Vezi toate reperele în <a href="/ro/cand-sa-trimiti-invitatiile.html">când să trimiți invitațiile</a>.',
         ],
       },
     ],
