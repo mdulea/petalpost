@@ -25,6 +25,7 @@ export const ROUTE_PAIRS = [
   { key: 'housewarming', en: 'housewarming-invitations.html', ro: 'ro/invitatii-casa-noua.html', indexed: true },
   { key: 'botez', en: null, ro: 'ro/invitatii-botez.html', indexed: true },
   { key: 'cununie', en: null, ro: 'ro/invitatii-cununie.html', indexed: true },
+  { key: 'mot', en: null, ro: 'ro/invitatii-mot.html', indexed: true },
   { key: 'wording', en: 'invitation-wording.html', ro: 'ro/text-invitatii.html', indexed: true },
   {
     key: 'when-to-send',
@@ -92,11 +93,13 @@ export const CATEGORY_LABELS = {
     Housewarming: 'Housewarming',
     Botez: 'Botez',
     Cununie: 'Cununie',
+    Moț: 'Moț',
   },
   ro: {
     Wedding: 'Nuntă',
     Cununie: 'Cununie',
     Botez: 'Botez',
+    Moț: 'Moț',
     Birthday: 'Zi de naștere',
     Housewarming: 'Casă nouă',
     Graduation: 'Absolvire',

@@ -5,7 +5,7 @@
 // the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
 // after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer; a confirmed
 // withdrawal clears the form and the address, its old edit link says no reply is saved yet and can send, and a stale
-// withdrawal loads the latest answer; the Romanian withdrawal copy;
+// withdrawal loads the latest answer; the Romanian withdrawal copy; a Moț invitation published in Romanian takes a guest's reply;
 // publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
@@ -672,4 +672,21 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
     'Încă nu există un răspuns salvat la acest link. Trimite formularul pentru a-l salva.',
   );
   expect([...host.problems, ...guest.problems, ...stranger.problems, ...guestLater.problems]).toEqual([]);
+});
+
+test('a Moț invitation publishes in Romanian and a guest replies through its link', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  await host.page.goto('/ro/editor.html?t=mot-foarfeca');
+  await host.page.click('#publish');
+  await expect(host.page.locator('#eventLink')).toHaveValue(/\/ro\/e\/[A-Za-z0-9_-]{22}$/);
+  const invitation = await host.page.locator('#eventLink').inputValue();
+
+  const guest = await newBrowser(browser);
+  await guest.page.goto(invitation);
+  await expect(guest.page.locator('h1')).toHaveText('Moțul Sofiei');
+  await guest.page.fill('#guestName', 'Ioana');
+  await guest.page.fill('#partySize', '3');
+  await guest.page.click('#sendReply');
+  await expect(guest.page.locator('#rsvpStatus')).toHaveText('Răspunsul tău a fost salvat. Gazda îl poate vedea acum.');
+  expect([...host.problems, ...guest.problems]).toEqual([]);
 });

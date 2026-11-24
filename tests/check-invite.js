@@ -1,6 +1,7 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, invite records, storage writes, the stored published event identity, template switching,
-// template ids, Romanian localization coverage and 24-hour time formatting, the calendar file or the report link break.
+// template ids, Romanian localization coverage, the Romanian occasion order, Romanian-only occasions kept out of the English
+// catalog, 24-hour time formatting, the calendar file or the report link break.
 // Run: node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -749,6 +750,19 @@ check(
     (t) => t.id,
   ),
   [],
+);
+check(
+  'the Romanian occasions put Moț right after Botez and the English catalog leaves Moț out',
+  [
+    ctx.categoriesFor('ro').indexOf('Moț') - ctx.categoriesFor('ro').indexOf('Botez'),
+    ctx
+      .templatesFor('ro')
+      .filter((t) => t.category === 'Moț')
+      .map((t) => t.id),
+    ctx.categoriesFor('en').includes('Moț'),
+    ctx.templatesFor('en').filter((t) => t.category === 'Moț').length,
+  ],
+  [1, ['mot-foarfeca'], false, 0],
 );
 check(
   'every Romanian template sample fits its limits',
