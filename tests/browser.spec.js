@@ -4,6 +4,8 @@
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
 // English browser or on a page without a pair, a close does not last across pages, a close with blocked storage breaks
 // the page, or it writes a cookie, requests another origin or changes the canonical and hreflang links.
+// The filter checks also fail when a category change misses its 150ms fade-out or its 200ms fade-in with an 8px rise,
+// rapid clicks end on another category or leave an animation running, or filtering animates under reduced motion.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
@@ -41,6 +43,90 @@ test('the landing filter shows only the chosen occasion', async ({ page }) => {
   await expect(page.locator('#gallery .card:visible')).toHaveCount(
     templatesFor('en').filter((t) => t.category === 'Wedding').length,
   );
+});
+
+// Records each Web Animations API call on a gallery card as {category, keyframes, duration, startedAt} in
+// window.cardAnimations, where startedAt is the performance.now() time of the call.
+const recordCardAnimations = (page) =>
+  page.addInitScript(() => {
+    const record = /** @type {any} */ (window);
+    const animate = Element.prototype.animate;
+    record.cardAnimations = [];
+    Element.prototype.animate = function (keyframes, options) {
+      if (this.matches('#gallery .card')) {
+        record.cardAnimations.push({
+          category: /** @type {HTMLElement} */ (this).dataset.category,
+          keyframes,
+          duration: typeof options === 'number' ? options : options?.duration,
+          startedAt: performance.now(),
+        });
+      }
+      return animate.call(this, keyframes, options);
+    };
+  });
+const cardAnimations = (page) => page.evaluate(() => /** @type {any} */ (window).cardAnimations);
+const runningGalleryAnimations = (page) =>
+  page.evaluate(() => document.getElementById('gallery').getAnimations({ subtree: true }).length);
+const countOf = (category) => templatesFor('en').filter((t) => t.category === category).length;
+
+test('a category change fades the cards out over 150ms, then fades the new cards in and raises them 8px over 200ms', async ({
+  page,
+}) => {
+  await recordCardAnimations(page);
+  await page.goto('/');
+  await page.click('.filter[data-filter="Wedding"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Wedding'));
+  await expect.poll(() => runningGalleryAnimations(page)).toBe(0);
+  const animations = await cardAnimations(page);
+  const fadeOut = animations.filter((call) => call.duration === 150);
+  const fadeIn = animations.filter((call) => call.duration === 200);
+  expect(fadeOut.map((call) => call.keyframes)).toEqual(
+    Array(templatesFor('en').length).fill([{ opacity: 1 }, { opacity: 0 }]),
+  );
+  expect(fadeIn.map((call) => [call.category, call.keyframes])).toEqual(
+    Array(countOf('Wedding')).fill([
+      'Wedding',
+      [
+        { opacity: 0, transform: 'translateY(8px)' },
+        { opacity: 1, transform: 'none' },
+      ],
+    ]),
+  );
+  expect(animations).toHaveLength(fadeOut.length + fadeIn.length);
+  // The fade-in starts once the fade-out has run its 150ms.
+  const lastFadeOut = Math.max(...fadeOut.map((call) => call.startedAt));
+  expect(Math.min(...fadeIn.map((call) => call.startedAt)) - lastFadeOut).toBeGreaterThanOrEqual(140);
+});
+
+// The clicks land in one task, before any fade finishes, so only the last category may fade in.
+test('rapid category clicks end on the last category chosen with no animation left running', async ({ page }) => {
+  await recordCardAnimations(page);
+  await page.goto('/');
+  await page.evaluate(() => {
+    for (const category of ['Wedding', 'Brunch', 'All', 'Graduation', 'Birthday']) {
+      /** @type {HTMLElement} */ (document.querySelector(`.filter[data-filter="${category}"]`)).click();
+    }
+  });
+  await expect.poll(() => runningGalleryAnimations(page)).toBe(0);
+  const fadedIn = (await cardAnimations(page)).filter((call) => call.duration === 200).map((call) => call.category);
+  expect(fadedIn).toEqual(Array(countOf('Birthday')).fill('Birthday'));
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Birthday'));
+  const shown = await page
+    .locator('#gallery .card:visible')
+    .evaluateAll((cards) => cards.map((card) => [card.dataset.category, getComputedStyle(card).opacity]));
+  expect(shown).toEqual(Array(countOf('Birthday')).fill(['Birthday', '1']));
+});
+
+test('under reduced motion a category change switches the cards without animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await recordCardAnimations(page);
+  await page.goto('/');
+  await page.click('.filter[data-filter="Wedding"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Wedding'));
+  await page.click('.filter[data-filter="Brunch"]');
+  await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Brunch'));
+  expect(await cardAnimations(page)).toEqual([]);
+  expect(await runningGalleryAnimations(page)).toBe(0);
 });
 
 test('the Romanian landing page shows every Romanian template and filters local occasions', async ({ page }) => {
