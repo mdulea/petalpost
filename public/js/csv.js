@@ -7,7 +7,7 @@ const BOM = String.fromCharCode(0xfeff);
 const pad = (n) => String(n).padStart(2, '0');
 // Dates and times use the runtime's time zone, which in the browser is the host's.
 const day = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-const minute = (iso) => {
+const dateTime = (iso) => {
   const date = new Date(iso);
   return `${day(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
@@ -30,8 +30,8 @@ export function repliesCsv(responses, lang) {
     r.attending ? copy.yes : copy.no,
     String(r.partySize),
     r.note,
-    minute(r.createdAt),
-    r.updatedAt === r.createdAt ? '' : minute(r.updatedAt),
+    dateTime(r.createdAt),
+    r.updatedAt === r.createdAt ? '' : dateTime(r.updatedAt),
   ]);
   const lines = [copy.columns, ...rows].map((row) => row.map((v) => cell(v, copy.separator)).join(copy.separator));
   return `${BOM}${lines.join('\r\n')}\r\n`;

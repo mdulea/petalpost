@@ -624,7 +624,7 @@ rsvpForm.addEventListener('submit', async (e) => {
   sendReply.disabled = false;
   if (result.ok) {
     replyCred.version = result.data.version;
-    replyLinkInput.value = replyLink();
+    showReplyLink();
     rsvpStatus.textContent = '';
     showOutcome(replySavedPanel, created ? copy.replySent : copy.replyUpdated);
     return;
