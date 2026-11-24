@@ -1,7 +1,7 @@
 // Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, including the optional note, its trimming, line breaks, control characters and 300-character limit; link fragment
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
-// reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored note, its stale version and its repeat; deletion
+// reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored row or note, its stale version and its repeat; deletion
 // with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a reply without an answer; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
@@ -346,14 +346,14 @@ test('a withdrawn reply leaves the host list and totals, and its edit link no lo
   );
 });
 
-test('a withdrawn reply leaves no stored note', async () => {
+test('a withdrawn reply leaves no stored row or note', async () => {
   const { cred, guests } = await publishedEvent();
   const reply = guest();
   const note = `Allergic to peanuts ${newId()}`;
   await guests.saveReply(cred.id, reply, { ...sam, note });
   await guests.withdrawReply(cred.id, { ...reply, version: 1 });
   const db = await shared;
-  assert.equal((await db.query('select 1 from responses where note = $1', [note])).rows.length, 0);
+  assert.equal((await db.query('select 1 from responses where id = $1 or note = $2', [reply.id, note])).rows.length, 0);
 });
 
 test('a stored reply without a note gets an empty note, and the database refuses a note over 300 characters', async () => {
