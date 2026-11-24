@@ -20,7 +20,7 @@ README.md sections, by need:
 - commands via `pnpm` only; global Node.js install forbidden
 - plain JavaScript; JSDoc types only where inference fails, e.g. DOM lookup element types; TypeScript strict off
 - module/function comments state contract; follow existing pattern
-- DOM-free logic -> `public/js/invite.js` or `public/js/templates.js`, so `tests/` checks run in Node
+- DOM-free logic -> `public/js/invite.js`, `public/js/templates.js` or `public/js/i18n.js`, so `tests/` checks run in Node
 - new dependency -> justify
 
 ## Testing
