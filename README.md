@@ -124,7 +124,8 @@ It does not run the type check or the browser tests.
 
 `test:browser` starts `scripts/server.js` on port 4321 with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
 Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
-The run fails when another program already uses port 4321.
+When another program already uses port 4321, such as another worktree's run, the server exits with a message that names the port, and the run fails.
+Set `BROWSER_CHECK_PORT` to run the browser checks on another port, such as `BROWSER_CHECK_PORT=4322 pnpm test:browser`.
 The tests fail when a page breaks the Content-Security-Policy.
 
 ### Tooling notes

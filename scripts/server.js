@@ -3,6 +3,8 @@
 // listing and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
 // /api paths go to createApi and /e paths go to createEventPage over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
+// On a port that another program holds, startServer closes the database and rejects with code EADDRINUSE and a
+// message that names the port and PORT_ENV. The command prints that message and exits with status 1.
 // Run: node scripts/server.js --port <n> [--memory]
 import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -14,6 +16,9 @@ import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
 import { SITE } from './build.js';
+
+// The environment variable that playwright.config.js reads for the browser-check port.
+export const PORT_ENV = 'BROWSER_CHECK_PORT';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -106,7 +111,17 @@ export async function startServer({ port, memory = false, dailyEvents }) {
     res.end(req.method === 'HEAD' ? undefined : await readFile(path));
   });
 
-  await new Promise((done) => server.listen(port, 'localhost', () => done(undefined)));
+  try {
+    await new Promise((done, fail) => {
+      server.once('error', fail);
+      server.listen(port, 'localhost', () => done(undefined));
+    });
+  } catch (error) {
+    await db.close();
+    if (error.code !== 'EADDRINUSE') throw error;
+    const message = `Another program uses port ${port}. Stop it, or set ${PORT_ENV} to run the browser checks on another port.`;
+    throw Object.assign(new Error(message, { cause: error }), { code: 'EADDRINUSE' });
+  }
   const address = /** @type {import('node:net').AddressInfo} */ (server.address());
   return {
     url: `http://localhost:${address.port}/`,
@@ -123,6 +138,12 @@ if (import.meta.main) {
     options: { port: { type: 'string' }, memory: { type: 'boolean' }, 'daily-events': { type: 'string' } },
   });
   const dailyEvents = values['daily-events'] ? Number(values['daily-events']) : undefined;
-  const { url } = await startServer({ port: Number(values.port ?? 3000), memory: values.memory, dailyEvents });
-  console.log(`Petalpost at ${url}`);
+  try {
+    const { url } = await startServer({ port: Number(values.port ?? 3000), memory: values.memory, dailyEvents });
+    console.log(`Petalpost at ${url}`);
+  } catch (error) {
+    if (error.code !== 'EADDRINUSE') throw error;
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 }
