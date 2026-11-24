@@ -1,9 +1,12 @@
-// Browser checks run against scripts/server.js on port 4321, or the port that PORT_ENV names, with an in-memory
-// database. It answers like production (tests/check-site.js), and every run starts with no invitations or replies.
+// Browser checks run against scripts/server.js with an in-memory database. It answers like production
+// (tests/check-site.js), and every run starts with no invitations or replies. The port is the one browserCheckPort
+// gives this checkout: the port that PORT_ENV names, 4321 in the main checkout and CI, and a port of its own,
+// derived from the root path, in each linked worktree. Tests open paths, never a local origin, and lint enforces it.
+import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
-import { PORT_ENV } from './scripts/server.js';
+import { browserCheckPort } from './scripts/server.js';
 
-const port = Number(process.env[PORT_ENV] || 4321);
+const port = browserCheckPort(fileURLToPath(new URL('.', import.meta.url)));
 
 export default defineConfig({
   testDir: 'tests',

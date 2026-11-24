@@ -1,6 +1,8 @@
 import js from '@eslint/js';
 import globals from 'globals';
 
+const LOCAL_ORIGIN = 'Open a path such as /editor.html. Playwright resolves it against the base address of the run.';
+
 export default [
   { ignores: ['public/vendor/', 'dist/', '.pglite/', '.worktrees/'] },
   js.configs.recommended,
@@ -21,5 +23,16 @@ export default [
   {
     files: ['tests/*.spec.js', 'scripts/og-card.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser, htmlToImage: 'readonly' } },
+  },
+  // Each worktree runs the browser checks on its own port, so a test opens a path that the base address resolves.
+  {
+    files: ['tests/*.spec.js'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: String.raw`Literal[value=/(localhost|127\.0\.0\.1|\[::1\]):/]`, message: LOCAL_ORIGIN },
+        { selector: String.raw`TemplateElement[value.raw=/(localhost|127\.0\.0\.1|\[::1\]):/]`, message: LOCAL_ORIGIN },
+      ],
+    },
   },
 ];

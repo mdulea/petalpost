@@ -121,14 +121,17 @@ Run it before `check`. `check` reports formatting and lint errors and never rewr
 
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
 
-`test` runs the Prettier format check, ESLint and the contrast, DOM-free, invite, paths, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, invite, paths, RSVP, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
-`test:browser` starts `scripts/server.js` on port 4321 with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
+`test:browser` starts `scripts/server.js` with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests in WebKit too, because Safari sizes date and time inputs differently.
 Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
-When another program already uses port 4321, such as another worktree's run, the server exits with a message that names the port, and the run fails.
-Set `BROWSER_CHECK_PORT` to run the browser checks on another port, such as `BROWSER_CHECK_PORT=4322 pnpm test:browser`.
+The main checkout and CI run the server on port 4321.
+Each worktree runs it on a port between 4400 and 4999 that is derived from the worktree's path, so worktrees can run their browser checks at the same time, and a worktree gets the same port on every run.
+`BROWSER_CHECK_PORT` sets the port directly, such as `BROWSER_CHECK_PORT=4322 pnpm test:browser`.
+When another program already uses the port, the server exits with a message that names the port, and the run fails.
+Browser tests open paths such as `/editor.html`, and lint rejects a local address with a port in a browser test.
 The tests fail when a page breaks the Content-Security-Policy.
 
 ### Tooling notes
