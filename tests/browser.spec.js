@@ -1,4 +1,4 @@
-// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the guest note with their descriptions and limit announcement in English and Romanian, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the guest note, which counts code points and keeps text past its limit, with their descriptions and limit announcement in English and Romanian, the calendar download, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
 // Romanian language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
@@ -281,8 +281,9 @@ const NOTE_HINTS = {
 };
 
 // The reply form's invalid fields: each name in invalid has aria-invalid and its error as its description after any
-// hint, and every other field has neither, only its hint.
-async function expectFieldErrors(page, invalid) {
+// hint and counter, and every other field has neither, only its hint and counter. counts holds the counter text of
+// each field name that shows one.
+async function expectFieldErrors(page, invalid, counts = {}) {
   const noteHint = NOTE_HINTS[await page.locator('html').getAttribute('lang')];
   const fields = {
     '#guestName': ['name', ''],
@@ -294,11 +295,13 @@ async function expectFieldErrors(page, invalid) {
     const locator = page.locator(`#rsvpForm ${selector}`);
     if (field in invalid) {
       await expect(locator).toHaveAttribute('aria-invalid', 'true');
-      await expect(locator).toHaveAccessibleDescription([hint, invalid[field]].filter(Boolean).join(' '));
+      await expect(locator).toHaveAccessibleDescription(
+        [hint, counts[field], invalid[field]].filter(Boolean).join(' '),
+      );
       await expect(page.getByText(invalid[field], { exact: true })).toBeVisible();
     } else {
       await expect(locator).not.toHaveAttribute('aria-invalid');
-      await expect(locator).toHaveAccessibleDescription(hint);
+      await expect(locator).toHaveAccessibleDescription([hint, counts[field]].filter(Boolean).join(' '));
     }
   }
 }
@@ -350,12 +353,6 @@ test('the Romanian reply form shows its field errors in Romanian', { tag: '@webk
   await expectFieldErrors(page, { name: 'Scrie-ți numele.', attending: 'Alege dacă participi.' });
 });
 
-// The form limits typing to 300 characters, so the test sets a longer note from script, as a paste extension could.
-const setNote = (page, note) =>
-  page.locator('#guestNote').evaluate((el, value) => {
-    /** @type {HTMLTextAreaElement} */ (el).value = value;
-  }, note);
-
 test(
   'a note over 300 characters shows its error under the note in English and Romanian',
   { tag: '@webkit' },
@@ -364,13 +361,13 @@ test(
     await page.goto('editor.html?view=1&sample=1');
     await expect(page.locator('#guestNote')).toHaveAccessibleName('Note (optional)');
     await page.fill('#guestName', 'Alex');
-    await setNote(page, 'x'.repeat(301));
+    await page.fill('#guestNote', 'x'.repeat(301));
     await page.click('#sendReply');
-    await expectFieldErrors(page, { note: 'Use at most 300 characters.' });
+    await expectFieldErrors(page, { note: 'Use at most 300 characters.' }, { note: '0 left' });
     await expect(page.locator('#guestNote')).toBeFocused();
-    await setNote(page, 'x'.repeat(300));
+    await page.fill('#guestNote', 'x'.repeat(300));
     await page.click('#sendReply');
-    await expectFieldErrors(page, {});
+    await expectFieldErrors(page, {}, { note: '0 left' });
     await expect(page.locator('#rsvpStatus')).toContainText('Nothing was sent');
     // A tab pasted from a spreadsheet becomes a space instead of an error that names the length.
     await page.fill('#guestNote', 'Vegan\tno nuts');
@@ -380,9 +377,9 @@ test(
     await page.goto('ro/editor.html?view=1&sample=1');
     await expect(page.locator('#guestNote')).toHaveAccessibleName('Notă (opțional)');
     await page.fill('#guestName', 'Ana');
-    await setNote(page, 'x'.repeat(301));
+    await page.fill('#guestNote', 'x'.repeat(301));
     await page.click('#sendReply');
-    await expectFieldErrors(page, { note: 'Folosește cel mult 300 de caractere.' });
+    await expectFieldErrors(page, { note: 'Folosește cel mult 300 de caractere.' }, { note: 'Mai rămân 0' });
     expect(problems).toEqual([]);
   },
 );
@@ -438,6 +435,15 @@ test('the guest note counts the characters left after its hint in English and Ro
   await expectCounter(page, '#guestNote', 240, '', { hint: NOTE_HINTS.en });
   await expectCounter(page, '#guestNote', 241, '59 left', { hint: NOTE_HINTS.en });
   await expectCounter(page, '#guestNote', 300, '0 left', { hint: NOTE_HINTS.en, announced: true });
+  // The note counts code points, as the server does, so 250 emoji leave 50 although they take 500 UTF-16 units.
+  await page.fill('#guestNote', '🎂'.repeat(250));
+  await expect(page.locator('#guestNote + .counter')).toHaveText('50 left');
+  // Text past the limit stays in the field, the counter stops at 0, and only the arrival at the limit announces.
+  await expectCounter(page, '#guestNote', 300, '0 left', { hint: NOTE_HINTS.en, announced: true });
+  await page.locator('#guestNote').pressSequentially('xy');
+  await expect(page.locator('#guestNote')).toHaveValue('x'.repeat(300) + 'xy');
+  await expect(page.locator('#guestNote + .counter')).toHaveText('0 left');
+  await expect(page.locator('#limitAlert')).toHaveText('');
   await page.goto('ro/editor.html?view=1&sample=1');
   await expectCounter(page, '#guestNote', 299, 'Mai rămâne 1', { hint: NOTE_HINTS.ro });
 });

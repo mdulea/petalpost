@@ -102,21 +102,24 @@ function commit() {
   save();
 }
 
-// A limited text field takes its limit as maxLength and shows the characters left below it once its text passes 80%
-// of the limit. The counter joins the field's description after any hint, so a screen reader reads it with the field.
-// The shared live region announces the counter only when typing reaches the limit. Every other change clears it, so
-// the next arrival announces and a script that sets field values leaves no stale text.
+// A limited text field shows the characters left below it once its text passes 80% of the limit. The counter joins
+// the field's description after any hint, so a screen reader reads it with the field. The shared live region
+// announces the counter only when typing reaches the limit. Every other change clears it, so the next arrival
+// announces and a script that sets field values leaves no stale text.
 const limitAlert = document.createElement('p');
 limitAlert.className = 'visually-hidden';
 limitAlert.id = 'limitAlert';
 limitAlert.setAttribute('role', 'status');
 document.body.append(limitAlert);
-/** @type {Map<HTMLInputElement | HTMLTextAreaElement, HTMLElement>} */
+/** @type {Map<HTMLInputElement | HTMLTextAreaElement, {counter: HTMLElement, limit: number, length: (text: string) => number, count: number}>} */
 const counters = new Map();
 
-// Gives input its limit, a counter after it as its description, and a counter refresh on each input event.
-function addCounter(input, limit) {
-  input.maxLength = limit;
+// Gives input its limit, a counter after it as its description, and a counter refresh on each input event. By
+// default maxLength enforces the limit in UTF-16 units, the unit the browser counts. With codePoints, the counter
+// counts code points as makeReply does, so an emoji counts once. maxLength cannot count code points, so such a field
+// keeps text past its limit, and makeReply reports it on send.
+function addCounter(input, limit, { codePoints = false } = {}) {
+  if (!codePoints) input.maxLength = limit;
   const counter = document.createElement('span');
   counter.className = 'counter';
   counter.id = `${input.id}Count`;
@@ -125,20 +128,23 @@ function addCounter(input, limit) {
     'aria-describedby',
     [input.getAttribute('aria-describedby'), counter.id].filter(Boolean).join(' '),
   );
-  counters.set(input, counter);
+  const entry = { counter, limit, length: codePoints ? (text) => [...text].length : (text) => text.length, count: 0 };
+  counters.set(input, entry);
   input.addEventListener('input', () => {
+    const before = entry.count;
     showCounts();
-    if (input.value.length >= limit) limitAlert.textContent = copy.charsLeft(0);
+    if (entry.count >= limit && before < limit) limitAlert.textContent = copy.charsLeft(0);
   });
 }
 
 // Writes each counter from its field's value and clears the live region; call after a script sets field values.
 function showCounts() {
   limitAlert.textContent = '';
-  counters.forEach((counter, input) => {
-    const left = charsLeft(input.value, input.maxLength);
-    counter.hidden = left === null;
-    counter.textContent = left === null ? '' : copy.charsLeft(left);
+  counters.forEach((entry, input) => {
+    entry.count = entry.length(input.value);
+    const left = charsLeft(entry.count, entry.limit);
+    entry.counter.hidden = left === null;
+    entry.counter.textContent = left === null ? '' : copy.charsLeft(left);
   });
 }
 
@@ -491,7 +497,7 @@ const nameInput = /** @type {HTMLInputElement} */ (document.getElementById('gues
 const partySizeInput = /** @type {HTMLInputElement} */ (document.getElementById('partySize'));
 const noteInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('guestNote'));
 addCounter(nameInput, REPLY_LIMITS.name);
-addCounter(noteInput, REPLY_LIMITS.note);
+addCounter(noteInput, REPLY_LIMITS.note, { codePoints: true });
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
