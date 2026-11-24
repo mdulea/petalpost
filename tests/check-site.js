@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node
 import { createServer as createNetServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
-import { after, before, test } from 'node:test';
+import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { buildSite } from '../scripts/build.js';
 import { startServer } from '../scripts/server.js';
@@ -423,14 +423,13 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
 // the vercel.json headers on every path, / and /ro/ as index.html, no clean URLs, no directory listing, 404.html for
 // unknown paths, no dotfiles, no file outside public/, /api paths through the API and /e/{id} or
 // /ro/e/{id} through the dynamic event page.
-// The server starts in a before hook, so it listens only after every top-level line has run. A server started at top
-// level kept the process alive when a later top-level line threw, and the run hung with no error.
-let local;
-before(async () => {
-  local = await startServer({ port: 0, memory: true });
-});
-after(() => local?.close());
-const fetchLocal = (path) => fetch(new URL(path, local.url), { redirect: 'manual' });
+// The first test that needs the server starts it, so it listens only after every top-level line has run, and a run
+// filtered to other tests never starts it. A server started at top level kept the process alive when a later top-level
+// line threw. A server started in a before hook kept a filtered run alive, because the after hook ran before it listened.
+let shared;
+const localUrl = async () => (await (shared ??= startServer({ port: 0, memory: true }))).url;
+after(async () => (await shared)?.close());
+const fetchLocal = async (path) => fetch(new URL(path, await localUrl()), { redirect: 'manual' });
 
 // Another worktree's server, or any other program, can hold the port. The server then refuses to start instead of
 // leaving the browser checks to test that program.
@@ -547,7 +546,7 @@ test('the local server serves /e/{id} with dynamic OG metadata for published eve
   assert.match(await missing.text(), /<meta name="robots" content="noindex, nofollow" \/>/);
 
   const id = 'B'.repeat(22);
-  const put = await fetch(new URL(`/api/events/${id}`, local.url), {
+  const put = await fetch(new URL(`/api/events/${id}`, await localUrl()), {
     method: 'PUT',
     headers: { authorization: `Bearer ${'s'.repeat(43)}`, 'content-type': 'application/json' },
     body: JSON.stringify({

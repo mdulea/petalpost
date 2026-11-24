@@ -102,23 +102,28 @@ A lost management link cannot be recovered.
 
 ## Development
 
-| Task           | Command                                |
-| -------------- | -------------------------------------- |
-| All checks     | `pnpm check`                           |
-| Fast checks    | `pnpm check:fast`                      |
-| Test suite     | `pnpm test`                            |
-| One check file | `pnpm exec node tests/check-invite.js` |
-| Lint           | `pnpm lint`                            |
-| Format and fix | `pnpm fix`                             |
-| Format check   | `pnpm format:check`                    |
-| Type check     | `pnpm typecheck`                       |
-| Browser tests  | `pnpm test:browser`                    |
-| Site build     | `pnpm build`                           |
-| Generate pages | `pnpm pages`                           |
-| Screenshot     | `pnpm shot <path> [<selector>] <file>` |
-| Migrations     | `pnpm migrate`                         |
+| Task                | Command                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| All checks          | `pnpm check`                                                       |
+| Fast checks         | `pnpm check:fast`                                                  |
+| Test suite          | `pnpm test`                                                        |
+| One check file      | `pnpm exec node tests/check-invite.js`                             |
+| Filtered check file | `pnpm exec node --test-name-pattern="sitemap" tests/check-site.js` |
+| One browser test    | `pnpm test:browser tests/browser.spec.js -g "landing filter"`      |
+| Lint                | `pnpm lint`                                                        |
+| Format and fix      | `pnpm fix`                                                         |
+| Format check        | `pnpm format:check`                                                |
+| Type check          | `pnpm typecheck`                                                   |
+| Browser tests       | `pnpm test:browser`                                                |
+| Site build          | `pnpm build`                                                       |
+| Generate pages      | `pnpm pages`                                                       |
+| Screenshot          | `pnpm shot <path> [<selector>] <file>`                             |
+| Migrations          | `pnpm migrate`                                                     |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
+`--test-name-pattern` runs only the tests whose names match the regular expression, and `-g` does the same for browser tests.
+Each targeted command finishes in seconds, so rerun the check you are working on with one of them and run `pnpm check` once at the end.
+`check-filter.js` fails when a check file keeps running after its filtered tests finish.
 
 `fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
 Run it before `check`. `check` reports formatting and lint errors and never rewrites a file.
@@ -131,7 +136,7 @@ It starts `scripts/server.js` on a free port with an in-memory database, so it r
 When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
-`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
