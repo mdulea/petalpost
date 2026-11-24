@@ -10,13 +10,13 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 import {
-  ROUTE_PAIRS,
   alternatesFor,
   canonicalPath,
   categoryLabel,
   fileLang,
   languageSwitchHref,
   localeOf,
+  routeForFile,
 } from '../public/js/i18n.js';
 import { CONTACT, editorUrl, makeInviteData } from '../public/js/invite.js';
 import { categoriesFor, popularTemplatesFor, renderInvite, templatesFor } from '../public/js/templates.js';
@@ -115,6 +115,7 @@ const hreflangLinks = (file) =>
 const jsonLd = (data) =>
   `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', ...data }).replace(/</g, '\\u003c')}</script>`;
 
+// Describes Petalpost as a free web application on the home page in lang, under that page's meta description.
 const webApplication = (lang, description) =>
   jsonLd({
     '@type': 'WebApplication',
@@ -128,8 +129,10 @@ const webApplication = (lang, description) =>
   });
 
 // Two levels: the home page in the page's language, then the page itself under its heading.
-const breadcrumb = (lang, heading, url) =>
-  jsonLd({
+// The heading is plain text; markup or an entity would reach crawlers verbatim, so it throws.
+const breadcrumb = (lang, heading, url) => {
+  if (/[<&]/.test(heading)) throw new Error(`breadcrumb heading "${heading}" is not plain text`);
+  return jsonLd({
     '@type': 'BreadcrumbList',
     itemListElement: [
       {
@@ -141,19 +144,17 @@ const breadcrumb = (lang, heading, url) =>
       { '@type': 'ListItem', position: 2, name: heading, item: url },
     ],
   });
+};
 
-// Hand-written pages that carry the structured-data region: the home pages and the guides.
-const HOME_FILES = ['index.html', 'ro/index.html'];
-const GUIDE_FILES = ROUTE_PAIRS.filter((pair) => pair.key === 'wording' || pair.key === 'when-to-send').flatMap(
-  (pair) => [pair.en, pair.ro],
-);
-
+// Fills the structured region of a hand-written page: a WebApplication on the home pages, a breadcrumb on the guides.
+// It reads the committed meta description or h1, so the JSON-LD repeats the visible text. Any other page throws.
 const structuredData = (file, html) => {
   const lang = fileLang(file);
-  if (HOME_FILES.includes(file)) {
+  const route = routeForFile(file);
+  if (route?.key === 'home') {
     return webApplication(lang, html.match(/<meta\s+name="description"\s+content="([^"]+)"/)[1]);
   }
-  if (GUIDE_FILES.includes(file)) {
+  if (route?.guide) {
     const heading = html
       .match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)[1]
       .replace(/\s+/g, ' ')

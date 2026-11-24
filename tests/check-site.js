@@ -136,27 +136,25 @@ test('every English and Romanian occasion has page text and all page text names 
 });
 
 // JSON-LD blocks per page, parsed; a block that does not parse fails every check that reads it.
-const jsonLd = (html) =>
+const parseJsonLd = (html) =>
   [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(([, json]) => JSON.parse(json));
-const ofType = (html, type) => jsonLd(html).filter((data) => data['@type'] === type);
+const ofType = (html, type) => parseJsonLd(html).filter((data) => data['@type'] === type);
 const text = (html) =>
   html
     .replace(/<[^>]+>/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 const canonicalOf = (html) => attr(html, /<link rel="canonical" href="([^"]+)"/);
-const HOMES = { en: 'index.html', ro: 'ro/index.html' };
+const homeRoute = ROUTE_PAIRS.find((pair) => pair.key === 'home');
+const HOMES = { en: homeRoute.en, ro: homeRoute.ro };
 const breadcrumbFiles = [
   ...Object.values(OCCASIONS).map((o) => o.file),
   ...Object.values(OCCASIONS_RO).map((o) => o.file),
-  ...ROUTE_PAIRS.filter((pair) => pair.key === 'wording' || pair.key === 'when-to-send').flatMap((pair) => [
-    pair.en,
-    pair.ro,
-  ]),
+  ...ROUTE_PAIRS.filter((pair) => pair.guide).flatMap((pair) => [pair.en, pair.ro]),
 ];
 
 test('every page JSON-LD block parses', () => {
-  for (const file of allHtmlFiles) assert.doesNotThrow(() => jsonLd(read(file)), file);
+  for (const file of allHtmlFiles) assert.doesNotThrow(() => parseJsonLd(read(file)), file);
 });
 
 for (const [lang, file] of Object.entries(HOMES)) {
@@ -209,7 +207,7 @@ test('no page emits an FAQ, a rating or a review', () => {
   const banned = ['FAQPage', 'AggregateRating', 'Rating', 'Review'];
   assert.deepEqual(
     allHtmlFiles.filter((file) =>
-      jsonLd(read(file))
+      parseJsonLd(read(file))
         .flatMap(types)
         .some((type) => banned.includes(type)),
     ),

@@ -1,10 +1,13 @@
 // Fails when the landing gallery or its occasion filter, a content page, the editor preview, the draft reload, the guest view, the sample guest invitation, the calendar download, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download or the link preview generator breaks in
-// Chromium, or a page breaks the Content-Security-Policy.
+// Chromium, or a page breaks the Content-Security-Policy, including a page with structured data.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { ROUTE_PAIRS, canonicalPath } from '../public/js/i18n.js';
 import { HERO_TEMPLATES, RO_HERO_TEMPLATES, templatesFor } from '../public/js/templates.js';
+import { OCCASIONS } from '../scripts/occasions.js';
+import { OCCASIONS_RO } from '../scripts/occasions-ro.js';
 
 // Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
 function watch(page) {
@@ -52,12 +55,10 @@ test('the Romanian landing page shows every Romanian template and filters local 
 for (const path of [
   'birthday-invitations.html',
   'invitation-wording.html',
-  'when-to-send-invitations.html',
   'about.html',
   'ro/invitatii-botez.html',
   'ro/invitatii-cununie.html',
   'ro/text-invitatii.html',
-  'ro/cand-sa-trimiti-invitatiile.html',
   'ro/despre.html',
 ]) {
   test(`${path} loads its icons without errors`, async ({ page }) => {
@@ -67,6 +68,21 @@ for (const path of [
     expect(problems).toEqual([]);
   });
 }
+
+// Every page with a JSON-LD block: the home pages, every occasion page and the guides.
+test('every page with structured data loads it without a Content-Security-Policy violation', async ({ page }) => {
+  const problems = watch(page);
+  const files = [
+    ...ROUTE_PAIRS.filter((pair) => pair.key === 'home' || pair.guide).flatMap((pair) => [pair.en, pair.ro]),
+    ...Object.values(OCCASIONS).map((o) => o.file),
+    ...Object.values(OCCASIONS_RO).map((o) => o.file),
+  ];
+  for (const file of files) {
+    await page.goto(canonicalPath(file));
+    await expect(page.locator('script[type="application/ld+json"]'), file).toHaveCount(1);
+  }
+  expect(problems).toEqual([]);
+});
 
 test('an edit shows in the preview and survives a reload', async ({ page }) => {
   const problems = watch(page);
