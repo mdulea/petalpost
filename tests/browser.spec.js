@@ -1,4 +1,4 @@
-// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, the characters-left counters of the editor fields and the guest name with their descriptions and limit announcement in English and Romanian, the calendar download, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
 // Romanian language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
@@ -290,7 +290,7 @@ async function expectFieldErrors(page, invalid) {
       await expect(page.getByText(invalid[field], { exact: true })).toBeVisible();
     } else {
       await expect(locator).not.toHaveAttribute('aria-invalid');
-      await expect(locator).not.toHaveAttribute('aria-describedby');
+      await expect(locator).toHaveAccessibleDescription('');
     }
   }
 }
@@ -340,6 +340,51 @@ test('the Romanian reply form shows its field errors in Romanian', { tag: '@webk
   await clearAnswer(page);
   await page.click('#sendReply');
   await expectFieldErrors(page, { name: 'Scrie-ți numele.', attending: 'Alege dacă participi.' });
+});
+
+// The counter of a limited field: hidden with an empty live region up to 80% of the limit, then the text left as the
+// field's description, and in the live region only at the limit.
+async function expectCounter(page, field, length, text, { announced = false } = {}) {
+  await page.fill(field, 'x'.repeat(length));
+  const counter = page.locator(`${field} + .counter`);
+  if (text) await expect(counter).toHaveText(text);
+  else await expect(counter).toBeHidden();
+  await expect(page.locator(field)).toHaveAccessibleDescription(text);
+  await expect(page.locator('#limitAlert')).toHaveText(announced ? text : '');
+}
+
+test('a limited editor field counts the characters left above 80% of its limit', async ({ page }) => {
+  const problems = watch(page);
+  await page.goto('editor.html?t=birthday');
+  await expectCounter(page, '#title', 38, '');
+  await expectCounter(page, '#title', 39, '9 left');
+  await expectCounter(page, '#title', 48, '0 left', { announced: true });
+  await expectCounter(page, '#title', 47, '1 left');
+  await expect(page.locator('#date + .counter')).toHaveCount(0);
+  await expect(page.locator('#time + .counter')).toHaveCount(0);
+  await page.fill('#title', 'x'.repeat(45));
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('petalpost:draft'))).toContain('x'.repeat(45));
+  await page.goto('editor.html');
+  await expect(page.locator('#title + .counter')).toHaveText('3 left');
+  expect(problems).toEqual([]);
+});
+
+test('the guest name counts the characters left in English and Romanian', async ({ page }) => {
+  await page.goto('editor.html?view=1&sample=1');
+  await expectCounter(page, '#guestName', 64, '');
+  await expectCounter(page, '#guestName', 65, '15 left');
+  await page.fill('#partySize', '0');
+  await page.click('#sendReply');
+  await expect(page.locator('#guestName')).toHaveAccessibleDescription('15 left');
+  await expect(page.locator('#partySize')).toHaveAccessibleDescription('Enter a number from 1 to 10.');
+  await expectCounter(page, '#guestName', 80, '0 left', { announced: true });
+
+  await page.goto('ro/editor.html?view=1&sample=1');
+  await expectCounter(page, '#guestName', 70, 'Mai rămân 10');
+  await expectCounter(page, '#guestName', 79, 'Mai rămâne 1');
+  await expectCounter(page, '#guestName', 80, 'Mai rămân 0', { announced: true });
+  await page.goto('ro/editor.html?t=birthday');
+  await expectCounter(page, '#message', 100, 'Mai rămân 10');
 });
 
 test('the link preview generator draws the hero templates in English and Romanian', async ({ page }) => {

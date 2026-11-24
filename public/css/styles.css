@@ -1261,7 +1261,8 @@ div.banner-art {
 .field-row .field {
   margin-bottom: 0;
 }
-.hint {
+.hint,
+.counter {
   font-size: 13px;
   color: var(--muted);
 }

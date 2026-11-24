@@ -8,6 +8,7 @@ import {
   FIELDS,
   FIELD_LIMITS,
   buildIcs,
+  charsLeft,
   changePhoto,
   eventLink,
   eventPreviewMeta,
@@ -101,15 +102,53 @@ function commit() {
   save();
 }
 
+// A limited text field takes its limit as maxLength and shows the characters left below it once its text passes 80%
+// of the limit. The counter is the field's description, so a screen reader reads it with the field. The shared live
+// region announces the counter only when typing reaches the limit. Every other change clears it, so the next arrival
+// announces and a script that sets field values leaves no stale text.
+const limitAlert = document.createElement('p');
+limitAlert.className = 'visually-hidden';
+limitAlert.id = 'limitAlert';
+limitAlert.setAttribute('role', 'status');
+document.body.append(limitAlert);
+/** @type {Map<HTMLInputElement | HTMLTextAreaElement, HTMLElement>} */
+const counters = new Map();
+
+// Gives input its limit, a counter after it as its description, and a counter refresh on each input event.
+function addCounter(input, limit) {
+  input.maxLength = limit;
+  const counter = document.createElement('span');
+  counter.className = 'counter';
+  counter.id = `${input.id}Count`;
+  input.after(counter);
+  input.setAttribute('aria-describedby', counter.id);
+  counters.set(input, counter);
+  input.addEventListener('input', () => {
+    showCounts();
+    if (input.value.length >= limit) limitAlert.textContent = copy.charsLeft(0);
+  });
+}
+
+// Writes each counter from its field's value and clears the live region; call after a script sets field values.
+function showCounts() {
+  limitAlert.textContent = '';
+  counters.forEach((counter, input) => {
+    const left = charsLeft(input.value, input.maxLength);
+    counter.hidden = left === null;
+    counter.textContent = left === null ? '' : copy.charsLeft(left);
+  });
+}
+
 // The accent radio group takes its value too: a null accent checks the template default swatch.
 function fillForm() {
   EDITABLE.forEach((f) => {
     form.elements[f].value = state.d[f] ?? '';
   });
+  showCounts();
 }
 
 FIELDS.forEach((f) => {
-  if (FIELD_LIMITS[f]) form.elements[f].maxLength = FIELD_LIMITS[f];
+  if (FIELD_LIMITS[f]) addCounter(form.elements[f], FIELD_LIMITS[f]);
 });
 
 // The picker shows one occasion at a time; the tab follows the selected template.
@@ -447,7 +486,7 @@ const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById(
 const sendReply = /** @type {HTMLButtonElement} */ (document.getElementById('sendReply'));
 const nameInput = /** @type {HTMLInputElement} */ (document.getElementById('guestName'));
 const partySizeInput = /** @type {HTMLInputElement} */ (document.getElementById('partySize'));
-nameInput.maxLength = REPLY_LIMITS.name;
+addCounter(nameInput, REPLY_LIMITS.name);
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
@@ -459,8 +498,8 @@ function attendingChecked() {
   return checked ? checked.value === 'yes' : null;
 }
 
-// Each reply field shows its own error in a message below it, which becomes the field's description. The answer's
-// field is its radio group, and focus goes to the group's first choice.
+// Each reply field shows its own error in a message below it, which joins the field's description after any counter.
+// The answer's field is its radio group, and focus goes to the group's first choice.
 const replyErrors = copy.replyErrors(REPLY_LIMITS.partySize);
 /** @type {Record<string, {field: Element, focusTarget: HTMLElement}>} */
 const replyControls = {
@@ -487,13 +526,14 @@ function showReplyErrors(invalid) {
     const isInvalid = invalid.includes(name);
     message.hidden = !isInvalid;
     message.textContent = isInvalid ? replyErrors[name] : '';
-    if (isInvalid) {
-      field.setAttribute('aria-invalid', 'true');
-      field.setAttribute('aria-describedby', message.id);
-    } else {
-      field.removeAttribute('aria-invalid');
-      field.removeAttribute('aria-describedby');
-    }
+    if (isInvalid) field.setAttribute('aria-invalid', 'true');
+    else field.removeAttribute('aria-invalid');
+    const ids = [];
+    const counter = counters.get(/** @type {HTMLInputElement} */ (field));
+    if (counter) ids.push(counter.id);
+    if (isInvalid) ids.push(message.id);
+    if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
+    else field.removeAttribute('aria-describedby');
   }
   replyFields.find(({ name }) => invalid.includes(name))?.focusTarget.focus();
 }
@@ -511,6 +551,7 @@ function fillReply(reply) {
   answer.checked = true;
   if (reply.attending) partySizeInput.value = String(reply.partySize);
   syncPartySize();
+  showCounts();
 }
 
 const replyLink = () => responseLink(location.origin, state.event, replyCred.id, replyCred.secret, lang);
@@ -570,6 +611,7 @@ withdrawButton.addEventListener('click', async () => {
     history.replaceState(null, '', eventLink(location.origin, state.event, lang));
     rsvpForm.reset();
     syncPartySize();
+    showCounts();
     document.getElementById('replySaved').hidden = true;
     rsvpStatus.textContent = copy.replyWithdrawn;
     return;

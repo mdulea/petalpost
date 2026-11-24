@@ -17,6 +17,8 @@ export const FIELD_LIMITS = {
   rsvp: 40,
 };
 export const FIELDS = Object.keys(FIELD_LIMITS);
+// The characters left in a field once its text passes 80% of the limit, or null at or below 80%.
+export const charsLeft = (value, limit) => (value.length > limit * 0.8 ? limit - value.length : null);
 // Every name the editor form writes, and every key of a record.
 export const EDITABLE = [...FIELDS, 'photoY', 'accent'];
 // Date and time take the editor input formats, YYYY-MM-DD for a real day and HH:MM, or empty for a cleared input.
