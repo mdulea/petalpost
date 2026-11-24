@@ -66,9 +66,9 @@ A lost management link cannot be recovered.
 
 - `public/` holds every file the site serves, laid out as its URLs:
   - `index.html` is the landing page, `editor.html` is the editor and the guest view, and `manage.html` is the host's management page.
-  - `birthday-invitations.html` and the five other `*-invitations.html` pages show one occasion's templates and advice. `pnpm pages` generates them; do not edit them by hand.
+  - The occasion pages show one occasion's templates and advice. `pnpm pages` generates one page for each entry in `scripts/occasions.js` and `scripts/occasions-ro.js`, at the file that the entry names, such as `birthday-invitations.html`. Do not edit them by hand.
   - `invitation-wording.html` and `when-to-send-invitations.html` are the guides, and `about.html`, `privacy.html`, `terms.html` and `404.html` are the remaining pages.
-  - `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, the generated `ro/invitatii-*.html` occasion pages, the hand-written guides `ro/text-invitatii.html`, `ro/cand-sa-trimiti-invitatiile.html` and `ro/invitatii-digitale-sau-tiparite.html`, which is the only guide without an English pair, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
+  - `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, the Romanian occasion pages, the hand-written guides `ro/text-invitatii.html`, `ro/cand-sa-trimiti-invitatiile.html` and `ro/invitatii-digitale-sau-tiparite.html`, which is the only guide without an English pair, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
   - `js/` holds the page scripts:
     - `templates.js` is the template catalog and the `renderInvite` renderer.
     - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
@@ -102,23 +102,28 @@ A lost management link cannot be recovered.
 
 ## Development
 
-| Task           | Command                                |
-| -------------- | -------------------------------------- |
-| All checks     | `pnpm check`                           |
-| Fast checks    | `pnpm check:fast`                      |
-| Test suite     | `pnpm test`                            |
-| One check file | `pnpm exec node tests/check-invite.js` |
-| Lint           | `pnpm lint`                            |
-| Format and fix | `pnpm fix`                             |
-| Format check   | `pnpm format:check`                    |
-| Type check     | `pnpm typecheck`                       |
-| Browser tests  | `pnpm test:browser`                    |
-| Site build     | `pnpm build`                           |
-| Generate pages | `pnpm pages`                           |
-| Screenshot     | `pnpm shot <path> [<selector>] <file>` |
-| Migrations     | `pnpm migrate`                         |
+| Task                | Command                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| All checks          | `pnpm check`                                                       |
+| Fast checks         | `pnpm check:fast`                                                  |
+| Test suite          | `pnpm test`                                                        |
+| One check file      | `pnpm exec node tests/check-invite.js`                             |
+| Filtered check file | `pnpm exec node --test-name-pattern="sitemap" tests/check-site.js` |
+| One browser test    | `pnpm test:browser tests/browser.spec.js -g "landing filter"`      |
+| Lint                | `pnpm lint`                                                        |
+| Format and fix      | `pnpm fix`                                                         |
+| Format check        | `pnpm format:check`                                                |
+| Type check          | `pnpm typecheck`                                                   |
+| Browser tests       | `pnpm test:browser`                                                |
+| Site build          | `pnpm build`                                                       |
+| Generate pages      | `pnpm pages`                                                       |
+| Screenshot          | `pnpm shot <path> [<selector>] <file>`                             |
+| Migrations          | `pnpm migrate`                                                     |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
+`--test-name-pattern` runs only the tests whose names match the regular expression, and `-g` does the same for browser tests.
+Each targeted command finishes in seconds, so rerun the check you are working on with one of them and run `pnpm check` once at the end.
+`check-filter.js` fails when a check file keeps running after its filtered tests finish.
 
 `fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
 Run it before `check`. `check` reports formatting and lint errors and never rewrites a file.
@@ -131,7 +136,7 @@ It starts `scripts/server.js` on a free port with an in-memory database, so it r
 When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
-`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
