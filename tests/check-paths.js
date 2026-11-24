@@ -2,7 +2,7 @@
 // exists neither from the repository root, nor from public/ as a site path, nor from the naming file's directory. A
 // path counts when it has at least one slash and ends in .js, .css, .html, .sql, .json, .md or .ts. Globs, URLs and
 // the historical records in docs/decisions/ are exempt.
-// Run: node tests/check-paths.js
+// Run: pnpm exec node tests/check-paths.js
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';

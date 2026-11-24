@@ -1,6 +1,6 @@
 // Fails when the production database adapter makes node-postgres warn about a deprecated SSL mode in the connection
 // string that the Neon integration supplies.
-// Run: node tests/check-postgres.js
+// Run: pnpm exec node tests/check-postgres.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { connect } from '../server/postgres.js';

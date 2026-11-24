@@ -5,7 +5,7 @@
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
 // On a port that another program holds, startServer closes the database and rejects with code EADDRINUSE and a
 // message that names the port and PORT_ENV. The command prints that message and exits with status 1.
-// Run: node scripts/server.js --port <n> [--memory]
+// Run: pnpm exec node scripts/server.js --port <n> [--memory]
 import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, sep } from 'node:path';

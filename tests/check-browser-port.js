@@ -2,7 +2,7 @@
 // gives a worktree a port outside WORKTREE_PORTS or the pnpm dev port, gives the main checkout or a copy without .git
 // a port other than DEFAULT_PORT, ignores BROWSER_CHECK_PORT, or accepts a BROWSER_CHECK_PORT that is not a port. Fails too when ESLint accepts a local origin with a port written into
 // a browser test, in a string or a template literal, or rejects a colon outside a local origin or a local host without a port.
-// Run: node tests/check-browser-port.js
+// Run: pnpm exec node tests/check-browser-port.js
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

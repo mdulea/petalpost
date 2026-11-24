@@ -90,7 +90,7 @@ A host cannot:
 - edit or delete a single reply;
 - publish changes from another browser, because only the publishing browser keeps the management secret;
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
-- publish more than 20 invitations from one connection in a day;
+- publish more than 20 invitations from one IP address in a day;
 - keep an invitation longer than 90 days after its event date, or 90 days after its last change when it has no date.
 
 A guest can:
@@ -199,7 +199,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 1. Add the occasion's first template as [Add a template](#add-a-template) describes, with the new category name in `category`.
 2. For a Romanian occasion, add the category to `RO_CATEGORIES` in `public/js/templates.js` at its place in the Romanian order. The English order follows the order of each category's first template in `TEMPLATES`.
 3. Add the category's label to `CATEGORY_LABELS` in `public/js/i18n.js` for each language that shows it.
-4. Add a route to `ROUTE_PAIRS` in `public/js/i18n.js` with the page file for each language, `null` for a language without the occasion, and `indexed: true`.
+4. Add a route to `ROUTE_PAIRS` in `public/js/i18n.js` with a `key`, the page file for each language, `null` for a language without the occasion, and `indexed: true`.
 5. Add the page copy to `scripts/occasions.js`, `scripts/occasions-ro.js` or both, keyed by the category: `file`, `heading`, `description`, `lead` and `sections`. The heading is plain text without `<` or `&`. A Romanian description holds one of the Romanian search phrases from `check-site.js`.
 6. Run `pnpm pages`. It writes the occasion page, and the occasion links, footers, galleries, template counts, structured data and sitemap entries of the other pages.
 7. Update the tests that name occasions: the category order check in `check-invite.js` for a Romanian occasion, and in `browser.spec.js` the Romanian gallery filter counts and the list of pages that load their icons. Add the page to a page list in `layout.spec.js`.

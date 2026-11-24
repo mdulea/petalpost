@@ -1,6 +1,6 @@
 // Fails when another Node check file run with a test name filter keeps running past the timeout or exits with a non-zero
 // status, or when tests/check-site.js filtered to one test passes no test. Each run is a child process.
-// Run: node tests/check-filter.js
+// Run: pnpm exec node tests/check-filter.js
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
