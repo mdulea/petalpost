@@ -1,7 +1,7 @@
-// Fails when browserCheckPort gives the same worktree different ports, gives two worktrees the same port, gives a
-// worktree a port outside WORKTREE_PORTS or the pnpm dev port, gives the main checkout a port other than
-// DEFAULT_PORT, or ignores BROWSER_CHECK_PORT. Fails too when ESLint accepts a local origin with a port written into
-// a browser test, in a string or a template literal, or rejects a colon outside a local origin.
+// Fails when browserCheckPort gives the same worktree path different ports, gives two sample worktrees the same port,
+// gives a worktree a port outside WORKTREE_PORTS or the pnpm dev port, gives the main checkout or a copy without .git
+// a port other than DEFAULT_PORT, ignores BROWSER_CHECK_PORT, or accepts a BROWSER_CHECK_PORT that is not a port. Fails too when ESLint accepts a local origin with a port written into
+// a browser test, in a string or a template literal, or rejects a colon outside a local origin or a local host without a port.
 // Run: node tests/check-browser-port.js
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { ESLint } from 'eslint';
-import { DEFAULT_PORT, PORT_ENV, WORKTREE_PORTS, browserCheckPort } from '../scripts/server.js';
+import { DEFAULT_PORT, PORT_ENV, WORKTREE_PORTS, browserCheckPort } from '../scripts/browser-port.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'petalpost-port-'));
 after(() => rmSync(dir, { recursive: true, force: true }));
@@ -30,11 +30,11 @@ test('the main checkout uses DEFAULT_PORT', () => {
   assert.equal(browserCheckPort(main, {}), DEFAULT_PORT);
 });
 
-test('a worktree gets the same port on every run', () => {
+test('the same worktree path gives the same port on each call', () => {
   assert.equal(browserCheckPort(guestList, {}), browserCheckPort(guestList, {}));
 });
 
-test('two worktrees get different ports inside WORKTREE_PORTS, never the pnpm dev port', () => {
+test('feat-guest-list and fix-footer-links get different ports inside WORKTREE_PORTS, never the pnpm dev port', () => {
   const ports = [guestList, footerLinks].map((root) => browserCheckPort(root, {}));
   assert.notEqual(ports[0], ports[1]);
   for (const port of ports) {
@@ -47,6 +47,18 @@ test('two worktrees get different ports inside WORKTREE_PORTS, never the pnpm de
 test(`${PORT_ENV} wins over the derived and the default port`, () => {
   assert.equal(browserCheckPort(guestList, { [PORT_ENV]: '4999' }), 4999);
   assert.equal(browserCheckPort(main, { [PORT_ENV]: '5123' }), 5123);
+});
+
+test(`${PORT_ENV} that is not a port number throws with a message naming it`, () => {
+  for (const value of ['abc', '0', '70000', '4321.5']) {
+    assert.throws(() => browserCheckPort(main, { [PORT_ENV]: value }), new RegExp(`${PORT_ENV}.*"${value}"`));
+  }
+});
+
+test('a copy without .git uses DEFAULT_PORT', () => {
+  const copy = join(dir, 'copy');
+  mkdirSync(copy);
+  assert.equal(browserCheckPort(copy, {}), DEFAULT_PORT);
 });
 
 const eslint = new ESLint();

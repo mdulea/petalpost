@@ -6,39 +6,17 @@
 // On a port that another program holds, startServer closes the database and rejects with code EADDRINUSE and a
 // message that names the port and PORT_ENV. The command prints that message and exits with status 1.
 // Run: node scripts/server.js --port <n> [--memory]
-import { createHash } from 'node:crypto';
-import { statSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { extname, join, resolve, sep } from 'node:path';
+import { extname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { PGlite } from '@electric-sql/pglite';
 import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
+import { PORT_ENV } from './browser-port.js';
 import { SITE } from './build.js';
-
-// The environment variable that sets the browser-check port. It wins over the port that browserCheckPort derives.
-export const PORT_ENV = 'BROWSER_CHECK_PORT';
-
-// The browser-check port of the main checkout, and so of CI, which runs in a fresh clone.
-export const DEFAULT_PORT = 4321;
-
-// The browser-check ports of linked worktrees. The range holds neither DEFAULT_PORT nor the pnpm dev port 3000.
-export const WORKTREE_PORTS = { first: 4400, last: 4999 };
-
-// The browser-check port of the checkout at root: PORT_ENV when env sets it, DEFAULT_PORT for a main checkout, whose
-// .git is a directory, and otherwise a port in WORKTREE_PORTS hashed from the root path. A linked worktree's .git is a
-// file, and its port stays the same on every run, so worktrees running their checks at the same time rarely share a
-// port. Windows paths ignore case, so the hash does too.
-export function browserCheckPort(root, env = process.env) {
-  if (env[PORT_ENV]) return Number(env[PORT_ENV]);
-  if (!statSync(join(root, '.git')).isFile()) return DEFAULT_PORT;
-  const path = process.platform === 'win32' ? resolve(root).toLowerCase() : resolve(root);
-  const hash = createHash('sha256').update(path).digest().readUInt32BE(0);
-  return WORKTREE_PORTS.first + (hash % (WORKTREE_PORTS.last - WORKTREE_PORTS.first + 1));
-}
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 

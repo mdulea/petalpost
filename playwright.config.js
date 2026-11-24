@@ -4,7 +4,7 @@
 // derived from the root path, in each linked worktree. Tests open paths, never a local origin, and lint enforces it.
 import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
-import { browserCheckPort } from './scripts/server.js';
+import { browserCheckPort } from './scripts/browser-port.js';
 
 const port = browserCheckPort(fileURLToPath(new URL('.', import.meta.url)));
 
@@ -25,9 +25,10 @@ export default defineConfig({
   ],
   // A port of its own and no reuse: another program on the port, such as another worktree's server, fails the run
   // instead of being tested in place of scripts/server.js. With no url, Playwright skips its own port probe, so
-  // scripts/server.js refuses the port with a message that names PORT_ENV, and the start line marks it ready.
+  // scripts/server.js refuses the port with a message that names PORT_ENV, and its start line with the port marks it
+  // ready.
   webServer: {
     command: `node scripts/server.js --port ${port} --memory --daily-events 200`,
-    wait: { stdout: /Petalpost at / },
+    wait: { stdout: new RegExp(`Petalpost at http://localhost:${port}/`) },
   },
 });
