@@ -26,6 +26,7 @@ import {
   updateInvite,
 } from './invite.js';
 import {
+  REPLY_FIELDS,
   REPLY_LIMITS,
   createClient,
   editorPage,
@@ -461,17 +462,23 @@ function attendingChecked() {
 // Each reply field shows its own error in a message below it, which becomes the field's description. The answer's
 // field is its radio group, and focus goes to the group's first choice.
 const replyErrors = copy.replyErrors(REPLY_LIMITS.partySize);
-const replyFields = Object.entries({
-  name: [nameInput, nameInput],
-  attending: [rsvpForm.querySelector('[role="radiogroup"]'), rsvpForm.querySelector('input[name="attending"]')],
-  partySize: [partySizeInput, partySizeInput],
-}).map(([name, [field, focusTarget]]) => {
+/** @type {Record<string, {field: Element, focusTarget: HTMLElement}>} */
+const replyControls = {
+  name: { field: nameInput, focusTarget: nameInput },
+  attending: {
+    field: rsvpForm.querySelector('[role="radiogroup"]'),
+    focusTarget: rsvpForm.querySelector('input[name="attending"]'),
+  },
+  partySize: { field: partySizeInput, focusTarget: partySizeInput },
+};
+const replyFields = REPLY_FIELDS.map((name) => {
+  const { field, focusTarget } = replyControls[name];
   const message = document.createElement('p');
   message.className = 'field-error';
   message.id = `${name}Error`;
   message.hidden = true;
   field.closest('.field').append(message);
-  return { name, field, focusTarget: /** @type {HTMLElement} */ (focusTarget), message };
+  return { name, field, focusTarget, message };
 });
 
 // Marks the fields named in invalid, clears the others and focuses the first invalid field.

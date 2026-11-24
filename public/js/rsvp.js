@@ -8,8 +8,11 @@ export const REPLY_LIMITS = { name: 80, partySize: 10 };
 export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-// The only constructor for a reply: untrusted {name, attending, partySize} becomes {reply, invalid}. reply is the
-// valid reply, or null when invalid lists the invalid fields in form order: 'name', 'attending', 'partySize'.
+// The fields of a reply, in the order the reply form shows them.
+export const REPLY_FIELDS = ['name', 'attending', 'partySize'];
+
+// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize} becomes
+// {reply, invalid}. reply is the valid reply, or null when invalid lists the invalid fields in REPLY_FIELDS order.
 // The name is trimmed and holds 1 to 80 code points without control characters. An attending guest brings
 // a party of 1 to 10 people; a declined reply has a party size of exactly 0. Without a valid answer, the party size
 // only has to be a whole number.
@@ -17,16 +20,15 @@ export function makeReply(source) {
   const { name, attending, partySize } = source && typeof source === 'object' ? source : {};
   const trimmed = typeof name === 'string' ? name.trim() : '';
   const length = [...trimmed].length;
-  const invalid = [];
-  if (length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed)) invalid.push('name');
-  if (typeof attending !== 'boolean') invalid.push('attending');
-  if (
-    !Number.isInteger(partySize) ||
-    (attending === true && (partySize < 1 || partySize > REPLY_LIMITS.partySize)) ||
-    (attending === false && partySize !== 0)
-  ) {
-    invalid.push('partySize');
-  }
+  const isInvalid = {
+    name: length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed),
+    attending: typeof attending !== 'boolean',
+    partySize:
+      !Number.isInteger(partySize) ||
+      (attending === true && (partySize < 1 || partySize > REPLY_LIMITS.partySize)) ||
+      (attending === false && partySize !== 0),
+  };
+  const invalid = REPLY_FIELDS.filter((field) => isInvalid[field]);
   return { reply: invalid.length ? null : { name: trimmed, attending, partySize }, invalid };
 }
 
