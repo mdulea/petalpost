@@ -4,7 +4,6 @@ node_modules/
 .pnpm-store/
 .gitattributes
 .git-blame-ignore-revs
-.prettierrc.json
 .prettierignore
 eslint.config.js
 tsconfig.json

@@ -24,6 +24,10 @@
     "test:browser": "playwright test",
     "worktree": "node scripts/worktree.js"
   },
+  "prettier": {
+    "singleQuote": true,
+    "printWidth": 120
+  },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16",
     "@eslint/js": "10.0.1",
