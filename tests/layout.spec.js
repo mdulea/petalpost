@@ -226,7 +226,7 @@ test('the Create invite bar pads for the safe-area insets', async ({ page }) => 
   const padding = await page.evaluate(() => {
     const rules = [...document.styleSheets].flatMap((sheet) => [...sheet.cssRules]);
     const narrow = /** @type {CSSMediaRule} */ (
-      rules.find((rule) => rule instanceof CSSMediaRule && rule.conditionText.includes('639px'))
+      rules.find((rule) => rule instanceof CSSMediaRule && rule.conditionText === '(max-width: 639px)')
     );
     const bar = [...narrow.cssRules].find(
       (rule) => rule instanceof CSSStyleRule && rule.selectorText === '.sticky-cta',
@@ -264,7 +264,7 @@ test('the Create invite bar slides in, and appears without motion under reduced 
 // next link or button in document order from script after a Shift press, which keeps focus keyboard-driven, and
 // focus() scrolls it into view as Tab does.
 test('the Create invite bar never covers the focused control', async ({ page, browserName }) => {
-  // Each focus step waits for the scroll to settle: about 1.5 minutes in Chromium and in WebKit with two workers.
+  // Each focus step waits for the scroll to settle. The test takes about 1.5 minutes in Chromium and in WebKit.
   test.setTimeout(300000);
   const failures = [];
   for (const { path } of STICKY_PAGES) {

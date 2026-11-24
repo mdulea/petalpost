@@ -1454,7 +1454,7 @@ textarea.input {
 }
 
 @media (max-width: 639px) {
-  /* Also while the bar is hidden: the bar can appear during the browser's focus scroll. */
+  /* The padding also applies while the bar is hidden, because the bar can appear during the focus scroll. */
   html:has(.sticky-cta) {
     scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
