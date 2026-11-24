@@ -3,9 +3,14 @@
 // regions between <!-- generated:NAME --> and <!-- /generated:NAME --> markers in public/ and public/ro/ pages, which
 // are the hreflang links, JSON-LD structured data, landing galleries, landing template counts, occasion links and every
 // page footer.
-// generatePages() resolves a Map from file path relative to public/ to its content, formatted with Prettier;
-// check-site.js fails when a committed file differs from it.
+// It also writes sitemap.xml with every indexed page and its lastmod date. scripts/lastmod.json keeps each indexed
+// page's date with a fingerprint of its content: the page text outside its generated regions, or the occasion copy of
+// an occasion page. A page whose fingerprint changed gets today's date, so a change inside a generated region, such as
+// a new footer link, leaves every date alone.
+// generatePages() resolves a Map from file path relative to the repository root to its content, formatted with
+// Prettier; check-site.js fails when a committed file differs from it.
 // Run: pnpm pages, which writes the files.
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +29,9 @@ import { categoriesFor, popularTemplatesFor, renderInvite, templatesFor } from '
 import { OCCASIONS } from './occasions.js';
 import { OCCASIONS_RO } from './occasions-ro.js';
 
-const root = new URL('../public/', import.meta.url);
+const repo = new URL('../', import.meta.url);
+const root = new URL('public/', repo);
+const LEDGER = 'scripts/lastmod.json';
 const read = (file) => readFileSync(new URL(file, root), 'utf8');
 
 // Every absolute URL derives from the index.html canonical, so changing the production origin starts there.
@@ -338,9 +345,12 @@ function occasionPage(category, lang) {
 `;
 }
 
+// A generated region with its markers: the opening marker, the region name and the closing marker are groups 1 to 3.
+const GENERATED = /(<!-- generated:(\w+) -->)[\s\S]*?(<!-- \/generated:\2 -->)/g;
+
 // Replaces the content of every known marker region in html. A region reads the file name and the committed html.
 const fillRegions = (file, html) =>
-  html.replace(/(<!-- generated:(\w+) -->)[\s\S]*?(<!-- \/generated:\2 -->)/g, (match, open, name, close) =>
+  html.replace(GENERATED, (match, open, name, close) =>
     REGIONS[name] ? `${open}${REGIONS[name](file, html)}${close}` : match,
   );
 
@@ -353,12 +363,47 @@ function siteHtmlFiles() {
   return files;
 }
 
+// The fingerprint of a page's content: its text with every generated region emptied, runs of whitespace joined and
+// whitespace next to a tag bracket dropped, so neither a generated region nor reformatting changes it.
+export const contentFingerprint = (text) => {
+  const content = text
+    .replace(GENERATED, '$1$3')
+    .replace(/\s+/g, ' ')
+    .replace(/ ?([<>]) ?/g, '$1');
+  return createHash('sha256').update(content).digest('hex').slice(0, 16);
+};
+
+// The new ledger from the fingerprint of each indexed page: an unchanged page keeps its date, a changed or new page
+// gets today, and a page missing from fingerprints leaves the ledger. Keys are sorted, so the output is stable.
+export function nextLedger(fingerprints, ledger, today) {
+  const next = {};
+  for (const file of [...fingerprints.keys()].sort()) {
+    const fingerprint = fingerprints.get(file);
+    const lastmod = ledger[file]?.fingerprint === fingerprint ? ledger[file].lastmod : today;
+    next[file] = { lastmod, fingerprint };
+  }
+  return next;
+}
+
+// The local calendar date as YYYY-MM-DD.
+const localDate = (date = new Date()) =>
+  [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((n) => String(n).padStart(2, '0')).join('-');
+
+// The sitemap.xml text for a list of {loc, lastmod} entries, in list order.
+const sitemap = (urls) => `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(({ loc, lastmod }) => `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>\n`).join('')}</urlset>
+`;
+
 export async function generatePages() {
   const raw = new Map();
+  // The occasion copy is the content of a generated occasion page.
+  const occasionContent = new Map();
   for (const lang of ['en', 'ro']) {
     for (const c of categoriesFor(lang)) {
-      const file = OCCASIONS_BY_LANG[lang][c].file;
-      raw.set(file, occasionPage(c, lang));
+      const occasion = OCCASIONS_BY_LANG[lang][c];
+      raw.set(occasion.file, occasionPage(c, lang));
+      occasionContent.set(occasion.file, JSON.stringify(occasion));
     }
   }
   for (const file of siteHtmlFiles().filter((f) => !raw.has(f))) {
@@ -368,13 +413,37 @@ export async function generatePages() {
   const config = await resolveConfig(new URL('index.html', root));
   const pages = new Map();
   for (const [file, html] of raw) pages.set(file, await format(html, { ...config, parser: 'html' }));
-  return pages;
+
+  const fingerprints = new Map();
+  const locs = new Map();
+  for (const file of siteHtmlFiles()) {
+    const html = pages.get(file) ?? read(file);
+    if (!/<meta name="robots" content="index/.test(html)) continue;
+    fingerprints.set(file, contentFingerprint(occasionContent.get(file) ?? html));
+    const canonical = html.match(/<link rel="canonical" href="([^"]+)"/);
+    if (!canonical)
+      throw new Error(`${file} allows indexing but has no canonical link, so the sitemap cannot list it.`);
+    locs.set(file, canonical[1]);
+  }
+  const ledgerUrl = new URL(LEDGER, repo);
+  const ledger = nextLedger(
+    fingerprints,
+    existsSync(ledgerUrl) ? JSON.parse(readFileSync(ledgerUrl, 'utf8')) : {},
+    localDate(),
+  );
+  const urls = [...locs].map(([file, loc]) => ({ loc, lastmod: ledger[file].lastmod }));
+  urls.sort((a, b) => (a.loc < b.loc ? -1 : 1));
+
+  const output = new Map([...pages].map(([file, html]) => [`public/${file}`, html]));
+  output.set('public/sitemap.xml', sitemap(urls));
+  output.set(LEDGER, await format(JSON.stringify(ledger), { ...config, parser: 'json' }));
+  return output;
 }
 
 if (import.meta.main) {
-  for (const [file, html] of await generatePages()) {
-    const target = fileURLToPath(new URL(file, root));
+  for (const [file, content] of await generatePages()) {
+    const target = fileURLToPath(new URL(file, repo));
     mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, html);
+    writeFileSync(target, content);
   }
 }

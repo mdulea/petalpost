@@ -1,6 +1,11 @@
 import js from '@eslint/js';
 import globals from 'globals';
 
+// The local hosts that a browser test must not name, as a regular expression source for ESLint selectors.
+const LOCAL_HOST = String.raw`(localhost|127\.0\.0\.1|\[::1\])`;
+const LOCAL_ORIGIN_MESSAGE =
+  'Open a path such as /editor.html. Playwright resolves it against the base address of the run.';
+
 export default [
   { ignores: ['public/vendor/', 'dist/', '.pglite/', '.worktrees/'] },
   js.configs.recommended,
@@ -21,5 +26,17 @@ export default [
   {
     files: ['tests/*.spec.js', 'scripts/og-card.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser, htmlToImage: 'readonly' } },
+  },
+  // Each worktree runs the browser checks on its own port, so a test opens a path that the base address resolves.
+  {
+    files: ['tests/*.spec.js'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        // A port in a string, or a template literal part that ends before the expression that gives the port.
+        { selector: String.raw`Literal[value=/${LOCAL_HOST}:\d/]`, message: LOCAL_ORIGIN_MESSAGE },
+        { selector: String.raw`TemplateElement[value.raw=/${LOCAL_HOST}:(\d|$)/]`, message: LOCAL_ORIGIN_MESSAGE },
+      ],
+    },
   },
 ];
