@@ -36,9 +36,14 @@ A person who receives or opens an invitation. A guest can reply on behalf of a p
 
 **Reply**
 
-A submitted RSVP for one published invitation. It records the name given by the guest, whether the party will attend, and how many people will attend. The name is a label, so two replies with the same name are still two replies.
+A submitted RSVP for one published invitation. It records the name given by the guest, whether the party will attend, how many people will attend, and an optional note. The name is a label, so two replies with the same name are still two replies.
 A reply answers the published invitation as it is at any time, so it stays valid when the host changes the invitation's details.
 _Avoid_ `response` when naming this concept in the domain model.
+
+**Note**
+
+Optional free text of up to 300 characters that a guest adds to a reply for the host, such as a dietary need or a message. A reply has at most one note, and an empty note means the guest wrote none. The note belongs to the reply, so the guest changes it through the reply edit link, and withdrawing the reply removes it.
+_Avoid_ `comment`, and `note` for the invitation's own short text, which the editor labels Short note and the domain model calls the message.
 
 **Withdraw**
 

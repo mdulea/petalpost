@@ -81,7 +81,7 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
-- see every reply and the totals on the management page, and delete the invitation with all its replies.
+- see every reply with its note and the totals on the management page, and delete the invitation with all its replies.
 
 A host cannot:
 
@@ -96,7 +96,7 @@ A host cannot:
 A guest can:
 
 - open the invitation link in any browser, add the event to a calendar and open the address on a map;
-- reply with a name of up to 80 characters, whether the party attends and a party size of up to 10;
+- reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw that reply through the reply edit link.
 
 A guest cannot see other guests' replies or the totals.

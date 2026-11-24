@@ -1,7 +1,7 @@
-// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, link fragment
+// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, including the optional note, its trimming, line breaks, control characters and 300-character limit; link fragment
 // validation; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
-// reach only their own event or reply; reply totals; reply withdrawal, its stale version and its repeat; deletion
+// reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing, and an update without a note that keeps it; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored row or note, its stale version and its repeat; deletion
 // with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a reply without an answer; the daily
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
@@ -36,20 +36,43 @@ const SECRET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234';
 
 test('a reply keeps the trimmed name, the answer and the party size', () => {
   assert.deepEqual(makeReply({ name: '  Zoë 🎂 ', attending: true, partySize: 3 }), {
-    reply: { name: 'Zoë 🎂', attending: true, partySize: 3 },
+    reply: { name: 'Zoë 🎂', attending: true, partySize: 3, note: '' },
     invalid: [],
   });
 });
 
 test('a declined reply has a party size of 0', () => {
   assert.deepEqual(makeReply({ name: 'Sam', attending: false, partySize: 0 }), {
-    reply: { name: 'Sam', attending: false, partySize: 0 },
+    reply: { name: 'Sam', attending: false, partySize: 0, note: '' },
     invalid: [],
   });
 });
 
 test('a name of 80 code points is accepted, counting each emoji once', () => {
   assert.equal(makeReply({ name: '🎂'.repeat(80), attending: true, partySize: 1 }).reply?.name, '🎂'.repeat(80));
+});
+
+test('a reply note is trimmed and keeps its line breaks', () => {
+  const source = {
+    name: 'Sam',
+    attending: true,
+    partySize: 1,
+    note: '  No nuts, please.\r\nWe arrive at 3.\rThanks!\n ',
+  };
+  assert.equal(makeReply(source).reply?.note, 'No nuts, please.\nWe arrive at 3.\nThanks!');
+});
+
+test('a reply without a note or with a blank note has an empty note', () => {
+  const notes = [undefined, '', ' \n '].map((note) => makeReply({ name: 'Sam', attending: true, partySize: 1, note }));
+  assert.deepEqual(
+    notes.map(({ reply }) => reply?.note),
+    ['', '', ''],
+  );
+});
+
+test('a note of 300 code points is accepted, counting each emoji once', () => {
+  const note = '🎂'.repeat(300);
+  assert.equal(makeReply({ name: 'Sam', attending: true, partySize: 1, note }).reply?.note, note);
 });
 
 // Each invalid reply with the fields it reports, in form order.
@@ -67,6 +90,12 @@ const invalidReplies = {
   'a fractional party size': { source: { name: 'Sam', attending: true, partySize: 1.5 }, invalid: ['partySize'] },
   'a party size given as text': { source: { name: 'Sam', attending: true, partySize: '2' }, invalid: ['partySize'] },
   'a declined reply with guests': { source: { name: 'Sam', attending: false, partySize: 1 }, invalid: ['partySize'] },
+  'a note of 301 code points': {
+    source: { name: 'Sam', attending: true, partySize: 1, note: 'a'.repeat(301) },
+    invalid: ['note'],
+  },
+  'a tab in the note': { source: { name: 'Sam', attending: true, partySize: 1, note: 'No\tnuts' }, invalid: ['note'] },
+  'a note that is not text': { source: { name: 'Sam', attending: true, partySize: 1, note: 5 }, invalid: ['note'] },
   'an empty name and an attending party of 0': {
     source: { name: '', attending: true, partySize: 0 },
     invalid: ['name', 'partySize'],
@@ -211,10 +240,11 @@ test('an update of a missing invitation gets 404', async () => {
 });
 
 const guest = () => ({ id: newId(), secret: newSecret(), version: null });
-const sam = { name: 'Sam', attending: true, partySize: 2 };
-const ana = { name: 'Ana', attending: false, partySize: 0 };
-const lee = { name: 'Lee', attending: true, partySize: 1 };
-const answers = (list) => list.data.responses.map(({ name, attending, partySize }) => ({ name, attending, partySize }));
+const sam = { name: 'Sam', attending: true, partySize: 2, note: 'No nuts, please.\n<b>We arrive at 3.</b>' };
+const ana = { name: 'Ana', attending: false, partySize: 0, note: '' };
+const lee = { name: 'Lee', attending: true, partySize: 1, note: '' };
+const answers = (list) =>
+  list.data.responses.map(({ name, attending, partySize, note }) => ({ name, attending, partySize, note }));
 
 // A published event; a separate browser, without the management secret, plays the guests.
 async function publishedEvent() {
@@ -268,6 +298,33 @@ test('a reply retried after a lost confirmation applies the newer answer to the 
   );
 });
 
+test('a guest changes and clears the note through the edit link', async () => {
+  const { client, cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  await guests.saveReply(cred.id, { ...reply, version: 1 }, { ...sam, note: 'Vegetarian, please.' });
+  const changed = (await guests.loadReply(cred.id, reply)).data.note;
+  await guests.saveReply(cred.id, { ...reply, version: 2 }, { ...sam, note: '' });
+  assert.deepEqual(
+    {
+      changed,
+      cleared: (await guests.loadReply(cred.id, reply)).data,
+      answers: answers(await client().loadResponses(cred)),
+    },
+    { changed: 'Vegetarian, please.', cleared: { ...sam, note: '', version: 3 }, answers: [{ ...sam, note: '' }] },
+  );
+});
+
+// A page loaded before the note existed sends no note field, so its edits leave the stored note alone.
+test('an update without a note field keeps the stored note', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  await guests.saveReply(cred.id, reply, sam);
+  const { note, ...withoutNote } = sam;
+  await guests.saveReply(cred.id, { ...reply, version: 1 }, { ...withoutNote, name: 'Sam Lee' });
+  assert.deepEqual((await guests.loadReply(cred.id, reply)).data, { ...sam, name: 'Sam Lee', version: 2 });
+});
+
 test('a reply with a stale version gets 409 with the current answer', async () => {
   const { cred, guests } = await publishedEvent();
   const reply = guest();
@@ -297,6 +354,32 @@ test('a withdrawn reply leaves the host list and totals, and its edit link no lo
     },
     { status: 204, answers: [lee], totals: { responses: 1, yes: 1, no: 0, attending: 1 }, loaded: 404 },
   );
+});
+
+test('a withdrawn reply leaves no stored row or note', async () => {
+  const { cred, guests } = await publishedEvent();
+  const reply = guest();
+  const note = `Allergic to peanuts ${newId()}`;
+  await guests.saveReply(cred.id, reply, { ...sam, note });
+  await guests.withdrawReply(cred.id, { ...reply, version: 1 });
+  const db = await shared;
+  assert.equal((await db.query('select 1 from responses where id = $1 or note = $2', [reply.id, note])).rows.length, 0);
+});
+
+test('a stored reply without a note gets an empty note, and the database refuses a note over 300 characters', async () => {
+  const { cred } = await publishedEvent();
+  const db = await shared;
+  const insert = (id, note) =>
+    db.query(
+      `insert into responses (id, event_id, secret_hash, name, attending, party_size${note === undefined ? '' : ', note'})
+       values ($1, $2, 'x', 'Sam', true, 1${note === undefined ? '' : ', $3'})`,
+      note === undefined ? [id, cred.id] : [id, cred.id, note],
+    );
+  const id = newId();
+  await insert(id);
+  await insert(newId(), 'a'.repeat(300));
+  await assert.rejects(insert(newId(), 'a'.repeat(301)));
+  assert.equal((await db.query('select note from responses where id = $1', [id])).rows[0].note, '');
 });
 
 test('a withdrawal with a stale version gets 409 with the current answer and keeps the reply', async () => {
@@ -460,6 +543,7 @@ test('malformed requests get their status and an error message', async () => {
     'a field that is not text': [400, event, put(withField({ venue: 7 }), auth)],
     'a reply with an empty name': [400, reply, put({ ...sam, name: ' ' }, bearer(newSecret()))],
     'a reply with a party of 11': [400, reply, put({ ...sam, partySize: 11 }, bearer(newSecret()))],
+    'a reply with a note of 301 characters': [400, reply, put({ ...sam, note: 'x'.repeat(301) }, bearer(newSecret()))],
     'a reply without an answer': [400, reply, put({ ...sam, attending: undefined }, bearer(newSecret()))],
     'a withdrawal without a version': [400, reply, { ...put({}, bearer(newSecret())), method: 'DELETE' }],
     'a withdrawal without Authorization': [401, reply, { ...put({ version: 1 }), method: 'DELETE' }],

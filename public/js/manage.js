@@ -26,7 +26,7 @@ function showOnly(heading, message) {
   content.hidden = true;
 }
 
-// Guest names are untrusted text, so every value enters the page as textContent.
+// Guest names and notes are untrusted text, so every value enters the page as textContent.
 function item(className, ...parts) {
   const li = document.createElement('li');
   li.className = className;
@@ -69,6 +69,7 @@ function showEvent({ t, d, responses, totals }) {
           'reply',
           ['strong', r.name],
           ['span', r.attending ? copy.yesCount(r.partySize) : copy.no],
+          ...(r.note ? [['p', r.note]] : []),
           ['span', `${r.updatedAt === r.createdAt ? copy.replied : copy.changed} ${when(r.updatedAt)}`],
         ),
       ),

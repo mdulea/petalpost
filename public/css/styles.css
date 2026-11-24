@@ -1655,6 +1655,12 @@ textarea.input {
   font-size: 13px;
   color: var(--muted);
 }
+/* A guest's note keeps its line breaks, and a long word wraps inside the list. */
+.reply p {
+  margin: 4px 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 #noReplies {
   margin-bottom: 16px;
 }

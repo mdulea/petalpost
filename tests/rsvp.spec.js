@@ -1,6 +1,7 @@
 // Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the post-RSVP prompt or the management page break in Chromium against the real API of
 // scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
-// link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; the invitation link and a guessed
+// link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; a guest's note, which the edit link loads
+// and the management page shows under its reply as text with its line breaks; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
 // the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
 // after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer; a confirmed
@@ -53,10 +54,11 @@ test('an invitation published in one browser opens in another', async ({ browser
 });
 
 // Fills and sends the reply form on an opened invitation and waits for the saved confirmation.
-async function reply(page, { name, attending = true, partySize = 1 }) {
+async function reply(page, { name, attending = true, partySize = 1, note = '' }) {
   await page.fill('#guestName', name);
   await page.check(`input[name="attending"][value="${attending ? 'yes' : 'no'}"]`);
   if (attending) await page.fill('#partySize', String(partySize));
+  await page.fill('#guestNote', note);
   await page.click('#sendReply');
   await expect(page.locator('#rsvpStatus')).toHaveText('Your reply is saved. The host can see it now.');
 }
@@ -93,6 +95,31 @@ test('a guest edits a reply through the edit link, and the host sees one reply a
     totals: expect.stringMatching(/2\s+replies[\s\S]*1\s+yes[\s\S]*1\s+no[\s\S]*3\s+people attending/i),
     replies: [expect.stringMatching(/Sam Lee[\s\S]*Yes[\s\S]*3/), expect.stringMatching(/Ana[\s\S]*No/)],
   });
+  expect([...host.problems, ...sam.problems, ...samLater.problems, ...ana.problems]).toEqual([]);
+});
+
+test('a guest note loads through the edit link, and the host sees it under the reply as text with its line breaks', async ({
+  browser,
+}) => {
+  const host = await newBrowser(browser);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const note = 'No nuts, please.\n<b>We arrive at 3.</b>';
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: 'Sam', partySize: 2, note: `  ${note}\n` });
+  const samLater = await newBrowser(browser);
+  await samLater.page.goto(await sam.page.locator('#replyLink').inputValue());
+  await expect(samLater.page.locator('#guestNote')).toHaveValue(note);
+  const ana = await newBrowser(browser);
+  await ana.page.goto(invitation);
+  await reply(ana.page, { name: 'Ana', attending: false });
+
+  await host.page.goto(manage);
+  const shown = host.page.locator('#responseList li p');
+  await expect(shown).toHaveCount(1);
+  await expect(host.page.locator('#responseList li').first().locator('p')).toHaveCount(1);
+  expect(await shown.innerText()).toBe(note);
+  await expect(shown.locator('b')).toHaveCount(0);
   expect([...host.problems, ...sam.problems, ...samLater.problems, ...ana.problems]).toEqual([]);
 });
 

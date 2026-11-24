@@ -169,9 +169,9 @@ check(
   long.slice(0, ctx.FIELD_LIMITS.title),
 );
 check(
-  'a field shows no count up to 80% of its limit and the characters left above it',
-  [0, 40, 41, 50].map((length) => ctx.charsLeft('x'.repeat(length), 50)),
-  [null, null, 9, 0],
+  'a field shows no count up to 80% of its limit, the characters left above it and 0 past it',
+  [0, 40, 41, 50, 51].map((length) => ctx.charsLeft(length, 50)),
+  [null, null, 9, 0, 0],
 );
 check(
   'every template sample fits its limits',
