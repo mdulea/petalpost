@@ -15,10 +15,8 @@ import { PGlite } from '@electric-sql/pglite';
 import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
 import { migrate } from '../server/migrate.js';
+import { PORT_ENV } from './browser-port.js';
 import { SITE } from './build.js';
-
-// The environment variable that playwright.config.js reads for the browser-check port.
-export const PORT_ENV = 'BROWSER_CHECK_PORT';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
