@@ -4,7 +4,7 @@
 // remove leaves the worktree, an empty .worktrees directory, its local branch, its remote branch or its
 // remote-tracking branch behind. Each case runs the command against a throwaway repository
 // with a local bare origin and skips the dependency install.
-// Run: node scripts/check-worktree.js
+// Run: node tests/check-worktree.js
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
 
-const SCRIPT = fileURLToPath(new URL('./worktree.js', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../scripts/worktree.js', import.meta.url));
 const temps = [];
 after(() => temps.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
 

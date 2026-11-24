@@ -23,5 +23,4 @@ dist/
 .pglite/
 
 # Playwright output
-test-results/
-playwright-report/
+tests/results/

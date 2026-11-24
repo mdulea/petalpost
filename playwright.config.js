@@ -1,9 +1,10 @@
 // Browser checks run against scripts/server.js on port 4321 with an in-memory database. It answers like production
-// (scripts/check-site.js), and every run starts with no invitations or replies.
+// (tests/check-site.js), and every run starts with no invitations or replies.
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: 'scripts',
+  testDir: 'tests',
+  outputDir: 'tests/results',
   testMatch: '*.spec.js',
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? 'github' : 'list',

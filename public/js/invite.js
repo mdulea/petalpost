@@ -1,4 +1,4 @@
-// Invite records, share links and the calendar file. No DOM access, so scripts/check-invite.js runs it in Node.
+// Invite records, share links and the calendar file. No DOM access, so tests/check-invite.js runs it in Node.
 
 import { UI, normalizeLang } from './i18n.js';
 import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';

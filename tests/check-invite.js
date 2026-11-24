@@ -1,7 +1,7 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, invite records, storage writes, the stored published event identity, template switching,
 // template ids, Romanian localization coverage and 24-hour time formatting, the calendar file or the report link break.
-// Run: node scripts/check-invite.js
+// Run: node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as templates from '../public/js/templates.js';

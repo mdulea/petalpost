@@ -10,5 +10,5 @@
     "types": ["node", "emscripten"],
     "rootDirs": [".", "public"]
   },
-  "include": ["public/js", "types", "scripts", "server", "api", "eslint.config.js", "playwright.config.js"]
+  "include": ["public/js", "types", "scripts", "tests", "server", "api", "eslint.config.js", "playwright.config.js"]
 }
