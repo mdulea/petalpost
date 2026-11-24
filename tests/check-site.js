@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
-import { after, test } from 'node:test';
+import { after, before, test } from 'node:test';
 import { buildSite } from '../scripts/build.js';
 import { startServer } from '../scripts/server.js';
 import { alternatesFor, canonicalPath, fileLang } from '../public/js/i18n.js';
@@ -264,8 +264,13 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
 // the vercel.json headers on every path, / and /ro/ as index.html, no clean URLs, no directory listing, 404.html for
 // unknown paths, no dotfiles, no file outside public/, /api paths through the API and /e/{id} or
 // /ro/e/{id} through the dynamic event page.
-const local = await startServer({ port: 0, memory: true });
-after(() => local.close());
+// The server starts in a before hook, so it listens only after every top-level line has run. A server started at top
+// level kept the process alive when a later top-level line threw, and the run hung with no error.
+let local;
+before(async () => {
+  local = await startServer({ port: 0, memory: true });
+});
+after(() => local?.close());
 const fetchLocal = (path) => fetch(new URL(path, local.url), { redirect: 'manual' });
 const vercelHeaders = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).headers.flatMap(
   (rule) => rule.headers,
