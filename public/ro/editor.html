@@ -209,7 +209,8 @@
           pentru a actualiza.
         </p>
         <p class="status owner-only" id="publishStatus" role="status"></p>
-        <div class="published owner-only" id="published" hidden>
+        <div class="published owner-only" id="published" tabindex="-1" hidden>
+          <h3 class="outcome" id="publishOutcome" hidden></h3>
           <p class="warning">
             Salvează linkul de administrare într-un loc privat. Oricine îl are poate vedea confirmările și șterge
             invitația. Petalpost nu poate recupera un link de administrare pierdut.
@@ -260,7 +261,8 @@
             <svg class="icon"><use href="#i-send" /></svg>Trimite răspunsul
           </button>
           <p class="status" id="rsvpStatus" role="status"></p>
-          <div class="published" id="replySaved" hidden>
+          <div class="published" id="replySaved" tabindex="-1" hidden>
+            <h3 class="outcome" id="replyOutcome" hidden></h3>
             <p class="warning">
               Păstrează acest link privat dacă vrei să modifici sau să retragi răspunsul mai târziu. Oricine îl are îți
               poate schimba sau retrage răspunsul.
@@ -281,6 +283,15 @@
             </div>
           </div>
         </form>
+        <section class="panel rsvp" id="replyWithdrawn" tabindex="-1" aria-labelledby="h-withdrawn" hidden>
+          <h2 id="h-withdrawn">
+            <svg class="icon"><use href="#i-trash" /></svg>Răspuns retras
+          </h2>
+          <p class="hint">Gazda nu îți mai vede răspunsul.</p>
+          <button class="btn btn-primary btn-small" type="button" id="replyAgain">
+            <svg class="icon"><use href="#i-send" /></svg>Răspunde din nou
+          </button>
+        </section>
         <p class="hint" id="reportRow" hidden>
           Această invitație conține conținut ilegal? <a id="reportLink" href="#">Raportează invitația</a>
         </p>

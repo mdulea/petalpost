@@ -207,7 +207,8 @@
           this browser. To send it, download the PNG. After you change the invite, publish again to update it.
         </p>
         <p class="status owner-only" id="publishStatus" role="status"></p>
-        <div class="published owner-only" id="published" hidden>
+        <div class="published owner-only" id="published" tabindex="-1" hidden>
+          <h3 class="outcome" id="publishOutcome" hidden></h3>
           <p class="warning">
             Save the management link somewhere private. Anyone with it can see the replies and delete the invitation.
             Petalpost cannot recover a lost management link.
@@ -258,7 +259,8 @@
             <svg class="icon"><use href="#i-send" /></svg>Send reply
           </button>
           <p class="status" id="rsvpStatus" role="status"></p>
-          <div class="published" id="replySaved" hidden>
+          <div class="published" id="replySaved" tabindex="-1" hidden>
+            <h3 class="outcome" id="replyOutcome" hidden></h3>
             <p class="warning">
               Keep this private link to change or withdraw your reply later. Anyone with it can change or withdraw your
               reply.
@@ -279,6 +281,15 @@
             </div>
           </div>
         </form>
+        <section class="panel rsvp" id="replyWithdrawn" tabindex="-1" aria-labelledby="h-withdrawn" hidden>
+          <h2 id="h-withdrawn">
+            <svg class="icon"><use href="#i-trash" /></svg>Reply withdrawn
+          </h2>
+          <p class="hint">The host no longer sees your reply.</p>
+          <button class="btn btn-primary btn-small" type="button" id="replyAgain">
+            <svg class="icon"><use href="#i-send" /></svg>Reply again
+          </button>
+        </section>
         <p class="hint" id="reportRow" hidden>
           Is this invitation illegal? <a id="reportLink" href="#">Report this invitation</a>
         </p>
