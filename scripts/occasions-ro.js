@@ -123,8 +123,8 @@ export const OCCASIONS_RO = {
     file: 'ro/invitatii-mot.html',
     heading: 'Invitații de moț',
     description:
-      'Model ilustrat de invitație de moț cu foarfecă, șuviță de păr și fundă. Adaugă numele copilului, nașii și restaurantul, apoi trimite linkul pe WhatsApp.',
-    lead: 'Foarfecă, șuviță de păr legată cu fundă și steluțe aurii. Pentru ziua în care cel mic împlinește un an și i se taie moțul.',
+      'Modele ilustrate de invitații de moț cu foarfecă și șuviță, tava cu obiecte, turtă și tort cu lumânarea 1. Adaugă numele copilului, nașii și restaurantul, apoi trimite linkul pe WhatsApp.',
+    lead: 'Foarfecă și șuviță legată cu fundă, tava cu carte, stilou, bănuț și lingură, turta decorată și tortul cu baloane. Pentru ziua în care cel mic împlinește un an și i se taie moțul.',
     sections: [
       {
         heading: 'Ce să treci pe invitația de moț',

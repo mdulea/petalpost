@@ -765,7 +765,7 @@ check(
     ctx.categoriesFor('en').includes('Moț'),
     ctx.templatesFor('en').filter((t) => t.category === 'Moț').length,
   ],
-  [1, ['mot-foarfeca'], false, 0],
+  [1, ['mot-foarfeca', 'mot-tava', 'mot-turta', 'mot-primul-an'], false, 0],
 );
 check(
   'every Romanian template sample fits its limits',

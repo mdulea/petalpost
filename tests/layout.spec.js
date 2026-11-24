@@ -200,7 +200,7 @@ test('the Romanian landing, editor, occasion and two guide pages fit every viewp
   for (const path of [
     '/ro/',
     '/ro/editor.html?t=botez-porumbel',
-    '/ro/invitatii-botez.html',
+    '/ro/invitatii-mot.html',
     '/ro/text-invitatii.html',
     '/ro/invitatii-digitale-sau-tiparite.html',
   ]) {
