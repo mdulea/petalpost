@@ -8,7 +8,7 @@
 // rapid clicks end on another category or leave an animation running, or filtering animates under reduced motion.
 // The motion checks fail when a template or accent change misses the preview's 180ms settle from opacity 0.6 or a
 // text edit animates it, rapid changes leave the preview faded, on an earlier accent or with an animation running, a
-// share link misses its single 400ms reveal with a 12px rise, or the preview or the guest view animates under reduced
+// share link or the sample invitation misses its single 400ms reveal with a 12px rise, or the preview or the guest view animates under reduced
 // motion.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
@@ -343,6 +343,7 @@ test('the hero sample link opens a client-only sample guest invitation with loca
     if (new URL(req.url()).pathname.startsWith('/api/')) apiRequests.push(req.url());
   });
 
+  await recordAnimations(page, '#previewCard');
   await page.goto('/');
   await page.click('.hero .cta-row a[href="editor.html?view=1&sample=1"]');
   await expect(page.locator('body')).toHaveClass(/view-mode/);
@@ -370,6 +371,10 @@ test('the hero sample link opens a client-only sample guest invitation with loca
   expect(await page.evaluate(() => location.hash)).toBe('');
   expect(apiRequests).toEqual([]);
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
+  // The sample reveals once, and the replies above do not replay it.
+  expect((await recordedAnimations(page)).map((call) => [call.keyframes, call.duration])).toEqual([
+    [GUEST_REVEAL, 400],
+  ]);
   expect(problems).toEqual([]);
 });
 

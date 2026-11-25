@@ -108,16 +108,15 @@ function settlePreview() {
   animate([previewCard], [{ opacity: 0.6 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
 }
 
-// The guest view fades the invitation in and raises it 12px over 400ms, once when the page shows it.
+// The guest view's invitation and the confirmation panels fade in and rise 12px.
+const RISE = [
+  { opacity: 0, transform: 'translateY(12px)' },
+  { opacity: 1, transform: 'none' },
+];
+
+// The guest view reveals the invitation over 400ms, once when the page shows it.
 function revealInvite() {
-  animate(
-    [previewCard],
-    [
-      { opacity: 0, transform: 'translateY(12px)' },
-      { opacity: 1, transform: 'none' },
-    ],
-    { duration: 400, easing: 'ease-out' },
-  );
+  animate([previewCard], RISE, { duration: 400, easing: 'ease-out' });
 }
 
 // A limited text field shows the characters left below it once its text passes 80% of the limit. The counter joins
@@ -446,14 +445,7 @@ const publishedPanel = document.getElementById('published');
 // and focus moves to it, so a screen reader reads it and a keyboard continues from it.
 function openPanel(panel) {
   panel.hidden = false;
-  animate(
-    [panel],
-    [
-      { opacity: 0, transform: 'translateY(12px)' },
-      { opacity: 1, transform: 'none' },
-    ],
-    { duration: 250, easing: 'ease-out' },
-  );
+  animate([panel], RISE, { duration: 250, easing: 'ease-out' });
   panel.focus();
 }
 
