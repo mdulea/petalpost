@@ -1696,6 +1696,10 @@ export function templatesFor(lang = 'en') {
   return ordered;
 }
 
+// The site path of a template's link preview image, a 1200 by 630 JPEG that pnpm previews writes into public/, or
+// null for an id that names no template.
+export const linkPreviewPath = (id) => (TEMPLATES.some((t) => t.id === id) ? `previews/${id}.jpg` : null);
+
 export function getTemplate(id, lang = 'en') {
   const found = TEMPLATES.find((t) => t.id === id) || TEMPLATES.find((t) => t.id === DEFAULT_TEMPLATE);
   return localizeTemplate(found, lang);

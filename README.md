@@ -121,6 +121,7 @@ A guest cannot see other guests' replies or the totals.
   - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
   - `vendor/html-to-image.js` is html-to-image 1.11.11, the library that renders the PNG. Its license is in `THIRD_PARTY_NOTICES.txt`.
   - `sitemap.xml` lists the indexed pages. `pnpm pages` generates it; do not edit it by hand.
+  - `previews/` holds one link preview image per template. `pnpm previews` generates them.
   - `og-image.png`, `ro/og-image.png`, `favicon.svg` and `robots.txt` are the remaining site files.
 - `types/globals.d.ts` declares the types of the `htmlToImage` and analytics globals for the type check.
 - `api/index.js` is the Vercel Function for `/api/`, `/e/{id}` and `/ro/e/{id}` paths. Vercel requires it in `api/`.
@@ -131,6 +132,7 @@ A guest cannot see other guests' replies or the totals.
   - `build.js` copies `public/` into `dist/`, which Vercel serves.
   - `pages.js` generates the HTML that search engines must read without running JavaScript: the English and Romanian occasion pages, the hreflang links, the JSON-LD structured data on the home, occasion and guide pages, the landing galleries and occasion links, every page footer and `sitemap.xml`. It fills the regions between `<!-- generated:NAME -->` markers. `lastmod.json` keeps each indexed page's sitemap date with a fingerprint of its content. `occasions.js` holds the English occasion copy, and `occasions-ro.js` holds the Romanian occasion copy.
   - `og-card.html` and `og-card.js` generate `og-image.png`.
+  - `previews.js` writes the link preview image of each template through `preview-card.html` and `preview-card.js`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
   - `shot.js` writes a PNG of a page or of one element on it.
 - `tests/` holds the checks that `pnpm check` runs:
@@ -158,6 +160,7 @@ A guest cannot see other guests' replies or the totals.
 | Browser tests       | `pnpm test:browser`                                                |
 | Site build          | `pnpm build`                                                       |
 | Generate pages      | `pnpm pages`                                                       |
+| Link previews       | `pnpm previews`                                                    |
 | Screenshot          | `pnpm shot <path> [<selector>] <file>`                             |
 | Migrations          | `pnpm migrate`                                                     |
 
@@ -215,9 +218,10 @@ The tests fail when a page breaks the Content-Security-Policy.
 3. For a template in both languages, add its Romanian `name`, `tagline` and `defaults` to `RO_TEMPLATE_COPY` in `public/js/templates-ro.js`, keyed by the id.
 4. For a new `frame` or `titleFont` value, add the `.frame-<frame>` or `.font-<titleFont>` rule to `public/css/styles.css`.
 5. Run `pnpm pages`. It writes the template into the galleries of the home page and the occasion page.
-6. Update the tests that count templates: the Romanian gallery filter counts in `browser.spec.js`, and for a Moț template the id list in `check-invite.js` and the Moț picker and gallery tests in `browser.spec.js`.
+6. Run `pnpm previews`. It writes the template's link preview image into `public/previews/`.
+7. Update the tests that count templates: the Romanian gallery filter counts in `browser.spec.js`, and for a Moț template the id list in `check-invite.js` and the Moț picker and gallery tests in `browser.spec.js`.
 
-`check-contrast.js` fails when the template's colors or an accent swatch on its background drop below 4.5:1, `check-invite.js` fails when a template in both languages has no Romanian copy, and `check-site.js` fails when a frame or font has no CSS rule.
+`check-contrast.js` fails when the template's colors or an accent swatch on its background drop below 4.5:1, `check-invite.js` fails when a template in both languages has no Romanian copy, and `check-site.js` fails when a frame or font has no CSS rule or the template has no link preview image.
 
 ### Tooling notes
 
@@ -294,6 +298,13 @@ To regenerate it:
 2. Open `http://localhost:3000/scripts/og-card.html`.
 3. Click "Save og-image.png".
 4. Move the downloaded file to `public/` and commit it.
+
+A published invitation's link preview names its template's image in `public/previews/` instead.
+Each image is a 1200 by 630 JPEG of the template's art on its background color with the Petalpost wordmark.
+It has no other text, so English and Romanian invitations share it.
+After you change a template's art or add a template, run `pnpm previews` and commit the images.
+The command renders every template in Chromium and overwrites its image.
+`check-site.js` fails when a template has no image or an image is 300 KB or larger, because WhatsApp drops larger preview images.
 
 ## Workflow
 

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Petalpost | Template link preview</title>
+    <link rel="stylesheet" href="../css/fonts.css" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <style>
+      body {
+        margin: 0;
+      }
+      #card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: var(--i-bg);
+      }
+      #art {
+        width: 1050px;
+        display: grid;
+        place-items: center;
+        container-type: inline-size;
+      }
+      #card .brand {
+        position: absolute;
+        right: 36px;
+        bottom: 28px;
+        font-size: 26px;
+        color: var(--i-ink);
+      }
+      #card .brand-mark {
+        width: 36px;
+        height: 36px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- pnpm previews opens this page once per template, as ?t=<template id>, and saves #card as its link preview. -->
+    <div id="card">
+      <div id="art"></div>
+      <span class="brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="4" y="10" width="32" height="22" rx="4" fill="#F9E6E2" stroke="#A9524C" stroke-width="2" />
+          <path d="M5 12l15 11 15-11" fill="none" stroke="#A9524C" stroke-width="2" stroke-linejoin="round" />
+          <path d="M20 19c-1.6-2.4-5-1.4-5 1.2 0 2.4 5 5.3 5 5.3s5-2.9 5-5.3c0-2.6-3.4-3.6-5-1.2z" fill="#7C9A74" />
+        </svg>
+        Petalpost
+      </span>
+    </div>
+
+    <script type="module" src="preview-card.js"></script>
+  </body>
+</html>

@@ -37,9 +37,15 @@ const VERCEL = JSON.parse(await readFile(join(root, 'vercel.json'), 'utf8'));
 const RULES = VERCEL.headers.map((rule) => ({ pattern: new RegExp(`^${rule.source}$`), headers: rule.headers }));
 const REDIRECTS = VERCEL.redirects.map((rule) => ({ ...rule, pattern: new RegExp(`^${rule.source}$`) }));
 
-// The social card generator is a local tool that Vercel never serves. It is served here in addition to the site
-// files, because the README steps for og-image.png and the browser checks open it from this server.
-const LOCAL_TOOLS = ['scripts/og-card.html', 'scripts/og-card.js'];
+// The social card and template link preview generators are local tools that Vercel never serves. They are served
+// here in addition to the site files, because the README steps for og-image.png, pnpm previews and the browser checks
+// open them from this server.
+const LOCAL_TOOLS = [
+  'scripts/og-card.html',
+  'scripts/og-card.js',
+  'scripts/preview-card.html',
+  'scripts/preview-card.js',
+];
 
 // The file a static path names, or null. A local tool path names its file in the repository, and any other path
 // names a file in public/. A path that leaves its directory or has a dot segment names no file.
