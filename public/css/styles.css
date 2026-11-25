@@ -1556,6 +1556,8 @@ textarea.input {
   margin-bottom: 6px;
 }
 .reply-cta {
+  width: 100%;
+  max-width: 520px;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--line);

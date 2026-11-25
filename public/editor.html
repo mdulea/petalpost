@@ -273,12 +273,6 @@
             <button class="btn btn-rose btn-small" type="button" id="withdrawReply">
               <svg class="icon"><use href="#i-trash" /></svg>Withdraw my reply
             </button>
-            <div class="reply-cta" id="replyCta">
-              <p>Planning an event of your own? Make a free invite with RSVP tracking, no account needed.</p>
-              <a class="btn btn-ghost btn-small" href="/#templates">
-                <svg class="icon"><use href="#i-pen" /></svg>Browse free templates
-              </a>
-            </div>
           </div>
         </form>
         <section class="panel rsvp" id="replyWithdrawn" tabindex="-1" aria-labelledby="h-withdrawn" hidden>
@@ -290,6 +284,12 @@
             <svg class="icon"><use href="#i-send" /></svg>Reply again
           </button>
         </section>
+        <div class="reply-cta" id="replyCta" hidden>
+          <p>Planning an event of your own? Make a free invite with RSVP tracking, no account needed.</p>
+          <a class="btn btn-ghost btn-small" href="/?from=invite#templates">
+            <svg class="icon"><use href="#i-pen" /></svg>Browse free templates
+          </a>
+        </div>
         <p class="hint" id="reportRow" hidden>
           Is this invitation illegal? <a id="reportLink" href="#">Report this invitation</a>
         </p>
