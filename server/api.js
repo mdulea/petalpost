@@ -12,6 +12,7 @@
 // GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note, version}
 // DELETE /api/events/{id}/responses/{rid}  edit secret; {version} withdraws the reply; 204, also when it is gone
 // GET /api/retention                       public; deletes expired events and their responses; {deleted}
+// POST /api/stats                          public; {action, lang} adds 1 to a browser action's count; 204
 //
 // An event expires RETENTION_DAYS days after the later of its event date and its last change; an event without a
 // date counts only from its last change. Vercel Cron calls /api/retention daily (vercel.json). The route takes no
@@ -21,10 +22,16 @@
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
 // or 409 with the error and the current record when the version is stale. A reply created without note has an
 // empty note, and a reply updated without note keeps its stored note.
+//
+// action_counts holds the totals of a fixed set of actions per UTC day and page language, and nothing else. A new
+// event counts invitation_publish and a new reply counts reply_submit, in the transaction that stores it, under the
+// body's lang normalized to en or ro. Updates, replays, withdrawals and refusals count nothing. POST /api/stats
+// counts only the BEACON_ACTIONS under exactly en or ro, reads no IP address and has no cap, so its totals are
+// approximate. Accept-Language picks only the error message language.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { apiMessages, normalizeLang } from '../public/js/i18n.js';
 import { readPublished } from '../public/js/invite.js';
-import { ID_PATTERN, makeReply, REPLY_LIMITS, SECRET_PATTERN, tally } from '../public/js/rsvp.js';
+import { BEACON_ACTIONS, ID_PATTERN, makeReply, REPLY_LIMITS, SECRET_PATTERN, tally } from '../public/js/rsvp.js';
 
 const RETENTION_DAYS = 90;
 const DAILY_EVENTS = 20;
@@ -47,6 +54,7 @@ const requestMessages = (request) => MESSAGES[normalizeLang(request.headers.get(
 
 const ROUTES = [
   { pattern: /^\/api\/retention$/, methods: { GET: deleteExpired } },
+  { pattern: /^\/api\/stats$/, methods: { POST: countBeacon } },
   { pattern: /^\/api\/events\/([^/]+)$/, methods: { GET: getEvent, PUT: putEvent, DELETE: deleteEvent } },
   { pattern: /^\/api\/events\/([^/]+)\/responses$/, methods: { GET: listResponses } },
   {
@@ -75,6 +83,15 @@ const hash = (text) => createHash('sha256').update(text).digest('hex');
 const matches = (secret, secretHash) => timingSafeEqual(Buffer.from(hash(secret)), Buffer.from(secretHash));
 const isVersion = (v) => Number.isInteger(v) && v > 0;
 const today = "(now() at time zone 'utc')::date";
+
+// Adds 1 to today's count of the action in lang, which is en or ro.
+async function addCount(tx, action, lang) {
+  await tx.query(
+    `insert into action_counts (day, action, lang, count) values (${today}, $1, $2, 1)
+     on conflict (day, action, lang) do update set count = action_counts.count + 1`,
+    [action, lang],
+  );
+}
 
 export function createApi(db, { dailyEvents = DAILY_EVENTS } = {}) {
   return async function handle(request) {
@@ -145,6 +162,13 @@ async function deleteExpired({ db }) {
   return json(200, { deleted: rows.length });
 }
 
+async function countBeacon({ db, request }) {
+  const { action, lang } = await readBody(request);
+  if (!BEACON_ACTIONS.includes(action) || normalizeLang(lang) !== lang) throw new Refusal(400, 'body');
+  await addCount(db, action, lang);
+  return json(204, null);
+}
+
 async function putEvent({ db, request, ids: [id], dailyEvents }) {
   const secret = bearer(request);
   const body = await readBody(request);
@@ -185,6 +209,7 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
       record.t,
       JSON.stringify(record.d),
     ]);
+    await addCount(tx, 'invitation_publish', normalizeLang(body.lang));
     return json(201, { version: 1, created: true });
   });
 }
@@ -279,6 +304,7 @@ async function putReply({ db, request, ids: [eventId, id] }) {
        values ($1, $2, $3, $4, $5, $6, $7)`,
       [id, eventId, hash(secret), reply.name, reply.attending, reply.partySize, reply.note],
     );
+    await addCount(tx, 'reply_submit', normalizeLang(body.lang));
     return json(201, { version: 1, created: true });
   });
 }

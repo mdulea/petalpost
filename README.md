@@ -73,6 +73,7 @@ The promises:
 - Hosts and guests need no account and no email address.
 - The site sets no cookies and loads nothing from another origin except Vercel Web Analytics, which sets no cookie.
 - The photo never leaves the host's browser.
+- Petalpost counts a fixed set of actions per day and page language, and stores no cookie, identifier, IP address or invitation content with the counts.
 - The site is in English and Romanian. Botez, Cununie and Moț exist only in Romanian.
 
 A host can:
@@ -111,7 +112,7 @@ A guest cannot see other guests' replies or the totals.
   - `js/` holds the page scripts:
     - `templates.js` is the template catalog and the `renderInvite` renderer.
     - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
-    - `rsvp.js` validates replies, builds and reads private links, and is the API client. It has no DOM access, so the server and the Node checks import it.
+    - `rsvp.js` validates replies, builds and reads private links, is the API client and sends the action counts. It has no DOM access, so the server and the Node checks import it.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
@@ -264,6 +265,17 @@ DATABASE_URL_UNPOOLED='<connection string>' pnpm migrate
 
 No non-production Neon branch exists, so run it against production before you merge the pull request whose code needs the change.
 Never commit a connection string or an `.env` file.
+
+Migration `004_action_counts.sql` adds the `action_counts` table, which counts a fixed set of actions per UTC day and page language.
+The server counts `invitation_publish` when it stores a new invitation and `reply_submit` when it stores a new reply.
+The editor and the guest view send `png_download`, `png_share`, `invitation_link_copy`, `invitation_link_share` and `calendar_add` to `/api/stats` after the action succeeds.
+That route has no per-client cap, so the browser counts are approximate.
+A row holds only the day, the action, the language and the count, and the retention job keeps every row.
+Read the totals in the Neon console SQL editor:
+
+```sql
+select day, action, lang, count from action_counts order by day desc, action, lang;
+```
 
 Every page loads Vercel Web Analytics.
 `public/js/analytics.js` removes the part after `#` from every address it reports, so private links never reach analytics.

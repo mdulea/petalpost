@@ -9,4 +9,4 @@ const eventPage = createEventPage(db);
 const isEventPage = (pathname) => pathname.startsWith('/e/') || pathname.startsWith('/ro/e/');
 const handle = (request) => (isEventPage(new URL(request.url).pathname) ? eventPage(request) : api(request));
 
-export { handle as GET, handle as HEAD, handle as PUT, handle as DELETE };
+export { handle as GET, handle as HEAD, handle as POST, handle as PUT, handle as DELETE };

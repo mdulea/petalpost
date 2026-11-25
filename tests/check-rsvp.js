@@ -8,18 +8,26 @@
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
 // failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses; the template's
 // link preview image at 1200 by 630 with the escaped title in its English or Romanian alt text, and the generic image
-// of the page language for a missing invitation, a storage error or an unknown template; Romanian link helpers and localized API error messages via Accept-Language.
+// of the page language for a missing invitation, a storage error or an unknown template; Romanian link helpers and localized API error messages via Accept-Language;
+// the action totals that the README query reads: a new invitation and a new reply each add 1 under the body's page
+// language, en for a missing or unknown one and never the Accept-Language one, and republishing, replays, reply
+// changes, withdrawals, the daily quota, the reply limit and other refused requests add nothing; /api/stats, which
+// counts the five browser actions in en and ro and refuses other actions, languages, bodies and methods; the browser
+// counter, which posts the page language and ignores a failed send.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
-// checks, which read the stored keys in a database of their own.
+// and action count checks, which read the stored rows in a database of their own.
 // Run: pnpm exec node tests/check-rsvp.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { after, test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 import { getTemplate } from '../public/js/templates.js';
 import { eventLink, makeInviteData } from '../public/js/invite.js';
 import {
+  BEACON_ACTIONS,
   createClient,
+  createCounter,
   editorPage,
   makeReply,
   manageLink,
@@ -145,13 +153,15 @@ async function openDatabase() {
   await migrate(db);
   return db;
 }
-async function setup(db) {
+async function setup(db, options) {
   db ??= await (shared ??= openDatabase());
-  const api = createApi(db);
+  const api = createApi(db, options);
   const ownIp = newId();
   const raw = (path, init = {}) => api(new Request(new URL(path, 'http://petalpost.test'), init));
-  const client = (ip = ownIp) =>
-    createClient((path, init = {}) => raw(path, { ...init, headers: { ...init.headers, 'x-real-ip': ip } }));
+  const client = (ip = ownIp, lang = 'en') =>
+    createClient((path, init = {}) => raw(path, { ...init, headers: { ...init.headers, 'x-real-ip': ip } }), {
+      lang,
+    });
   return { raw, client };
 }
 
@@ -601,6 +611,169 @@ test('a new day deletes the earlier counts and keys the same IP address differen
   await client('203.0.113.7').publish(host(), party);
   const keys = await quotaKeys(db);
   assert.deepEqual({ rows: keys.length, rekeyed: keys[0].client !== yesterday.client }, { rows: 1, rekeyed: true });
+});
+
+// The action count tests read the totals with the query that the README Database section documents, each in a
+// database of its own. totals(db) maps "action lang" to its count for today's UTC date, and fails on any other day.
+const README = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+const TOTALS_QUERY = README.match(/```sql\n(select [^`]*from action_counts[^`]*)```/)?.[1];
+async function totals(db) {
+  const { rows } = await db.query(TOTALS_QUERY, []);
+  const day = new Date().toISOString().slice(0, 10);
+  assert.deepEqual(
+    new Set(rows.map((r) => new Date(r.day).toISOString().slice(0, 10))),
+    new Set(rows.length ? [day] : []),
+  );
+  return Object.fromEntries(rows.map((r) => [`${r.action} ${r.lang}`, r.count]));
+}
+async function countingSetup(options) {
+  const db = await openDatabase();
+  after(() => db.close());
+  return { db, ...(await setup(db, options)) };
+}
+
+test('the README documents the query that reads the action totals', () => assert.equal(typeof TOTALS_QUERY, 'string'));
+
+test('a new published invitation and a new reply each add 1 under the language of their page', async () => {
+  const { db, client } = await countingSetup();
+  const english = host();
+  const romanian = host();
+  await client(newId(), 'en').publish(english, party);
+  await client(newId(), 'ro').publish(romanian, party);
+  await client(newId(), 'en').saveReply(english.id, guest(), sam);
+  await client(newId(), 'ro').saveReply(romanian.id, guest(), ana);
+  await client(newId(), 'ro').saveReply(romanian.id, guest(), lee);
+  assert.deepEqual(await totals(db), {
+    'invitation_publish en': 1,
+    'invitation_publish ro': 1,
+    'reply_submit en': 1,
+    'reply_submit ro': 2,
+  });
+});
+
+test('republishing, replays, reply changes, withdrawals and refused requests add nothing', async () => {
+  const { db, client, raw } = await countingSetup({ dailyEvents: 1 });
+  const browser = client();
+  const cred = host();
+  await browser.publish(cred, party);
+  const reply = guest();
+  await browser.saveReply(cred.id, reply, sam);
+  const before = await totals(db);
+  const statuses = [
+    // A create retried after a lost confirmation replays, then updates with the returned version.
+    (await browser.publish(cred, party)).status,
+    (await browser.publish({ ...cred, version: 2 }, edited)).status,
+    (await browser.publish(host(), party)).status,
+    (await browser.saveReply(cred.id, reply, lee)).status,
+    (await browser.saveReply(cred.id, { ...reply, version: 2 }, ana)).status,
+    (await browser.withdrawReply(cred.id, { ...reply, version: 3 })).status,
+    (await raw(`/api/events/${cred.id}/responses/${newId()}`, put({ ...sam, name: ' ' }, bearer(newSecret())))).status,
+    (await browser.saveReply(newId(), guest(), sam)).status,
+  ];
+  assert.deepEqual(
+    { statuses, totals: await totals(db) },
+    { statuses: [200, 200, 429, 200, 200, 204, 400, 404], totals: before },
+  );
+});
+
+test('the 201st reply to an invitation adds nothing', async () => {
+  const { db, client } = await countingSetup();
+  const browser = client();
+  const cred = host();
+  await browser.publish(cred, party);
+  for (let i = 0; i < 200; i += 1) await browser.saveReply(cred.id, guest(), lee);
+  const refused = await browser.saveReply(cred.id, guest(), lee);
+  assert.deepEqual(
+    { status: refused.status, totals: await totals(db) },
+    { status: 429, totals: { 'invitation_publish en': 1, 'reply_submit en': 200 } },
+  );
+});
+
+test('the count language comes from the body, and a missing or unknown language counts as en', async () => {
+  const { db, raw } = await countingSetup();
+  const publish = (lang, headers = {}) => {
+    const cred = host();
+    return raw(
+      `/api/events/${cred.id}`,
+      put({ t: party.t, d: partyFields, lang }, { ...bearer(cred.secret), 'x-real-ip': newId(), ...headers }),
+    );
+  };
+  const statuses = [
+    (await publish('ro')).status,
+    (await publish(undefined, { 'accept-language': 'ro' })).status,
+    (await publish('fr')).status,
+    (await publish(7)).status,
+  ];
+  assert.deepEqual(
+    { statuses, totals: await totals(db) },
+    { statuses: [201, 201, 201, 201], totals: { 'invitation_publish en': 3, 'invitation_publish ro': 1 } },
+  );
+});
+
+// stat(body) posts the body to /api/stats as navigator.sendBeacon sends a string, as text/plain.
+const statRequest = (body, method = 'POST') => ({
+  method,
+  headers: { 'content-type': 'text/plain;charset=UTF-8' },
+  body: method === 'GET' ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+});
+
+test('the stats route counts each browser action in both languages', async () => {
+  const { db, raw } = await countingSetup();
+  const statuses = [];
+  for (const action of BEACON_ACTIONS) {
+    for (const lang of ['en', 'ro']) statuses.push((await raw('/api/stats', statRequest({ action, lang }))).status);
+  }
+  await raw('/api/stats', statRequest({ action: 'png_download', lang: 'ro' }));
+  assert.deepEqual(
+    { statuses: new Set(statuses), totals: await totals(db) },
+    {
+      statuses: new Set([204]),
+      totals: {
+        ...Object.fromEntries(BEACON_ACTIONS.flatMap((action) => [`${action} en`, `${action} ro`]).map((k) => [k, 1])),
+        'png_download ro': 2,
+      },
+    },
+  );
+});
+
+test('the stats route refuses other actions, languages, bodies and methods and counts nothing', async () => {
+  const { db, raw } = await countingSetup();
+  const cases = {
+    'an unknown action': [400, statRequest({ action: 'page_view', lang: 'en' })],
+    'the server-counted publish': [400, statRequest({ action: 'invitation_publish', lang: 'en' })],
+    'the server-counted reply': [400, statRequest({ action: 'reply_submit', lang: 'en' })],
+    'no action': [400, statRequest({ lang: 'en' })],
+    'an unknown language': [400, statRequest({ action: 'png_download', lang: 'fr' })],
+    'a language tag': [400, statRequest({ action: 'png_download', lang: 'ro-RO' })],
+    'no language': [400, statRequest({ action: 'png_download' })],
+    'a body that is not JSON': [400, statRequest('png_download')],
+    'a JSON array body': [400, statRequest('["png_download", "en"]')],
+    'a body over 8 KB': [413, statRequest({ action: 'png_download', lang: 'en', pad: 'x'.repeat(8 * 1024) })],
+    'a GET': [405, statRequest(null, 'GET')],
+    'a PUT': [405, statRequest({ action: 'png_download', lang: 'en' }, 'PUT')],
+    'a DELETE': [405, statRequest({ action: 'png_download', lang: 'en' }, 'DELETE')],
+  };
+  const results = {};
+  for (const [label, [, init]] of Object.entries(cases)) {
+    const response = await raw('/api/stats', init);
+    results[label] = [response.status, typeof (await response.json()).error === 'string'];
+  }
+  assert.deepEqual(
+    { results, totals: await totals(db) },
+    {
+      results: Object.fromEntries(Object.entries(cases).map(([label, [status]]) => [label, [status, true]])),
+      totals: {},
+    },
+  );
+});
+
+test('the browser counter posts the action and page language, and ignores a failed send', () => {
+  const sent = [];
+  createCounter((url, data) => sent.push([url, JSON.parse(data)]), 'ro-RO')('calendar_add');
+  createCounter(() => {
+    throw new TypeError('sendBeacon is not a function');
+  }, 'en')('png_download');
+  assert.deepEqual(sent, [['/api/stats', { action: 'calendar_add', lang: 'ro' }]]);
 });
 
 // The retention job deletes an invitation, with its replies, 91 days after the later of its event date and its
