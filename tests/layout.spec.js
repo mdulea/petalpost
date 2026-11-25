@@ -188,8 +188,18 @@ async function stickyShownAt(page, place) {
     }[place];
     scrollTo({ top: target, behavior: 'instant' });
     const bar = document.getElementById('stickyCta');
-    // Two frames for the intersection observer, then the slide.
-    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+    // The page's intersection observer runs some frames after the scroll, more of them on a slow runner, so this
+    // waits up to 60 frames for data-shown to match the geometry. An observer that never updates fails below.
+    const onScreen = (el) => {
+      const rect = el.getBoundingClientRect();
+      return rect.bottom >= 0 && rect.top <= innerHeight;
+    };
+    const shown = ![document.querySelector('.hero .btn-primary'), document.querySelector('.site-footer')].some(
+      onScreen,
+    );
+    for (let frame = 0; frame < 60 && bar.hasAttribute('data-shown') !== shown; frame++) {
+      await new Promise(requestAnimationFrame);
+    }
     // When the observer flips data-shown during a slide, the browser cancels that transition, and its finished
     // promise rejects with an AbortError. This waits until no transition runs, whether it ended or was cancelled.
     while (bar.getAnimations().length) await Promise.allSettled(bar.getAnimations().map((a) => a.finished));
