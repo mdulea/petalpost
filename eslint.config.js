@@ -22,9 +22,9 @@ export default [
     files: ['scripts/**/*.js', 'tests/**/*.js', 'server/**/*.js', 'api/**/*.js', '*.config.js'],
     languageOptions: { globals: globals.node },
   },
-  // og-card.js runs in the browser, and so do callbacks that the spec files pass to page.evaluate.
+  // og-card.js and preview-card.js run in the browser, and so do callbacks that the spec files pass to page.evaluate.
   {
-    files: ['tests/*.spec.js', 'scripts/og-card.js'],
+    files: ['tests/*.spec.js', 'scripts/og-card.js', 'scripts/preview-card.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser, htmlToImage: 'readonly' } },
   },
   // Each worktree runs the browser checks on its own port, so a test opens a path that the base address resolves.

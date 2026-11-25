@@ -6,7 +6,9 @@
 // invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
 // one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
 // date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
-// failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses; Romanian link helpers and localized API error messages via Accept-Language.
+// failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses; the template's
+// link preview image at 1200 by 630 with the escaped title in its English or Romanian alt text, and the generic image
+// of the page language for a missing invitation, a storage error or an unknown template; Romanian link helpers and localized API error messages via Accept-Language.
 // Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
 // checks, which read the stored keys in a database of their own.
 // Run: pnpm exec node tests/check-rsvp.js
@@ -825,4 +827,59 @@ test('the /e/{id} route renders dynamic OG tags, escapes special text and handle
   assert.equal(down.status, 503);
   assert.equal(down.headers.get('cache-control'), 'no-store');
   assert.match(await down.text(), /<title>The invitation could not be loaded \| Petalpost<\/title>/);
+});
+
+test('the /e/{id} route names the template link preview image, and the generic image when it cannot', async () => {
+  const db = await (shared ??= openDatabase());
+  const { client } = await setup(db);
+  // The og:image address and og:image:alt text that the page at path names.
+  const image = async (path, pageDb = db) => {
+    const html = await (await createEventPage(pageDb)(new Request(`https://petalpost.test${path}`))).text();
+    return [
+      html.match(/<meta property="og:image" content="([^"]*)" \/>/)[1],
+      html.match(/<meta\s+property="og:image:alt"\s+content="([^"]*)"\s*\/>/)[1],
+      html.match(/<meta property="og:image:width" content="(\d+)" \/>/)[1],
+      html.match(/<meta property="og:image:height" content="(\d+)" \/>/)[1],
+    ];
+  };
+  const cred = host();
+  const title = 'A & "B" <3> $& $1';
+  await client().publish(cred, { t: 'noir-laurel', d: makeInviteData(getTemplate('noir-laurel'), { title }) });
+  const escaped = 'A &amp; &quot;B&quot; &lt;3&gt; $&amp; $1';
+  assert.deepEqual(await image(`/e/${cred.id}`), [
+    'https://www.petalpost.ro/previews/noir-laurel.jpg',
+    `Invitation: ${escaped}`,
+    '1200',
+    '630',
+  ]);
+  assert.deepEqual(await image(`/ro/e/${cred.id}`), [
+    'https://www.petalpost.ro/previews/noir-laurel.jpg',
+    `Invitație: ${escaped}`,
+    '1200',
+    '630',
+  ]);
+
+  const english = [
+    'https://www.petalpost.ro/og-image.png',
+    'Petalpost: three hand-drawn invitation cards beside the words Your day, your invite.',
+    '1200',
+    '630',
+  ];
+  const romanian = [
+    'https://www.petalpost.ro/ro/og-image.png',
+    'Petalpost: trei invitații ilustrate alături de mesajul Ziua ta, invitația ta.',
+    '1200',
+    '630',
+  ];
+  assert.deepEqual(await image(`/e/${newId()}`), english);
+  assert.deepEqual(await image(`/ro/e/${newId()}`), romanian);
+
+  const closedDb = await openDatabase();
+  await closedDb.close();
+  assert.deepEqual(await image(`/e/${cred.id}`, closedDb), english);
+  assert.deepEqual(await image(`/ro/e/${cred.id}`, closedDb), romanian);
+
+  await db.query(`update events set t = 'retired-template' where id = $1`, [cred.id]);
+  assert.deepEqual(await image(`/e/${cred.id}`), english);
+  assert.deepEqual(await image(`/ro/e/${cred.id}`), romanian);
 });

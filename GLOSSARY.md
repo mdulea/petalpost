@@ -61,6 +61,11 @@ The number of people covered by an accepting reply, including the guest if they 
 The link guests use to open a published invitation and reply.
 _Avoid_ `event link` and `share link` for this concept.
 
+**Link preview**
+
+The image, title, and description that messaging apps show for an invitation link.
+The image depends only on the invitation's template. The title and description come from the published invitation.
+
 **Management link**
 
 The private link that gives its holder access to a published invitation's replies and lets them delete the invitation.

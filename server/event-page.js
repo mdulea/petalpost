@@ -1,11 +1,11 @@
 // Dynamic HTML route for published invitations at /e/{id} and /ro/e/{id}. Serves editor.html or ro/editor.html with
-// per-event Open Graph metadata built from the event's title, date, time and venue, noindex so personal invites stay
+// per-event Open Graph metadata built from the event's title, date, time and venue and its template's link preview image, noindex so personal invites stay
 // out of search engines, and cache-control: no-store so edits and deletions take effect immediately.
 import { readFileSync } from 'node:fs';
 import { localeOf, normalizeLang } from '../public/js/i18n.js';
 import { eventPreviewMeta, makeInviteData } from '../public/js/invite.js';
 import { ID_PATTERN } from '../public/js/rsvp.js';
-import { escapeHtml, getTemplate } from '../public/js/templates.js';
+import { escapeHtml, getTemplate, linkPreviewPath } from '../public/js/templates.js';
 
 const DEFAULT_TEMPLATES = {
   en: readFileSync(new URL('../public/editor.html', import.meta.url), 'utf8'),
@@ -35,22 +35,30 @@ const FALLBACK_META = {
   },
 };
 
-// Replaces the static editor HTML head metadata with per-event Open Graph tags and noindex.
+// The word that the alt text of a template's link preview image puts before the invitation title.
+const IMAGE_ALT = { en: 'Invitation', ro: 'Invitație' };
+
+// Replaces the static editor HTML head metadata with per-event Open Graph tags and noindex. A found event whose
+// template has a link preview image names that image; any other page keeps the generic image of its language.
 // Reads the production origin from the template's og:url so the site origin has one source of truth.
 export function renderEventPage(templateHtml, { id = null, event = null, status = 200, lang = 'en' } = {}) {
   const code = normalizeLang(lang);
   const originMatch = templateHtml.match(/<meta\s+property="og:url"\s+content="([^"]+)"\s*\/>/);
   const origin = originMatch ? new URL(originMatch[1]).origin : 'https://www.petalpost.ro';
   let meta;
+  // The template's link preview image; null keeps the generic image of the page language.
+  let image = null;
   if (event) {
     const data = makeInviteData(getTemplate(event.t, code), event.d, code);
     meta = eventPreviewMeta(data, localeOf(code));
+    const path = linkPreviewPath(event.t);
+    if (path) image = { url: `${origin}/${path}`, alt: `${IMAGE_ALT[code]}: ${meta.title}` };
   } else {
     meta = status === 503 ? FALLBACK_META[code].unavailable : FALLBACK_META[code].missing;
   }
   const prefix = code === 'ro' ? '/ro' : '';
   const url = id ? `${origin}${prefix}/e/${id}` : `${origin}${prefix}/editor.html`;
-  return templateHtml
+  const html = templateHtml
     .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(meta.pageTitle)}</title>`)
     .replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/>/,
@@ -70,6 +78,16 @@ export function renderEventPage(templateHtml, { id = null, event = null, status 
     .replace(
       /<meta\s+property="og:url"\s+content="[^"]*"\s*\/>/,
       () => `<meta property="og:url" content="${escapeHtml(url)}" />`,
+    );
+  if (!image) return html;
+  return html
+    .replace(
+      /<meta\s+property="og:image"\s+content="[^"]*"\s*\/>/,
+      () => `<meta property="og:image" content="${escapeHtml(image.url)}" />`,
+    )
+    .replace(
+      /<meta\s+property="og:image:alt"\s+content="[^"]*"\s*\/>/,
+      () => `<meta property="og:image:alt" content="${escapeHtml(image.alt)}" />`,
     );
 }
 
