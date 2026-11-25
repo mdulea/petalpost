@@ -71,7 +71,7 @@ const state = openInvite({
 const pageBase = editorPage(location.origin, lang);
 const shareUrl = () => shareLink(pageBase, state);
 const client = createClient(fetch, { lang });
-const count = createCounter((url, data) => navigator.sendBeacon(url, data), lang);
+const countAction = createCounter((url, data) => navigator.sendBeacon(url, data), lang);
 
 /** @type {ReturnType<typeof setTimeout>} */
 let statusTimer;
@@ -379,7 +379,7 @@ document.getElementById('downloadPng').addEventListener('click', async (e) => {
   setStatus(copy.preparingImage, { keep: true });
   try {
     downloadDataUrl(await renderPng(), `${slug(state.d.title)}.png`);
-    count('png_download');
+    countAction('png_download');
     setStatus(copy.downloaded);
   } catch {
     setStatus(copy.downloadFailed);
@@ -409,14 +409,14 @@ sharePngButton.addEventListener('click', async () => {
   try {
     const file = dataUrlToFile(dataUrl, filename);
     await navigator.share({ files: [file], title: eventPreviewMeta(state.d, localeOf(lang)).title });
-    count('png_share');
+    countAction('png_share');
     setStatus(copy.inviteShared);
   } catch (error) {
     if (error?.name === 'AbortError') {
       setStatus('');
     } else {
       downloadDataUrl(dataUrl, filename);
-      count('png_download');
+      countAction('png_download');
       setStatus(copy.downloaded);
     }
   } finally {
@@ -436,7 +436,7 @@ document.getElementById('addCalendar').addEventListener('click', () => {
   link.download = `${slug(state.d.title)}.ics`;
   link.click();
   // Only guests of a published invitation count. The sample invitation and the host's preview send nothing.
-  if (state.event) count('calendar_add');
+  if (state.event) countAction('calendar_add');
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
@@ -515,7 +515,7 @@ publishButton.addEventListener('click', async () => {
 
 document.getElementById('copyEventLink').addEventListener('click', () =>
   copyLink(eventLinkInput.value, () => {
-    count('invitation_link_copy');
+    countAction('invitation_link_copy');
     publishStatus.textContent = copy.eventLinkCopied;
   }),
 );
@@ -525,11 +525,11 @@ shareEventLinkButton.addEventListener('click', () =>
   shareLinkNative(
     eventLinkInput.value,
     () => {
-      count('invitation_link_share');
+      countAction('invitation_link_share');
       publishStatus.textContent = copy.eventLinkShared;
     },
     () => {
-      count('invitation_link_copy');
+      countAction('invitation_link_copy');
       publishStatus.textContent = copy.eventLinkCopied;
     },
   ),
