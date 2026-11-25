@@ -1,6 +1,7 @@
-// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the post-RSVP prompt or the management page break in Chromium against the real API of
+// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the guest templates prompt or the management page break in Chromium against the real API of
 // scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
-// link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; a guest's note, which the edit link loads
+// link and an edit that keeps one reply; a guest sees the free templates prompt below the reply form from page load and once after a reply; the host
+// and the missing-invitation message never show it; it links to the home page templates tagged from=invite in English and Romanian; the management totals and reply list; a guest's note, which the edit link loads
 // and the management page shows under its reply as text with its line breaks; the replies CSV download with its
 // byte order mark, file name, columns, answers, browser time zone times, empty "Changed" cell, formula apostrophe
 // and quoting, with no totals row, in English with commas and in Romanian with semicolons; the invitation link and a guessed
@@ -570,6 +571,7 @@ test('deleting the invitation shows guests a missing message and lets the host p
   await expect(guest.page.locator('#status')).toHaveText('This invitation does not exist. It may have been deleted.');
   await expect(guest.page.locator('#previewCard')).toBeHidden();
   await expect(guest.page.locator('#rsvpForm')).toBeHidden();
+  await expect(guest.page.locator('#replyCta')).toBeHidden();
 
   await host.page.click('#publish');
   await expect(host.page.locator('#publishStatus')).toHaveText(
@@ -703,18 +705,22 @@ test('published /e/{id} serves dynamic OG tags and legacy ?view=1&e= links still
   expect([...host.problems, ...legacyGuest.problems]).toEqual([]);
 });
 
-test('after saving an RSVP, a modest prompt invites the guest to browse free templates', async ({ browser }) => {
+test('a guest sees the free templates prompt once from page load, and the host never sees it', async ({ browser }) => {
   const host = await newBrowser(browser);
   const { invitation } = await publish(host.page, 'Zoe turns 30');
+  await expect(host.page.locator('#replyCta')).toBeHidden();
   const guest = await newBrowser(browser);
   await guest.page.goto(invitation);
-  await expect(guest.page.locator('#replyCta')).toBeHidden();
-  await reply(guest.page, { name: 'Sam', partySize: 2 });
+  const prompt = guest.page.getByText('Planning an event of your own?');
   await expect(guest.page.locator('#replyCta')).toBeVisible();
+  await expect(guest.page.locator('#replyCta + #reportRow')).toBeVisible();
+  await reply(guest.page, { name: 'Sam', partySize: 2 });
+  await expect(prompt).toHaveCount(1);
+  await expect(prompt).toBeVisible();
   const ctaLink = guest.page.locator('#replyCta a');
-  await expect(ctaLink).toHaveAttribute('href', '/#templates');
+  await expect(ctaLink).toHaveAttribute('href', '/?from=invite#templates');
   await ctaLink.click();
-  await expect(guest.page).toHaveURL(/\/#templates$/);
+  await expect(guest.page).toHaveURL(/\/\?from=invite#templates$/);
   await expect(guest.page.locator('#gallery .card').first()).toBeVisible();
   expect([...host.problems, ...guest.problems]).toEqual([]);
 });
@@ -820,6 +826,7 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await expect(host.page.locator('#publishOutcome')).toHaveText('Invitație publicată');
   await expect(host.page.locator('#eventLink')).toHaveValue(/\/ro\/e\/[A-Za-z0-9_-]{22}$/);
   await expect(host.page.locator('#manageLink')).toHaveValue(/\/ro\/manage\.html#/);
+  await expect(host.page.locator('#replyCta')).toBeHidden();
   const invitation = await host.page.locator('#eventLink').inputValue();
   const manage = await host.page.locator('#manageLink').inputValue();
 
@@ -834,6 +841,7 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   const guest = await newBrowser(browser);
   await guest.page.goto(invitation);
   await expect(guest.page.locator('h1')).toHaveText('Botezul lui Matei');
+  await expect(guest.page.locator('#replyCta a')).toHaveAttribute('href', '/ro/?from=invite#templates');
   await guest.page.fill('#guestName', 'Ștefan');
   await guest.page.fill('#partySize', '2');
   await guest.page.fill('#guestNote', 'Venim; mulțumim!');
@@ -841,7 +849,7 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await expect(guest.page.locator('#replyOutcome')).toHaveText('Răspuns trimis');
   await guest.page.click('#sendReply');
   await expect(guest.page.locator('#replyOutcome')).toHaveText('Răspuns actualizat');
-  await expect(guest.page.locator('#replyCta a')).toHaveAttribute('href', '/ro/#templates');
+  await expect(guest.page.getByText('Organizezi un eveniment?')).toHaveCount(1);
 
   await host.page.goto(manage);
   expect(await managed(host.page)).toEqual({

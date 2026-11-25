@@ -725,6 +725,7 @@ async function openEvent() {
     eventLink(location.origin, state.event, lang),
     lang,
   );
+  document.getElementById('replyCta').hidden = false;
   document.getElementById('reportRow').hidden = false;
   if (!fromLink) return;
   const saved = await client.loadReply(state.event, replyCred);
