@@ -280,6 +280,9 @@ Remove-Item Env:DATABASE_URL_UNPOOLED
 ```
 
 No non-production Neon branch exists, so run it against production before you merge the pull request whose code needs the change.
+A `/wave` run applies migrations itself, and no other agent session may run `pnpm migrate` against Neon.
+Production runs the previous code until the merge deploys, so a migration must keep that code working.
+For example, add a new column instead of renaming one that the deployed code reads.
 Never commit a connection string or an `.env` file.
 
 Migration `004_action_counts.sql` adds the `action_counts` table, which counts a fixed set of actions per UTC day and page language.
@@ -349,7 +352,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
 2. Commit in that worktree. Each behavior change adds or updates a check in `tests/`.
 3. Run `pnpm check`.
 4. Push with `git push -u origin HEAD` and open a pull request with `gh pr create`.
-   When the pull request adds a migration, its body says so, and you apply the migration to production as [Database](#database) describes before you merge.
+   When the pull request adds a migration, its body says so.
+   Outside a `/wave` run, you apply the migration to production as [Database](#database) describes before you merge.
 5. Squash-merge the pull request after the `checks` job passes.
    The repository allows only squash merges, builds the commit message from the pull request title and body, and deletes the remote branch.
 6. In the main checkout, run `git pull --ff-only` and `pnpm worktree remove <type>-<task>`.
@@ -369,5 +373,5 @@ Agents: [AGENTS.md](AGENTS.md).
 In Claude Code, `/wave [--max <n>] [<issue numbers>]` works through the open issues in dependency order and stops after the 15th merged pull request, or after `n`.
 It runs one headless Claude Code session for each issue, at most three at once, and each session opens one pull request.
 The coordinating session merges each pull request once its checks pass, closes the parent issues and reports the pull requests with the findings of every session's retrospective.
-It holds a pull request that adds a migration until you apply the migration.
+Before it merges a pull request that adds a migration, it applies the migration to production with the connection string in the main checkout's `.env.local`.
 [.claude/skills/wave/SKILL.md](.claude/skills/wave/SKILL.md) lists the steps.

@@ -50,5 +50,6 @@ README Workflow == procedure; agent limits:
 - T3 `pull_request_*` tools read main checkout branch -> from `.worktrees/` push + open via `gh pr create`
 - merge -> only on request
 - after own pull request merges -> in main checkout `git pull --ff-only`, then `pnpm worktree remove <type>-<task>`; unasked
-- `pnpm migrate` against Neon forbidden
+- `pnpm migrate` against Neon: only the `/wave` coordinator, per its skill; every other agent session forbidden
+- migration keeps deployed code working; production runs previous code until merge deploys; failure example: renaming a column the deployed code reads
 - output: changes, reasons, tests
