@@ -5,7 +5,7 @@ import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
-import { eventLink, makeInviteData } from './invite.js';
+import { eventLink, makeInviteData, whatsappLink } from './invite.js';
 import { createClient, readCredential } from './rsvp.js';
 import { repliesCsv, repliesCsvName } from './csv.js';
 
@@ -18,6 +18,7 @@ const cred = readCredential(location.hash, '');
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
 const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
+const whatsappEventLink = /** @type {HTMLAnchorElement} */ (document.getElementById('whatsappEventLink'));
 // The replies of the last load, which the CSV download writes.
 let loadedReplies = [];
 
@@ -80,6 +81,7 @@ function showEvent({ t, d, responses, totals }) {
   document.getElementById('noReplies').hidden = responses.length > 0;
   loadedReplies = responses;
   eventLinkInput.value = eventLink(location.origin, cred.id, lang);
+  whatsappEventLink.href = whatsappLink(data, localeOf(lang), eventLinkInput.value);
 }
 
 async function load() {
