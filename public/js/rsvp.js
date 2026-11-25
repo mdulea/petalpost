@@ -81,6 +81,29 @@ function randomToken(size) {
 export const newId = () => randomToken(16);
 export const newSecret = () => randomToken(32);
 
+// The actions that the browser counts through POST /api/stats. The server counts invitation_publish and
+// reply_submit itself, when it stores a new invitation or reply.
+export const BEACON_ACTIONS = [
+  'png_download',
+  'png_share',
+  'invitation_link_copy',
+  'invitation_link_share',
+  'calendar_add',
+];
+
+// A counter for the page language: count(action) sends {action, lang} to /api/stats through beacon, which has the
+// navigator.sendBeacon shape. A failed send is ignored, so counting never delays or blocks the action.
+export function createCounter(beacon, lang) {
+  const code = normalizeLang(lang);
+  return (action) => {
+    try {
+      beacon('/api/stats', JSON.stringify({ action, lang: code }));
+    } catch {
+      // Counting is approximate by design.
+    }
+  };
+}
+
 // The API client. fetchFn has the fetch shape and receives relative /api paths.
 // Every method resolves {ok, status, data, message} and never throws: data is the parsed JSON body or null,
 // message is null on success and text to show the user on failure, and status is 0 when the network failed.
@@ -124,10 +147,10 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
 
   return {
     // Creates the event, or updates it when cred.version is set. record is the editor's {t, d}; the photo
-    // position stays local. data is {version, created}.
+    // position stays local. The page language goes with it for the server's count. data is {version, created}.
     publish(cred, record) {
       const { photoY, ...d } = record.d;
-      return save(eventPath(cred.id), cred, { t: record.t, d });
+      return save(eventPath(cred.id), cred, { t: record.t, d, lang: code });
     },
     // Public presentation fields {t, d} of an event.
     loadEvent: (id) => call('GET', eventPath(id)),
@@ -136,8 +159,8 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // data is {t, d, version, responses: [{name, attending, partySize, note, createdAt, updatedAt}], totals}.
     loadResponses: (cred) => call('GET', `${eventPath(cred.id)}/responses`, cred.secret),
     // Creates the guest's reply {name, attending, partySize, note}, or updates it when cred.version is set.
-    // data is {version, created}.
-    saveReply: (eventId, cred, reply) => save(replyPath(eventId, cred.id), cred, reply),
+    // The page language goes with it for the server's count. data is {version, created}.
+    saveReply: (eventId, cred, reply) => save(replyPath(eventId, cred.id), cred, { ...reply, lang: code }),
     // data is {name, attending, partySize, note, version}.
     loadReply: (eventId, cred) => call('GET', replyPath(eventId, cred.id), cred.secret),
     // Removes the guest's reply at cred.version; a reply that is already gone counts as withdrawn. data is null.
