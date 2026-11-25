@@ -330,6 +330,8 @@ The command renders every template in Chromium and overwrites its image.
 
 Every change reaches `main` through a pull request.
 Branch protection on `main` requires a pull request and a passing `checks` job, blocks force pushes and deletion, and applies to administrators too.
+The `checks` workflow runs on each pull request event, such as opening the pull request or pushing to its branch, and on each push to `main`.
+A push to a branch without a pull request runs no checks.
 The main checkout stays on `main` and changes only through `git pull --ff-only`.
 
 1. In the main checkout, with no uncommitted changes, run `pnpm worktree add <type> <task>`.
