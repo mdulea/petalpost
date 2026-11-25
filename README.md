@@ -363,3 +363,5 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
 - When a formatting-only commit lands on `main`, add its hash to `.git-blame-ignore-revs`.
 
 Agents: [AGENTS.md](AGENTS.md).
+In Claude Code, `/wave <issue numbers>` implements several issues in parallel, one headless session for each issue, and then merges their pull requests in order.
+[.claude/skills/wave/SKILL.md](.claude/skills/wave/SKILL.md) lists the steps.
