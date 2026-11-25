@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm --dir \"$CLAUDE_PROJECT_DIR\" exec node scripts/command-guard.js"
+          }
+        ]
+      }
+    ]
+  }
+}

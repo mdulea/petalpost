@@ -136,11 +136,13 @@ A guest cannot see other guests' replies or the totals.
   - `previews.js` writes the link preview image of each template through `preview-card.html` and `preview-card.js`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
   - `shot.js` writes a PNG of a page or of one element on it.
+  - `command-guard.js` is the agent hook that rejects shell commands that call `node` or `npx` directly.
 - `tests/` holds the checks that `pnpm check` runs:
-  - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
+  - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
-- `.github/workflows/checks.yml` runs `pnpm check` on each push and pull request.
+- `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
+- `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
 - `docs/petalpost-flow.html` is a diagram of the site flow, and `docs/decisions/` holds the recorded decisions.
 - The root keeps the configs that ESLint, TypeScript, Playwright, pnpm and Vercel look for there, `package.json` with the Prettier settings, and `README.md`, `AGENTS.md` and `GLOSSARY.md`.
 
@@ -183,7 +185,7 @@ It starts `scripts/server.js` on a free port with an in-memory database, so it r
 When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
-`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, command guard, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
@@ -229,6 +231,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 ### Tooling notes
 
 - `.gitattributes` forces LF line endings. A CRLF checkout makes `pnpm format:check` fail on every file and makes the vendored library hash check fail.
+- Claude Code rejects an agent shell command that starts with `node` or `npx`, or calls either after a command separator, and its message names `pnpm exec`. A global Node.js install on the PATH can run another version than the one `package.json` pins. `.claude/settings.json` runs the check, and `check-command-guard.js` tests it against allowed and rejected sample commands.
 - pnpm refuses package releases younger than its minimum release age. When you upgrade a dependency, pick a release older than that age.
 
 ## Deployment

@@ -21,5 +21,6 @@ GLOSSARY.md
 docs/
 AGENTS.md
 .github/
+.claude/
 playwright.config.js
 tests/
