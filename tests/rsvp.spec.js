@@ -1,6 +1,7 @@
 // Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the guest templates prompt or the management page break in Chromium against the real API of
 // scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
-// link and an edit that keeps one reply; the free templates prompt, visible to a guest from page load below the reply form and once after a reply, hidden from the host and on a missing invitation, linking to the tagged home page templates in English and Romanian; the management totals and reply list; a guest's note, which the edit link loads
+// link and an edit that keeps one reply; a guest sees the free templates prompt below the reply form from page load and once after a reply; the host
+// and the missing-invitation message never show it; it links to the home page templates tagged from=invite in English and Romanian; the management totals and reply list; a guest's note, which the edit link loads
 // and the management page shows under its reply as text with its line breaks; the replies CSV download with its
 // byte order mark, file name, columns, answers, browser time zone times, empty "Changed" cell, formula apostrophe
 // and quoting, with no totals row, in English with commas and in Romanian with semicolons; the invitation link and a guessed
@@ -825,6 +826,7 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await expect(host.page.locator('#publishOutcome')).toHaveText('Invitație publicată');
   await expect(host.page.locator('#eventLink')).toHaveValue(/\/ro\/e\/[A-Za-z0-9_-]{22}$/);
   await expect(host.page.locator('#manageLink')).toHaveValue(/\/ro\/manage\.html#/);
+  await expect(host.page.locator('#replyCta')).toBeHidden();
   const invitation = await host.page.locator('#eventLink').inputValue();
   const manage = await host.page.locator('#manageLink').inputValue();
 
