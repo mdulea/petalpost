@@ -1,6 +1,6 @@
 // Dynamic HTML route for published invitations at /e/{id} and /ro/e/{id}. Serves editor.html or ro/editor.html with
-// per-event Open Graph metadata built from the event's title, date, time and venue and its template's link preview image, noindex so personal invites stay
-// out of search engines, and cache-control: no-store so edits and deletions take effect immediately.
+// per-event Open Graph metadata built from the event's title, date, time and venue and its template's link preview
+// image, noindex so personal invites stay out of search engines, and cache-control: no-store so edits and deletions take effect immediately.
 import { readFileSync } from 'node:fs';
 import { localeOf, normalizeLang } from '../public/js/i18n.js';
 import { eventPreviewMeta, makeInviteData } from '../public/js/invite.js';
@@ -35,8 +35,8 @@ const FALLBACK_META = {
   },
 };
 
-// The word that the alt text of a template's link preview image puts before the invitation title.
-const IMAGE_ALT = { en: 'Invitation', ro: 'Invitație' };
+// The word that the alt text of a template's link preview image puts after the invitation title.
+const INVITATION_WORD = { en: 'invitation', ro: 'invitație' };
 
 // Replaces the static editor HTML head metadata with per-event Open Graph tags and noindex. A found event whose
 // template has a link preview image names that image; any other page keeps the generic image of its language.
@@ -51,8 +51,8 @@ export function renderEventPage(templateHtml, { id = null, event = null, status 
   if (event) {
     const data = makeInviteData(getTemplate(event.t, code), event.d, code);
     meta = eventPreviewMeta(data, localeOf(code));
-    const path = linkPreviewPath(event.t);
-    if (path) image = { url: `${origin}/${path}`, alt: `${IMAGE_ALT[code]}: ${meta.title}` };
+    const previewPath = linkPreviewPath(event.t);
+    if (previewPath) image = { url: `${origin}/${previewPath}`, alt: `${meta.title} ${INVITATION_WORD[code]}` };
   } else {
     meta = status === 503 ? FALLBACK_META[code].unavailable : FALLBACK_META[code].missing;
   }

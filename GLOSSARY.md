@@ -65,6 +65,7 @@ _Avoid_ `event link` and `share link` for this concept.
 
 The image, title, and description that messaging apps show for an invitation link.
 The image depends only on the invitation's template. The title and description come from the published invitation.
+A missing invitation, a storage error, or an unknown template shows the generic Petalpost image instead.
 
 **Management link**
 

@@ -848,13 +848,13 @@ test('the /e/{id} route names the template link preview image, and the generic i
   const escaped = 'A &amp; &quot;B&quot; &lt;3&gt; $&amp; $1';
   assert.deepEqual(await image(`/e/${cred.id}`), [
     'https://www.petalpost.ro/previews/noir-laurel.jpg',
-    `Invitation: ${escaped}`,
+    `${escaped} invitation`,
     '1200',
     '630',
   ]);
   assert.deepEqual(await image(`/ro/e/${cred.id}`), [
     'https://www.petalpost.ro/previews/noir-laurel.jpg',
-    `Invitație: ${escaped}`,
+    `${escaped} invitație`,
     '1200',
     '630',
   ]);
