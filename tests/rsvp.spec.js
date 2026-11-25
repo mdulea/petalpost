@@ -10,8 +10,10 @@
 // withdrawal replaces the form with its panel and clears the address, Reply again shows the empty form, its old edit link says no reply is saved yet and can send, and a stale
 // withdrawal loads the latest answer; the Romanian withdrawal copy; a Moț invitation published in Romanian takes a guest's reply;
 // the confirmation panels of a sent, updated and withdrawn reply and of a first and a repeated publish, with their
-// headings in English and Romanian, the links they show and the focus move, and no panel after a failed send,
-// withdrawal or publish; publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
+// headings in English and Romanian, the links they show, their 250ms fade-in with a 12px rise and the focus move, and
+// no panel after a failed send, withdrawal or publish; an invitation link reveals the invitation once over 400ms with
+// a 12px rise, and sending or changing a reply does not replay it; under reduced motion neither the invitation nor a
+// panel animates; publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
 // analytics gets page addresses without the fragment; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; no page breaks the Content-Security-Policy or throws.
@@ -46,6 +48,31 @@ async function publish(page, title) {
     manage: await page.locator('#manageLink').inputValue(),
   };
 }
+
+// Records each Web Animations API call on an element that matches selector as {id, keyframes, duration} in
+// window.animations.
+const recordAnimations = (page, selector) =>
+  page.addInitScript((selector) => {
+    const record = /** @type {any} */ (window);
+    const animate = Element.prototype.animate;
+    record.animations = [];
+    Element.prototype.animate = function (keyframes, options) {
+      if (this.matches(selector))
+        record.animations.push({
+          id: this.id,
+          keyframes,
+          duration: /** @type {KeyframeAnimationOptions} */ (options).duration,
+        });
+      return animate.call(this, keyframes, options);
+    };
+  }, selector);
+const recordedAnimations = (page) => page.evaluate(() => /** @type {any} */ (window).animations);
+const PANELS = '#published, #replySaved, #replyWithdrawn';
+const RISE = [
+  { opacity: 0, transform: 'translateY(12px)' },
+  { opacity: 1, transform: 'none' },
+];
+const panelOpening = (id) => ({ id, keyframes: RISE, duration: 250 });
 
 test('an invitation published in one browser opens in another', async ({ browser }) => {
   const host = await newBrowser(browser);
@@ -218,8 +245,9 @@ test('a guest withdraws a reply after confirming, and a new send makes a separat
   expect([...host.problems, ...sam.problems]).toEqual([]);
 });
 
-test('each confirmation panel opens with its heading and takes focus', async ({ browser }) => {
+test('each confirmation panel fades in and rises with its heading and takes focus', async ({ browser }) => {
   const host = await newBrowser(browser);
+  await recordAnimations(host.page, PANELS);
   const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
   await expect(host.page.locator('#published')).toBeFocused();
   expect({
@@ -235,7 +263,10 @@ test('each confirmation panel opens with its heading and takes focus', async ({ 
     await host.page.locator('#manageLink').inputValue(),
   ]).toEqual([invitation, manage]);
 
+  expect(await recordedAnimations(host.page)).toEqual([panelOpening('published'), panelOpening('published')]);
+
   const sam = await newBrowser(browser);
+  await recordAnimations(sam.page, PANELS);
   await sam.page.goto(invitation);
   await reply(sam.page, { name: 'Sam' });
   await expect(sam.page.locator('#replySaved')).toBeFocused();
@@ -249,8 +280,51 @@ test('each confirmation panel opens with its heading and takes focus', async ({ 
   await expect(sam.page.locator('#replyWithdrawn')).toBeVisible();
   await expect(sam.page.locator('#replyWithdrawn h2')).toHaveText('Reply withdrawn');
   await expect(sam.page.locator('#replyWithdrawn')).toBeFocused();
+  expect(await recordedAnimations(sam.page)).toEqual([
+    panelOpening('replySaved'),
+    panelOpening('replySaved'),
+    panelOpening('replyWithdrawn'),
+  ]);
   await sam.page.click('#replyAgain');
   await expect(sam.page.locator('#guestName')).toBeFocused();
+  expect([...host.problems, ...sam.problems]).toEqual([]);
+});
+
+test('an invitation link reveals the invitation once, and sending or changing a reply does not replay it', async ({
+  browser,
+}) => {
+  const host = await newBrowser(browser);
+  const { invitation } = await publish(host.page, 'Zoe turns 30');
+  const sam = await newBrowser(browser);
+  await recordAnimations(sam.page, '#previewCard');
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: 'Sam' });
+  await reply(sam.page, { name: 'Sam Lee', heading: 'Reply updated' });
+  await expect
+    .poll(() => sam.page.evaluate(() => document.getElementById('previewCard').getAnimations().length))
+    .toBe(0);
+  expect(await recordedAnimations(sam.page)).toEqual([{ id: 'previewCard', keyframes: RISE, duration: 400 }]);
+  expect(await sam.page.locator('#previewCard').evaluate((card) => getComputedStyle(card).opacity)).toBe('1');
+  expect([...host.problems, ...sam.problems]).toEqual([]);
+});
+
+test('under reduced motion the invitation and the confirmation panels open without animation', async ({ browser }) => {
+  const host = await newBrowser(browser, { reducedMotion: 'reduce' });
+  await recordAnimations(host.page, PANELS);
+  const { invitation } = await publish(host.page, 'Zoe turns 30');
+  await expect(host.page.locator('#published')).toBeFocused();
+  expect(await recordedAnimations(host.page)).toEqual([]);
+
+  const sam = await newBrowser(browser, { reducedMotion: 'reduce' });
+  await recordAnimations(sam.page, `#previewCard, ${PANELS}`);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: 'Sam' });
+  await expect(sam.page.locator('#replySaved')).toBeFocused();
+  sam.page.once('dialog', (dialog) => dialog.accept());
+  await sam.page.click('#withdrawReply');
+  await expect(sam.page.locator('#replyWithdrawn')).toBeFocused();
+  expect(await recordedAnimations(sam.page)).toEqual([]);
+  expect(await sam.page.evaluate(() => document.getAnimations().length)).toBe(0);
   expect([...host.problems, ...sam.problems]).toEqual([]);
 });
 

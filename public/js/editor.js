@@ -3,6 +3,7 @@ import './language-banner.js';
 import { UI, accentLabel, categoryLabel, localeOf, normalizeLang } from './i18n.js';
 import { ACCENTS, categoriesFor, getTemplate, renderInvite, templatesFor } from './templates.js';
 import { mountInvites } from './mount.js';
+import { animate } from './motion.js';
 import {
   EDITABLE,
   FIELDS,
@@ -100,6 +101,22 @@ function render() {
 function commit() {
   render();
   save();
+}
+
+// A template or accent change settles the preview from opacity 0.6 to 1 over 180ms. A text edit does not animate.
+function settlePreview() {
+  animate([previewCard], [{ opacity: 0.6 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+}
+
+// The guest view's invitation and the confirmation panels fade in and rise 12px.
+const RISE = [
+  { opacity: 0, transform: 'translateY(12px)' },
+  { opacity: 1, transform: 'none' },
+];
+
+// The guest view reveals the invitation over 400ms, once when the page shows it.
+function revealInvite() {
+  animate([previewCard], RISE, { duration: 400, easing: 'ease-out' });
 }
 
 // A limited text field shows the characters left below it once its text passes 80% of the limit. The counter joins
@@ -213,6 +230,7 @@ form.addEventListener('input', (e) => {
     return;
   }
   commit();
+  if (name === 'template' || name === 'accent') settlePreview();
 });
 
 // On narrow layouts the floating Preview button covers the bottom of the screen. The browser scrolls a focused
@@ -423,13 +441,19 @@ const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById(
 const manageLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('manageLink'));
 const publishedPanel = document.getElementById('published');
 
-// A confirmation panel shows the result of the action that just succeeded. Its .outcome heading names the outcome,
-// and focus moves to the panel, so a screen reader reads it and a keyboard continues from it. A panel that shows saved
-// state, such as the links after a reload, keeps its heading hidden, and so does a panel whose last action failed.
-function showOutcome(panel, heading) {
+// A confirmation panel shows the result of the action that just succeeded. It fades in and rises 12px over 250ms,
+// and focus moves to it, so a screen reader reads it and a keyboard continues from it.
+function openPanel(panel) {
   panel.hidden = false;
-  setOutcome(panel, heading);
+  animate([panel], RISE, { duration: 250, easing: 'ease-out' });
   panel.focus();
+}
+
+// The .outcome heading of a confirmation panel names the outcome. A panel that shows saved state, such as the links
+// after a reload, keeps its heading hidden, and so does a panel whose last action failed.
+function showOutcome(panel, heading) {
+  setOutcome(panel, heading);
+  openPanel(panel);
 }
 
 function setOutcome(panel, heading) {
@@ -653,8 +677,7 @@ withdrawButton.addEventListener('click', async () => {
     replySavedPanel.hidden = true;
     rsvpStatus.textContent = '';
     rsvpForm.hidden = true;
-    withdrawnPanel.hidden = false;
-    withdrawnPanel.focus();
+    openPanel(withdrawnPanel);
     return;
   }
   if (result.status === 409) {
@@ -696,6 +719,7 @@ async function openEvent() {
   setHeading(state.d.title || copy.defaultGuestHeading);
   document.body.classList.remove('invite-hidden');
   render();
+  revealInvite();
   rsvpForm.hidden = false;
   /** @type {HTMLAnchorElement} */ (document.getElementById('reportLink')).href = reportLink(
     eventLink(location.origin, state.event, lang),
@@ -735,8 +759,10 @@ if (state.guest) {
     sampleNotice.textContent = copy.sampleNotice;
     sampleNotice.hidden = false;
     rsvpForm.hidden = false;
+    revealInvite();
   } else {
     setHeading(state.d.title || copy.defaultGuestHeading);
+    revealInvite();
   }
 }
 
