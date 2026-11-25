@@ -29,7 +29,7 @@ README.md sections, by need:
 
 ## Testing
 
-- behavior change -> add/update `node:test` checks in `tests/`; test added to `tests/check-*.js` or `tests/*.spec.js` -> update header comment listing checks
+- behavior change -> add/update `node:test` checks in `tests/`; test added to a `tests/` file whose header lists its checks -> update that list; `tests/check-site.js` header states coverage only
 - new or edited browser test -> run it alone first, `pnpm test:browser <spec> -g "<name>"`; then full `pnpm check`
 - before finishing: `pnpm fix`, then `pnpm check` passes
 

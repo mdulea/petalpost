@@ -153,6 +153,7 @@ A guest cannot see other guests' replies or the totals.
 | Test suite          | `pnpm test`                                                        |
 | One check file      | `pnpm exec node tests/check-invite.js`                             |
 | Filtered check file | `pnpm exec node --test-name-pattern="sitemap" tests/check-site.js` |
+| Check names         | `pnpm exec node --test --test-reporter=spec tests/check-site.js`   |
 | One browser test    | `pnpm test:browser tests/browser.spec.js -g "landing filter"`      |
 | Lint                | `pnpm lint`                                                        |
 | Format and fix      | `pnpm fix`                                                         |
@@ -166,6 +167,7 @@ A guest cannot see other guests' replies or the totals.
 | Migrations          | `pnpm migrate`                                                     |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
+The check names command runs one check file and prints the name of each check, and the `check-site.js` header names only what the file covers.
 `--test-name-pattern` runs only the tests whose names match the regular expression, and `-g` does the same for browser tests.
 Each targeted command finishes in seconds, so rerun the check you are working on with one of them and run `pnpm check` once at the end.
 `check-filter.js` fails when a check file keeps running after its filtered tests finish.
