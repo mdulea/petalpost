@@ -22,5 +22,5 @@ Thumbs.db
 dist/
 .pglite/
 
-# Wave run files: session results, retrospectives and reports
-.wave/
+# Sweep run files: session results, retrospectives and reports
+.sweep/

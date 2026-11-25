@@ -137,14 +137,14 @@ A guest cannot see other guests' replies or the totals.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
   - `shot.js` writes a PNG of a page or of one element on it.
   - `command-guard.js` is the agent hook that rejects shell commands that call `node` or `npx` directly.
-  - `wave-plan.js` prints the order in which `/wave` implements the open issues, and the issues it leaves alone.
+  - `sweep-plan.js` prints the order in which `/sweep` implements the open issues, and the issues it leaves alone.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
 - `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
-- `.claude/skills/wave/` is the Claude Code skill behind `/wave`. It writes each run's session results, retrospectives and report to `.wave/`, which git ignores.
+- `.claude/skills/sweep/` is the Claude Code skill behind `/sweep`. It writes each run's session results, retrospectives and report to `.sweep/`, which git ignores.
 - `docs/petalpost-flow.html` is a diagram of the site flow, and `docs/decisions/` holds the recorded decisions.
 - The root keeps the configs that ESLint, TypeScript, Playwright, pnpm and Vercel look for there, `package.json` with the Prettier settings, and `README.md`, `AGENTS.md` and `GLOSSARY.md`.
 
@@ -168,7 +168,7 @@ A guest cannot see other guests' replies or the totals.
 | Generate pages      | `pnpm pages`                                                       |
 | Link previews       | `pnpm previews`                                                    |
 | Screenshot          | `pnpm shot <path> [<selector>] <file>`                             |
-| Wave plan           | `pnpm wave-plan [<issue numbers>]`                                 |
+| Sweep plan          | `pnpm sweep-plan [<issue numbers>]`                                |
 | Migrations          | `pnpm migrate`                                                     |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
@@ -280,6 +280,9 @@ Remove-Item Env:DATABASE_URL_UNPOOLED
 ```
 
 No non-production Neon branch exists, so run it against production before you merge the pull request whose code needs the change.
+A `/sweep` run applies migrations itself, and no other agent session may run `pnpm migrate` against Neon.
+Production runs the previous code until the merge deploys, so a migration must keep that code working.
+For example, add a new column instead of renaming one that the deployed code reads.
 Never commit a connection string or an `.env` file.
 
 Migration `004_action_counts.sql` adds the `action_counts` table, which counts a fixed set of actions per UTC day and page language.
@@ -349,7 +352,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
 2. Commit in that worktree. Each behavior change adds or updates a check in `tests/`.
 3. Run `pnpm check`.
 4. Push with `git push -u origin HEAD` and open a pull request with `gh pr create`.
-   When the pull request adds a migration, its body says so, and you apply the migration to production as [Database](#database) describes before you merge.
+   When the pull request adds a migration, its body says so.
+   Outside a `/sweep` run, you apply the migration to production as [Database](#database) describes before you merge.
 5. Squash-merge the pull request after the `checks` job passes.
    The repository allows only squash merges, builds the commit message from the pull request title and body, and deletes the remote branch.
 6. In the main checkout, run `git pull --ff-only` and `pnpm worktree remove <type>-<task>`.
@@ -366,8 +370,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
 - When a formatting-only commit lands on `main`, add its hash to `.git-blame-ignore-revs`.
 
 Agents: [AGENTS.md](AGENTS.md).
-In Claude Code, `/wave [--max <n>] [<issue numbers>]` works through the open issues in dependency order and stops after the 15th merged pull request, or after `n`.
+In Claude Code, `/sweep [--max <n>] [<issue numbers>]` works through the open issues in dependency order and stops after the 15th merged pull request, or after `n`.
 It runs one headless Claude Code session for each issue, at most three at once, and each session opens one pull request.
 The coordinating session merges each pull request once its checks pass, closes the parent issues and reports the pull requests with the findings of every session's retrospective.
-It holds a pull request that adds a migration until you apply the migration.
-[.claude/skills/wave/SKILL.md](.claude/skills/wave/SKILL.md) lists the steps.
+Before it merges a pull request that adds a migration, it applies the migration to production with the connection string in the main checkout's `.env.local`.
+[.claude/skills/sweep/SKILL.md](.claude/skills/sweep/SKILL.md) lists the steps.

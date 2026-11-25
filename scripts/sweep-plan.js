@@ -1,4 +1,4 @@
-// Plans a wave run, which the wave skill in .claude/skills/wave/ starts. planWave(issues, pulls, only) takes the open
+// Plans a sweep run, which the sweep skill in .claude/skills/sweep/ starts. planSweep(issues, pulls, only) takes the open
 // issues as { number, title, labels, parent, subIssues, blockedBy }, where subIssues and blockedBy list { number, state },
 // and the open pull requests as { number, closes }. It returns:
 // - order: the issues to implement, each with the open blockers it waits for, blockers first, ties by ascending number
@@ -8,7 +8,7 @@
 // An issue labelled wontfix, duplicate, invalid or question is left out. An open blocker outside order, resume and
 // parents holds its dependents. Given issue numbers in only, the plan covers them, their sub-issues and blockers, and
 // the parents above them.
-// Run: pnpm wave-plan [issue numbers]
+// Run: pnpm sweep-plan [issue numbers]
 import { execFileSync } from 'node:child_process';
 
 const SKIPPED = ['wontfix', 'duplicate', 'invalid', 'question'];
@@ -52,7 +52,7 @@ const scope = (byNumber, only) => {
   return covered;
 };
 
-export const planWave = (allIssues, pulls = [], only = []) => {
+export const planSweep = (allIssues, pulls = [], only = []) => {
   const known = new Map(allIssues.map((issue) => [issue.number, issue]));
   const held = only
     .filter((number) => !known.has(number))
@@ -144,7 +144,7 @@ const fetchOpen = () => {
   );
   const { issues, pullRequests } = JSON.parse(output).data.repository;
   if (issues.pageInfo.hasNextPage || pullRequests.pageInfo.hasNextPage) {
-    throw new Error('More than 100 open issues or pull requests; wave-plan reads the first 100 only.');
+    throw new Error('More than 100 open issues or pull requests; sweep-plan reads the first 100 only.');
   }
   return {
     issues: issues.nodes.map((node) => ({
@@ -166,13 +166,13 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   const bad = args.find((arg) => !/^#?\d+$/.test(arg));
   if (bad) {
-    console.error(`Not an issue number: ${bad}. Usage: pnpm wave-plan [issue numbers]`);
+    console.error(`Not an issue number: ${bad}. Usage: pnpm sweep-plan [issue numbers]`);
     process.exit(1);
   }
   const { issues, pulls } = fetchOpen();
   console.log(
     JSON.stringify(
-      planWave(
+      planSweep(
         issues,
         pulls,
         args.map((arg) => Number(arg.replace('#', ''))),

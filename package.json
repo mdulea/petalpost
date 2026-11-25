@@ -23,7 +23,7 @@
     "previews": "node scripts/previews.js",
     "shot": "node scripts/shot.js",
     "typecheck": "tsc -p .",
-    "wave-plan": "node scripts/wave-plan.js",
+    "sweep-plan": "node scripts/sweep-plan.js",
     "test": "pnpm format:check && pnpm lint && node --test tests/check-*.js",
     "test:browser": "playwright test",
     "worktree": "node scripts/worktree.js"

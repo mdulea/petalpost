@@ -1,5 +1,5 @@
 ---
-name: wave
+name: sweep
 description: Work through open petalpost issues in dependency order, one headless session and one pull request per issue, merging up to 15 pull requests.
 disable-model-invocation: true
 ---
@@ -11,15 +11,15 @@ disable-model-invocation: true
 - Implementer = top-level headless `claude -p` session, one issue, own worktree, so `review` starts subagents; subagent implementers forbidden
 - Limits: max 3 running implementers; start implementer only while merged + in progress < `max`; stop after `max` merges or per step 12
 - Worktree add/remove: coordinator only, serially, from main checkout; worktree dir = branch with `/` -> `-`
-- Hold unmerged: pull request with file under `server/migrations/` (user applies production migration first; `pnpm migrate` against Neon forbidden) -> state `waiting for migration`, `in-progress` label stays so next run resumes it
+- Migrations: production migrations only via coordinator, only per step 8; implementers + fix sessions: `pnpm migrate` against Neon forbidden; migration keeps deployed code working, production runs previous code until merge deploys; failure example: renaming a column the deployed code reads
 - Git Bash: prefix every `claude -p` with `MSYS_NO_PATHCONV=1`; else leading `/` of prompt becomes Windows path
-- Comments start with `> Written by the wave coordinator.`
+- Comments start with `> Written by the sweep coordinator.`
 
 # Workflow
 
-1. Args: `--max <n>` (default 15), issue numbers (optional). `RUN=$(pwd -W)/.wave/$(date +%Y%m%d-%H%M)`, Windows path for implementers; `mkdir -p "${RUN}"`
-2. Labels: `gh label create in-progress --force --color fbca04 --description "A wave run works on this issue"`; `gh label create blocked --force --color b60205 --description "A wave run gave up; remove the label to retry"`
-3. `pnpm -s wave-plan <issue numbers> > "${RUN}/plan.json"`; print one line per `order`, `resume`, `parents`, `held` item via `jq`; start without confirmation
+1. Args: `--max <n>` (default 15), issue numbers (optional). `RUN=$(pwd -W)/.sweep/$(date +%Y%m%d-%H%M)`, Windows path for implementers; `mkdir -p "${RUN}"`
+2. Labels: `gh label create in-progress --force --color fbca04 --description "A sweep run works on this issue"`; `gh label create blocked --force --color b60205 --description "A sweep run gave up; remove the label to retry"`
+3. `pnpm -s sweep-plan <issue numbers> > "${RUN}/plan.json"`; print one line per `order`, `resume`, `parents`, `held` item via `jq`; start without confirmation
 4. Done set = closed issues; parents with empty `subIssues` -> close now per step 10
 5. Per `resume` item: branch `gh pr view <pr> --json headRefName --jq .headRefName`; counts as in progress; merge per step 8; session ID unknown -> fixes per step 9 start new session in its worktree, worktree missing -> block
 6. Start next `order` item with every `blockedBy` in done set, while limits allow, ascending plan position:
@@ -29,15 +29,16 @@ disable-model-invocation: true
 - Bash `run_in_background: true`, cwd = worktree:
 
 ```sh
-MSYS_NO_PATHCONV=1 claude -p "/implement gh issue <n>. Coordinated wave run: you are in worktree .worktrees/<type>-<task> on branch <type>/<task>; skip pnpm worktree add. Questions you would ask the user -> stop and end with BLOCKED <question>. Branch ready once pnpm fix and pnpm check pass: draft the body with the pr skill, include Closes #<n>, push, open the pull request with gh pr create. Never merge. Then run the retrospective skill on this session and write its findings, at most 300 words, to <RUN>/<n>.retro.md. Last line: PR <number> or BLOCKED <reason>." --permission-mode auto --output-format json > "<RUN>/<n>.json"
+MSYS_NO_PATHCONV=1 claude -p "/implement gh issue <n>. Coordinated sweep run: you are in worktree .worktrees/<type>-<task> on branch <type>/<task>; skip pnpm worktree add. Questions you would ask the user -> stop and end with BLOCKED <question>. Branch ready once pnpm fix and pnpm check pass: draft the body with the pr skill, include Closes #<n>, push, open the pull request with gh pr create. Never merge. Then run the retrospective skill on this session and write its findings, at most 300 words, to <RUN>/<n>.retro.md. Last line: PR <number> or BLOCKED <reason>." --permission-mode auto --output-format json > "<RUN>/<n>.json"
 ```
 
 7. Exit notification -> `jq -r '.session_id, (.permission_denials | length), (.result | split("\n") | last)' "${RUN}/<n>.json"`; record session ID; `PR <number>` + zero denials -> step 8; else block with last line or denials
-8. Per pull request: `gh pr view <pr> --json files --jq '[.files[].path | select(startswith("server/migrations/"))] | length'` > 0 -> hold `waiting for migration`; else background `gh pr checks <pr> --watch --interval 30 > /dev/null; gh pr view <pr> --json mergeStateStatus --jq .mergeStateStatus` -> notification:
+8. Per pull request: background `gh pr checks <pr> --watch --interval 30 > /dev/null; gh pr view <pr> --json mergeStateStatus --jq .mergeStateStatus` -> notification:
 
 - checks failed: `gh pr checks <pr> --json name,state --jq '.[] | select(.state=="FAILURE") | .name'` -> step 9
 - `DIRTY` -> step 9 with conflict
-- else `gh pr merge <pr> --squash`; merge refused for conflict -> step 9; merged -> step 10
+- else `gh pr view <pr> --json files --jq '[.files[].path | select(startswith("server/migrations/"))] | .[]'` non-empty -> cwd = worktree: `pnpm -s exec node --env-file=../../.env.local server/migrate.js > "<RUN>/<n>.migrate.txt" 2>&1; echo $?`; != 0 -> block `migration failed: <first line containing Error in <n>.migrate.txt>`; else record applied files for report
+- then `gh pr merge <pr> --squash`; merge refused for conflict -> step 9; merged -> step 10
 
 9. Fix, max 2 attempts per pull request, then block; last line `PUSHED` -> step 8, else block; background, cwd = worktree:
 
@@ -58,15 +59,15 @@ Report template:
 ```markdown
 ## Pull requests
 
-- [#<pr>](url) <title>. Closes [#<n>](url), [#<parent>](url).
+- [#<pr>](url) <title>. Closes [#<n>](url), [#<parent>](url). <Applied migration <file>, <file>.>
 
 ## Held issues
 
-- [#<n>](url) <title>. <waiting for migration in [#<pr>](url) | blocked: reason | blocked by #<b> | not started, limit reached | plan reason>.
+- [#<n>](url) <title>. <blocked: reason | blocked by #<b> | not started, limit reached | plan reason>.
 
 ## Findings
 
 1. <finding>. Sources: #<n>, #<n>.
 
-Run files: .wave/<run>/
+Run files: .sweep/<run>/
 ```
