@@ -350,6 +350,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
    The command removes the worktree, and `.worktrees/` once it is empty.
    It force-deletes the local branch, because a squash merge leaves that branch unmerged.
    It prunes the remote-tracking branches whose remote branch GitHub deleted, and deletes the remote branch when it still exists.
+   When Windows refuses to delete the worktree folder, because a shell or another program still uses it, the command retries the deletion for about 2 seconds and still deletes the branches.
+   A folder that stays behind is named in the output, and the command exits with status 1.
 
 ### Commits and pull requests
 

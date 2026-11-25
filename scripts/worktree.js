@@ -6,11 +6,14 @@
 // `remove <type>-<task>` removes the worktree, then .worktrees/ once it is empty, and force-deletes the local branch,
 // because a squash merge leaves the branch unmerged. git refuses to remove a worktree with uncommitted changes. It then
 // prunes the remote-tracking branches whose remote branch is gone, as after GitHub deletes a merged branch, and deletes
-// the remote branch when it still exists.
+// the remote branch when it still exists. It runs from the main checkout, so its own process never holds the folder.
+// When git unregisters the worktree but cannot delete its folder, as Windows refuses while a shell or another process
+// uses the folder, remove retries the deletion and then finishes the cleanup. A folder that stays undeletable is named,
+// and remove exits with status 1 after the other steps.
 // Run: pnpm worktree add <type> <task> [--no-install] | pnpm worktree remove <type>-<task>
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readdirSync, rmdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readdirSync, rmdirSync, rmSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 
 const TYPES = ['feat', 'fix', 'docs', 'refactor', 'test', 'chore'];
 const TASK = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -27,6 +30,30 @@ const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8',
 const gitOrExit = (cwd, ...args) => {
   const { status } = spawnSync('git', args, { cwd, stdio: 'inherit' });
   if (status !== 0) process.exit(status ?? 1);
+};
+
+// Whether git still lists the worktree at path. git prints forward slashes on Windows, and relative() ignores that and
+// the letter case of Windows paths.
+const registered = (path) =>
+  git(mainCheckout, 'worktree', 'list', '--porcelain')
+    .split('\n')
+    .filter((line) => line.startsWith('worktree '))
+    .some((line) => relative(line.slice('worktree '.length), path) === '');
+
+const DELETE_ATTEMPTS = 5;
+
+// Deletes the folder at path, waiting half a second after each failed attempt, and reports whether it is gone.
+const deleteFolder = (path) => {
+  for (let attempt = 1; attempt <= DELETE_ATTEMPTS; attempt++) {
+    console.error(`Deleting ${path} again, attempt ${attempt} of ${DELETE_ATTEMPTS}.`);
+    try {
+      rmSync(path, { recursive: true, force: true });
+      return true;
+    } catch {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+    }
+  }
+  return false;
 };
 
 const validate = (type, task) => {
@@ -64,13 +91,24 @@ if (command === 'add') {
   validate(type ?? '', task);
   const branch = `${type}/${task}`;
   const worktrees = join(mainCheckout, '.worktrees');
-  gitOrExit(mainCheckout, 'worktree', 'remove', join(worktrees, `${type}-${task}`));
-  if (readdirSync(worktrees).length === 0) rmdirSync(worktrees);
+  const path = join(worktrees, `${type}-${task}`);
+  process.chdir(mainCheckout);
+  // Git for Windows asks whether to retry a failed deletion when stdin is a terminal, so git gets no stdin.
+  const { status } = spawnSync('git', ['worktree', 'remove', path], {
+    cwd: mainCheckout,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+  // Any other failure, such as uncommitted changes or an unknown worktree, stops before the branches are touched.
+  if (status !== 0 && (!existsSync(path) || registered(path))) process.exit(status ?? 1);
+  const leftover = existsSync(path) && !deleteFolder(path);
+  if (!leftover && readdirSync(worktrees).length === 0) rmdirSync(worktrees);
   gitOrExit(mainCheckout, 'branch', '-D', branch);
   gitOrExit(mainCheckout, 'fetch', '--prune', 'origin');
   if (git(mainCheckout, 'ls-remote', '--heads', 'origin', branch).trim()) {
     gitOrExit(mainCheckout, 'push', 'origin', '--delete', branch);
   }
+  if (leftover)
+    fail(`The folder ${path} could not be deleted. Close the shells and programs that use it, then delete it.`);
 } else {
   fail(USAGE);
 }
