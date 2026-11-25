@@ -263,6 +263,14 @@ Apply schema changes with `pnpm migrate`, which applies the unapplied files in `
 DATABASE_URL_UNPOOLED='<connection string>' pnpm migrate
 ```
 
+In PowerShell, set the variable for the session, run the migration and clear the variable afterwards:
+
+```powershell
+$env:DATABASE_URL_UNPOOLED = '<connection string>'
+pnpm migrate
+Remove-Item Env:DATABASE_URL_UNPOOLED
+```
+
 No non-production Neon branch exists, so run it against production before you merge the pull request whose code needs the change.
 Never commit a connection string or an `.env` file.
 
