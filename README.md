@@ -303,7 +303,7 @@ Then run `pnpm exec node tests/check-site.js` to find any copy you missed.
 `pnpm pages` writes it from the indexed pages, so run `pnpm pages` after you change a page or add one.
 Google ignores `lastmod` dates that change without content changes, so a page's date moves only when its content changes.
 The content of a hand-written page is its text outside the generated regions, and the content of an occasion page is its copy in `scripts/occasions.js` or `scripts/occasions-ro.js`.
-`scripts/lastmod.json` keeps each page's date with a fingerprint of that content, and `pnpm pages` gives a page with a new fingerprint today's date.
+`scripts/lastmod.json` keeps each page's date with a fingerprint of that content, and `pnpm pages` gives a page with a new fingerprint the current UTC date, which the future-date check accepts at any local time.
 A change inside a generated region, such as a new footer link, or a whitespace change leaves every date alone.
 `check-site.js` fails when `sitemap.xml` or `scripts/lastmod.json` differs from the `pnpm pages` output, so a content change without `pnpm pages` fails the checks.
 `vercel.json` redirects `/index.html` to `/` with a 301, so the home page has one URL; link to `/`, never to `index.html`.

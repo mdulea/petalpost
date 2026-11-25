@@ -5,9 +5,10 @@
 // page footer.
 // It also writes sitemap.xml with every indexed page and its lastmod date. scripts/lastmod.json keeps each indexed
 // page's date with a fingerprint of its content: the page text outside its generated regions, or the occasion copy of
-// an occasion page. A page whose fingerprint changed gets today's date, so a change inside a generated region, such as
+// an occasion page. A page whose fingerprint changed gets today's UTC date, so a change inside a generated region, such as
 // a new footer link, leaves every date alone.
-// generatePages() resolves a Map from file path relative to the repository root to its content, formatted with
+// generatePages({ now, ledger }) dates a changed page with the date of now, by default the current time, and reads
+// the stored dates from ledger, by default scripts/lastmod.json. It resolves a Map from file path relative to the repository root to its content, formatted with
 // Prettier; check-site.js fails when a committed file differs from it.
 // Run: pnpm pages, which writes the files.
 import { createHash } from 'node:crypto';
@@ -384,9 +385,14 @@ export function nextLedger(fingerprints, ledger, today) {
   return next;
 }
 
-// The local calendar date as YYYY-MM-DD.
-const localDate = (date = new Date()) =>
-  [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((n) => String(n).padStart(2, '0')).join('-');
+// The UTC calendar date as YYYY-MM-DD, which the sitemap check compares with the current time.
+const utcDate = (date) => date.toISOString().slice(0, 10);
+
+// The stored ledger, or an empty one before the first run.
+const readLedger = () => {
+  const url = new URL(LEDGER, repo);
+  return existsSync(url) ? JSON.parse(readFileSync(url, 'utf8')) : {};
+};
 
 // The sitemap.xml text for a list of {loc, lastmod} entries, in list order.
 const sitemap = (urls) => `<?xml version="1.0" encoding="UTF-8"?>
@@ -394,7 +400,7 @@ const sitemap = (urls) => `<?xml version="1.0" encoding="UTF-8"?>
 ${urls.map(({ loc, lastmod }) => `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>\n`).join('')}</urlset>
 `;
 
-export async function generatePages() {
+export async function generatePages({ now = new Date(), ledger: stored = readLedger() } = {}) {
   const raw = new Map();
   // The occasion copy is the content of a generated occasion page.
   const occasionContent = new Map();
@@ -424,12 +430,7 @@ export async function generatePages() {
       throw new Error(`${file} allows indexing but has no canonical link, so the sitemap cannot list it.`);
     locs.set(file, canonical[1]);
   }
-  const ledgerUrl = new URL(LEDGER, repo);
-  const ledger = nextLedger(
-    fingerprints,
-    existsSync(ledgerUrl) ? JSON.parse(readFileSync(ledgerUrl, 'utf8')) : {},
-    localDate(),
-  );
+  const ledger = nextLedger(fingerprints, stored, utcDate(now));
   const urls = [...locs].map(([file, loc]) => ({ loc, lastmod: ledger[file].lastmod }));
   urls.sort((a, b) => (a.loc < b.loc ? -1 : 1));
 

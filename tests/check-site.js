@@ -119,6 +119,23 @@ test('nextLedger keeps an unchanged date, dates a changed or new page today and 
   });
 });
 
+// The future-date check below reads a lastmod as UTC midnight, so a run just after local midnight east of UTC must
+// still write the UTC date. At 10:30 UTC on 6 May it is already 00:30 on 7 May in Kiritimati, UTC+14.
+test('pnpm pages dates a changed page with the UTC date and keeps the stored date of an unchanged page', async () => {
+  const stored = JSON.parse(readFileSync(new URL('../scripts/lastmod.json', import.meta.url), 'utf8'));
+  const ledger = { ...stored, 'about.html': { lastmod: '2026-01-02', fingerprint: 'stale' } };
+  const tz = process.env.TZ;
+  process.env.TZ = 'Pacific/Kiritimati';
+  try {
+    const output = await generatePages({ now: new Date('2026-05-06T10:30:00Z'), ledger });
+    const next = JSON.parse(output.get('scripts/lastmod.json'));
+    assert.deepEqual(next, { ...stored, 'about.html': { ...stored['about.html'], lastmod: '2026-05-06' } });
+  } finally {
+    if (tz === undefined) delete process.env.TZ;
+    else process.env.TZ = tz;
+  }
+});
+
 // Google trusts lastmod only when it is a real date, so each URL needs one that is not in the future.
 test('every sitemap.xml URL has a lastmod date that is not in the future', () => {
   const urls = [...read('sitemap.xml').matchAll(/<url>([\s\S]*?)<\/url>/g)].map(([, url]) => url);
