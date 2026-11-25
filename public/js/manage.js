@@ -5,7 +5,7 @@ import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
-import { eventLink, makeInviteData } from './invite.js';
+import { eventLink, makeInviteData, whatsappLink } from './invite.js';
 import { createClient, readCredential } from './rsvp.js';
 import { repliesCsv, repliesCsvName } from './csv.js';
 
@@ -80,6 +80,11 @@ function showEvent({ t, d, responses, totals }) {
   document.getElementById('noReplies').hidden = responses.length > 0;
   loadedReplies = responses;
   eventLinkInput.value = eventLink(location.origin, cred.id, lang);
+  /** @type {HTMLAnchorElement} */ (document.getElementById('whatsappEventLink')).href = whatsappLink(
+    data,
+    localeOf(lang),
+    eventLinkInput.value,
+  );
 }
 
 async function load() {

@@ -26,6 +26,7 @@ import {
   storedInvite,
   switchTemplate,
   updateInvite,
+  whatsappLink,
 } from './invite.js';
 import {
   REPLY_FIELDS,
@@ -438,6 +439,7 @@ document.getElementById('addCalendar').addEventListener('click', () => {
 const publishButton = /** @type {HTMLButtonElement} */ (document.getElementById('publish'));
 const publishStatus = document.getElementById('publishStatus');
 const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
+const whatsappEventLink = /** @type {HTMLAnchorElement} */ (document.getElementById('whatsappEventLink'));
 const manageLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('manageLink'));
 const publishedPanel = document.getElementById('published');
 
@@ -470,6 +472,7 @@ function showPublished() {
   if (!live) setOutcome(publishedPanel, null);
   publishButton.lastChild.textContent = live ? copy.publishChanges : copy.publish;
   eventLinkInput.value = live ? eventLink(location.origin, cred.id, lang) : '';
+  whatsappEventLink.href = live ? whatsappLink(state.d, localeOf(lang), eventLinkInput.value) : '#';
   manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret, lang) : '';
 }
 

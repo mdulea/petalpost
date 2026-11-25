@@ -1,5 +1,6 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
-// link preview metadata, invite records, the characters left in a limited field, storage writes, the stored published
+// link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
+// Romanian with empty lines left out, invite records, the characters left in a limited field, storage writes, the stored published
 // event identity, template switching, template ids, Romanian localization coverage, the Romanian occasion order,
 // Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the calendar file, the report link
 // or the choice of when the Romanian language banner shows and where it links break.
@@ -454,6 +455,46 @@ for (const id of ['', 'short', `${EVENT_ID}A`, `${EVENT_ID.slice(1)}+`]) {
     [true, null],
   );
 }
+// The message a WhatsApp link prefills, decoded.
+const whatsappText = (link) => {
+  const url = new URL(link);
+  return [url.origin + url.pathname, url.searchParams.get('text')];
+};
+const INVITATION = 'https://www.petalpost.ro/e/AAAAAAAAAAAAAAAAAAAAAA';
+const zoeParty = { title: 'Zoe turns 30', date: '2026-12-12', time: '14:00', venue: 'Willow Park', address: '' };
+check(
+  'whatsappLink prefills the title, the date and venue line and the invitation link on separate lines',
+  whatsappText(ctx.whatsappLink(ctx.makeInviteData(birthday, zoeParty), 'en-US', INVITATION)),
+  ['https://wa.me/', `Zoe turns 30\nSaturday, December 12, 2026 at 2:00 PM · Willow Park\n${INVITATION}`],
+);
+check(
+  'whatsappLink leaves out a missing date, a missing venue and a line with neither',
+  [
+    { ...zoeParty, date: '', time: '' },
+    { ...zoeParty, venue: '' },
+    { ...zoeParty, date: '', time: '', venue: '' },
+  ].map((d) => whatsappText(ctx.whatsappLink(ctx.makeInviteData(birthday, d), 'en-US', INVITATION))[1]),
+  [
+    `Zoe turns 30\nWillow Park\n${INVITATION}`,
+    `Zoe turns 30\nSaturday, December 12, 2026 at 2:00 PM\n${INVITATION}`,
+    `Zoe turns 30\n${INVITATION}`,
+  ],
+);
+check(
+  'whatsappLink formats a Romanian message in Romanian',
+  whatsappText(
+    ctx.whatsappLink(
+      ctx.makeInviteData(
+        ctx.getTemplate('botez-porumbel', 'ro'),
+        { title: 'Botezul lui Matei', date: '2027-05-15', time: '14:30', venue: 'Biserica Sf. Nicolae', address: '' },
+        'ro',
+      ),
+      'ro-RO',
+      'https://www.petalpost.ro/ro/e/AAAAAAAAAAAAAAAAAAAAAA',
+    ),
+  )[1],
+  'Botezul lui Matei\nsâmbătă, 15 mai 2027, ora 14:30 · Biserica Sf. Nicolae\nhttps://www.petalpost.ro/ro/e/AAAAAAAAAAAAAAAAAAAAAA',
+);
 check(
   'eventPreviewMeta builds title and description from title, date, time and venue',
   ctx.eventPreviewMeta(
@@ -467,6 +508,7 @@ check(
   {
     title: 'Zoe turns 30',
     pageTitle: 'Zoe turns 30 | Petalpost',
+    details: 'Saturday, December 12, 2026 at 2:00 PM · Willow Park Pavilion',
     description: 'Saturday, December 12, 2026 at 2:00 PM · Willow Park Pavilion',
   },
 );
@@ -488,11 +530,13 @@ check(
     {
       title: 'Zoe turns 30',
       pageTitle: 'Zoe turns 30 | Petalpost',
+      details: 'Saturday, December 12, 2026 · 24 Willow Lane',
       description: 'Saturday, December 12, 2026 · 24 Willow Lane',
     },
     {
       title: 'You are invited',
       pageTitle: 'You are invited | Petalpost',
+      details: '',
       description: 'You are invited. Open the invitation to see the details and reply.',
     },
   ],

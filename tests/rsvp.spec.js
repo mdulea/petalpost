@@ -1,4 +1,4 @@
-// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the guest templates prompt or the management page break in Chromium against the real API of
+// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the WhatsApp link, the guest templates prompt or the management page break in Chromium against the real API of
 // scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
 // link and an edit that keeps one reply; a guest sees the free templates prompt below the reply form from page load and once after a reply; the host
 // and the missing-invitation message never show it; it links to the home page templates tagged from=invite in English and Romanian; the management totals and reply list; a guest's note, which the edit link loads
@@ -17,7 +17,9 @@
 // panel animates; publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
-// analytics gets page addresses without the fragment; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; no page breaks the Content-Security-Policy or throws.
+// analytics gets page addresses without the fragment; the WhatsApp link on the published panel and the management page, in
+// English and Romanian, opens wa.me in a new tab with no opener and prefills the title, the date and venue line and the
+// invitation link, never the management link, and the pages request nothing from another origin; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
@@ -725,6 +727,51 @@ test('a guest sees the free templates prompt once from page load, and the host n
   expect([...host.problems, ...guest.problems]).toEqual([]);
 });
 
+// The WhatsApp link of the page as its label, how it opens, its address and the lines of its prefilled message.
+async function whatsappMessage(page) {
+  const link = page.locator('#whatsappEventLink');
+  await expect(link).toBeVisible();
+  const url = new URL(await link.getAttribute('href'));
+  return {
+    label: (await link.innerText()).trim(),
+    target: await link.getAttribute('target'),
+    rel: await link.getAttribute('rel'),
+    address: url.origin + url.pathname,
+    lines: url.searchParams.get('text').split('\n'),
+  };
+}
+
+// Requests a page makes to an origin other than origin, the local server.
+function foreignRequests(page, origin) {
+  const foreign = [];
+  page.on('request', (req) => {
+    if (new URL(req.url()).origin !== origin) foreign.push(req.url());
+  });
+  return foreign;
+}
+
+test('a host sends the invitation link on WhatsApp from the published panel and the management page', async ({
+  browser,
+  baseURL,
+}) => {
+  const host = await newBrowser(browser);
+  const foreign = foreignRequests(host.page, new URL(baseURL).origin);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const expected = {
+    label: 'Send on WhatsApp',
+    target: '_blank',
+    rel: 'noopener',
+    address: 'https://wa.me/',
+    lines: ['Zoe turns 30', 'Saturday, December 12, 2026 at 2:00 PM · Willow Park Pavilion', invitation],
+  };
+  expect(await whatsappMessage(host.page)).toEqual(expected);
+  await host.page.goto(manage);
+  await expect(host.page.locator('#eventLink')).toHaveValue(invitation);
+  expect(await whatsappMessage(host.page)).toEqual(expected);
+  expect(foreign).toEqual([]);
+  expect(host.problems).toEqual([]);
+});
+
 test('native navigator.share shares invitation links and PNG files, ignores abort and falls back to copy', async ({
   browser,
 }) => {
@@ -829,6 +876,14 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await expect(host.page.locator('#replyCta')).toBeHidden();
   const invitation = await host.page.locator('#eventLink').inputValue();
   const manage = await host.page.locator('#manageLink').inputValue();
+  const whatsapp = {
+    label: 'Trimite pe WhatsApp',
+    target: '_blank',
+    rel: 'noopener',
+    address: 'https://wa.me/',
+    lines: ['Botezul lui Matei', expect.stringMatching(/, ora 11:00 · \S/), invitation],
+  };
+  expect(await whatsappMessage(host.page)).toEqual(whatsapp);
 
   const raw = await request.get(invitation);
   const html = await raw.text();
@@ -852,6 +907,7 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await expect(guest.page.getByText('Organizezi un eveniment?')).toHaveCount(1);
 
   await host.page.goto(manage);
+  expect(await whatsappMessage(host.page)).toEqual(whatsapp);
   expect(await managed(host.page)).toEqual({
     totals: expect.stringMatching(/1\s+răspuns[\s\S]*1\s+confirmare[\s\S]*0\s+refuzuri[\s\S]*2\s+persoane confirmate/i),
     replies: [expect.stringMatching(/Ștefan[\s\S]*Da, 2 persoane/)],

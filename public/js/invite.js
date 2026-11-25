@@ -97,7 +97,8 @@ export function readPublished(value) {
 // The invitation link of a published event opens the guest view at /e/<id> (or /ro/e/<id>), serving dynamic link metadata.
 export const eventLink = (origin, id, lang = 'en') => `${origin}${normalizeLang(lang) === 'ro' ? '/ro' : ''}/e/${id}`;
 
-// Link preview and native share metadata built from an invite's title, date, time and venue.
+// Link preview and native share metadata built from an invite's title, date, time and venue. details is the date and
+// venue line, empty when the invite has neither; description falls back to generic copy then.
 // locale fixes date and time formatting on the server so link previews stay consistent across regions.
 export function eventPreviewMeta(data, locale = 'en-US') {
   const isRo = typeof locale === 'string' && locale.toLowerCase().startsWith('ro');
@@ -112,12 +113,20 @@ export function eventPreviewMeta(data, locale = 'en-US') {
   return {
     title,
     pageTitle: `${title} | Petalpost`,
+    details,
     description:
       details ||
       (isRo
         ? 'Ești invitat. Deschide invitația pentru a vedea detaliile și a confirma participarea.'
         : 'You are invited. Open the invitation to see the details and reply.'),
   };
+}
+
+// A WhatsApp link that opens a message with the invite's title, its date and venue line, and url, each on its own
+// line and with empty lines left out. url is the invitation link from eventLink, never the management link.
+export function whatsappLink(data, locale, url) {
+  const { title, details } = eventPreviewMeta(data, locale);
+  return `https://wa.me/?text=${encodeURIComponent([title, details, url].filter(Boolean).join('\n'))}`;
 }
 
 // The single contact address of the site, for users and authorities. scripts/pages.js puts it in every footer.
