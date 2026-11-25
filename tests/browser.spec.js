@@ -6,11 +6,15 @@
 // the page, or it writes a cookie, requests another origin or changes the canonical and hreflang links.
 // The filter checks also fail when a category change misses its 150ms fade-out or its 200ms fade-in with an 8px rise,
 // rapid clicks end on another category or leave an animation running, or filtering animates under reduced motion.
+// The motion checks fail when a template or accent change misses the preview's 180ms settle from opacity 0.6 or a
+// text edit animates it, rapid changes leave the preview faded, on an earlier accent or with an animation running, a
+// share link misses its single 400ms reveal with a 12px rise, or the preview or the guest view animates under reduced
+// motion.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { ROUTE_PAIRS, canonicalPath } from '../public/js/i18n.js';
-import { HERO_TEMPLATES, RO_HERO_TEMPLATES, templatesFor } from '../public/js/templates.js';
+import { HERO_TEMPLATES, RO_HERO_TEMPLATES, inviteColors, templatesFor } from '../public/js/templates.js';
 import { OCCASIONS } from '../scripts/occasions.js';
 import { OCCASIONS_RO } from '../scripts/occasions-ro.js';
 
@@ -45,16 +49,18 @@ test('the landing filter shows only the chosen occasion', async ({ page }) => {
   );
 });
 
-// Records each Web Animations API call on a gallery card as {category, keyframes, duration, startedAt} in
-// window.cardAnimations, where startedAt is the performance.now() time of the call.
-const recordCardAnimations = (page) =>
-  page.addInitScript(() => {
+// Records each Web Animations API call on an element that matches selector as {id, category, keyframes, duration,
+// startedAt} in window.animations, where category is the element's data-category and startedAt is the
+// performance.now() time of the call.
+const recordAnimations = (page, selector) =>
+  page.addInitScript((selector) => {
     const record = /** @type {any} */ (window);
     const animate = Element.prototype.animate;
-    record.cardAnimations = [];
+    record.animations = [];
     Element.prototype.animate = function (keyframes, options) {
-      if (this.matches('#gallery .card')) {
-        record.cardAnimations.push({
+      if (this.matches(selector)) {
+        record.animations.push({
+          id: this.id,
           category: /** @type {HTMLElement} */ (this).dataset.category,
           keyframes,
           duration: typeof options === 'number' ? options : options?.duration,
@@ -63,8 +69,8 @@ const recordCardAnimations = (page) =>
       }
       return animate.call(this, keyframes, options);
     };
-  });
-const cardAnimations = (page) => page.evaluate(() => /** @type {any} */ (window).cardAnimations);
+  }, selector);
+const recordedAnimations = (page) => page.evaluate(() => /** @type {any} */ (window).animations);
 const runningGalleryAnimations = (page) =>
   page.evaluate(() => document.getElementById('gallery').getAnimations({ subtree: true }).length);
 const countOf = (category) => templatesFor('en').filter((t) => t.category === category).length;
@@ -72,12 +78,12 @@ const countOf = (category) => templatesFor('en').filter((t) => t.category === ca
 test('a category change fades the cards out over 150ms, then fades the new cards in and raises them 8px over 200ms', async ({
   page,
 }) => {
-  await recordCardAnimations(page);
+  await recordAnimations(page, '#gallery .card');
   await page.goto('/');
   await page.click('.filter[data-filter="Wedding"]');
   await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Wedding'));
   await expect.poll(() => runningGalleryAnimations(page)).toBe(0);
-  const animations = await cardAnimations(page);
+  const animations = await recordedAnimations(page);
   const fadeOut = animations.filter((call) => call.duration === 150);
   const fadeIn = animations.filter((call) => call.duration === 200);
   expect(fadeOut.map((call) => call.keyframes)).toEqual(
@@ -100,7 +106,7 @@ test('a category change fades the cards out over 150ms, then fades the new cards
 
 // The clicks land in one task, before any fade finishes, so only the last category may fade in.
 test('rapid category clicks end on the last category chosen with no animation left running', async ({ page }) => {
-  await recordCardAnimations(page);
+  await recordAnimations(page, '#gallery .card');
   await page.goto('/');
   await page.evaluate(() => {
     for (const category of ['Wedding', 'Brunch', 'All', 'Graduation', 'Birthday']) {
@@ -108,7 +114,7 @@ test('rapid category clicks end on the last category chosen with no animation le
     }
   });
   await expect.poll(() => runningGalleryAnimations(page)).toBe(0);
-  const fadedIn = (await cardAnimations(page)).filter((call) => call.duration === 200).map((call) => call.category);
+  const fadedIn = (await recordedAnimations(page)).filter((call) => call.duration === 200).map((call) => call.category);
   expect(fadedIn).toEqual(Array(countOf('Birthday')).fill('Birthday'));
   await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Birthday'));
   const shown = await page
@@ -119,13 +125,13 @@ test('rapid category clicks end on the last category chosen with no animation le
 
 test('under reduced motion a category change switches the cards without animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await recordCardAnimations(page);
+  await recordAnimations(page, '#gallery .card');
   await page.goto('/');
   await page.click('.filter[data-filter="Wedding"]');
   await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Wedding'));
   await page.click('.filter[data-filter="Brunch"]');
   await expect(page.locator('#gallery .card:visible')).toHaveCount(countOf('Brunch'));
-  expect(await cardAnimations(page)).toEqual([]);
+  expect(await recordedAnimations(page)).toEqual([]);
   expect(await runningGalleryAnimations(page)).toBe(0);
 });
 
@@ -188,6 +194,99 @@ test('an edit shows in the preview and survives a reload', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#title')).toHaveValue('Ana and Luca');
   expect(problems).toEqual([]);
+});
+
+const PREVIEW_SETTLE = [{ opacity: 0.6 }, { opacity: 1 }];
+const GUEST_REVEAL = [
+  { opacity: 0, transform: 'translateY(12px)' },
+  { opacity: 1, transform: 'none' },
+];
+const runningPreviewAnimations = (page) =>
+  page.evaluate(() => document.getElementById('previewCard').getAnimations().length);
+const otherWedding = templatesFor('en').find((t) => t.category === 'Wedding' && t.id !== 'wedding');
+
+test('a template or accent change settles the preview from opacity 0.6 to 1 over 180ms, and a text edit does not', async ({
+  page,
+}) => {
+  await recordAnimations(page, '#previewCard');
+  await page.goto('editor.html?t=wedding');
+  await page.fill('#title', 'Ana and Luca');
+  await page.click(`.picker-item:has(input[value="${otherWedding.id}"])`);
+  await page.click('.swatch:has(input[value="#52704C"])');
+  await expect.poll(() => runningPreviewAnimations(page)).toBe(0);
+  expect((await recordedAnimations(page)).map((call) => [call.keyframes, call.duration])).toEqual([
+    [PREVIEW_SETTLE, 180],
+    [PREVIEW_SETTLE, 180],
+  ]);
+  expect(await page.locator('#previewCard').evaluate((card) => getComputedStyle(card).opacity)).toBe('1');
+});
+
+// The changes land in one task, so each one starts before the previous one finishes.
+test('rapid template and accent changes leave the latest preview fully visible with no animation running', async ({
+  page,
+}) => {
+  await page.goto('editor.html?t=wedding');
+  const running = await page.evaluate((template) => {
+    for (const [name, value] of [
+      ['template', template],
+      ['accent', '#52704C'],
+      ['accent', '#4F6993'],
+    ]) {
+      const input = /** @type {HTMLInputElement} */ (document.querySelector(`input[name="${name}"][value="${value}"]`));
+      input.checked = true;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return document.getElementById('previewCard').getAnimations().length;
+  }, otherWedding.id);
+  expect(running).toBe(1);
+  await expect.poll(() => runningPreviewAnimations(page)).toBe(0);
+  expect(await page.locator('#previewCard').evaluate((card) => getComputedStyle(card).opacity)).toBe('1');
+  await expect(page.locator('#previewCard .invite')).toHaveAttribute(
+    'style',
+    new RegExp(`--i-accent:${inviteColors(otherWedding, '#4F6993').accent}`),
+  );
+});
+
+test('a share link reveals the invitation once, fading it in and raising it 12px over 400ms', async ({
+  page,
+  browser,
+}) => {
+  await page.goto('editor.html?t=birthday');
+  await page.fill('#title', 'Zoe turns 30');
+  const link = await page.locator('#previewGuest').getAttribute('href');
+
+  const guest = await (await browser.newContext()).newPage();
+  await recordAnimations(guest, '#previewCard');
+  await guest.goto(link);
+  await expect(guest.locator('h1')).toHaveText('Zoe turns 30');
+  await expect.poll(() => runningPreviewAnimations(guest)).toBe(0);
+  expect((await recordedAnimations(guest)).map((call) => [call.keyframes, call.duration])).toEqual([
+    [GUEST_REVEAL, 400],
+  ]);
+  expect(
+    await guest
+      .locator('#previewCard')
+      .evaluate((card) => [getComputedStyle(card).opacity, getComputedStyle(card).transform]),
+  ).toEqual(['1', 'none']);
+});
+
+test('under reduced motion the preview and the guest view change without animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await recordAnimations(page, '#previewCard');
+  await page.goto('editor.html?t=wedding');
+  await page.click(`.picker-item:has(input[value="${otherWedding.id}"])`);
+  await page.click('.swatch:has(input[value="#52704C"])');
+  await expect(page.locator('#previewCard .invite')).toHaveAttribute(
+    'style',
+    new RegExp(`--i-accent:${inviteColors(otherWedding, '#52704C').accent}`),
+  );
+  expect(await recordedAnimations(page)).toEqual([]);
+  expect(await runningPreviewAnimations(page)).toBe(0);
+  await page.goto(await page.locator('#previewGuest').getAttribute('href'));
+  await expect(page.locator('body')).toHaveClass(/view-mode/);
+  await expect(page.locator('#previewCard .invite')).toBeVisible();
+  expect(await recordedAnimations(page)).toEqual([]);
+  expect(await runningPreviewAnimations(page)).toBe(0);
 });
 
 test('a share link opens the guest view and its calendar file in another browser', async ({ page, browser }) => {
