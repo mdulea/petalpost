@@ -190,7 +190,9 @@ async function stickyShownAt(page, place) {
     const bar = document.getElementById('stickyCta');
     // Two frames for the intersection observer, then the slide.
     await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
-    await Promise.all(bar.getAnimations().map((a) => a.finished));
+    // When the observer flips data-shown during a slide, the browser cancels that transition, and its finished
+    // promise rejects with an AbortError. This waits until no transition runs, whether it ended or was cancelled.
+    while (bar.getAnimations().length) await Promise.allSettled(bar.getAnimations().map((a) => a.finished));
     const rect = bar.getBoundingClientRect();
     return getComputedStyle(bar).visibility === 'visible' && rect.height > 0 && rect.top < innerHeight;
   }, place);
@@ -288,7 +290,8 @@ test('the Create invite bar never covers the focused control', async ({ page, br
             still = scrollY === y ? still + 1 : 0;
           }
           const bar = document.getElementById('stickyCta');
-          await Promise.all(bar.getAnimations().map((a) => a.finished));
+          // A cancelled slide rejects finished, as in stickyShownAt.
+          while (bar.getAnimations().length) await Promise.allSettled(bar.getAnimations().map((a) => a.finished));
           const focused = document.activeElement;
           if (focused.closest('.site-footer')) return 'footer';
           if (focused === document.body || bar.contains(focused)) return 'inside';
