@@ -1,7 +1,9 @@
 # A Vercel Deployment Check on the checks job, once configured, holds a push to main back from production until the job passes.
 name: Checks
+# A pull request branch runs the checks once, from its pull_request events, and a push to main runs them before deployment.
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:

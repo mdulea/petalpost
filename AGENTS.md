@@ -20,7 +20,7 @@ README.md sections, by need:
 
 ## Code
 
-- commands via `pnpm` only; tools via `pnpm exec <tool>`, e.g. `pnpm exec node tests/check-site.js`; never `npx` or plain `node`; global Node.js install forbidden
+- commands via `pnpm` only; tools via `pnpm exec <tool>`, e.g. `pnpm exec node tests/check-site.js`; global Node.js install forbidden
 - site copy == pages, `scripts/occasions*.js`, template text, UI strings in `public/js/i18n.js`: the Writing output rules for human-facing prose apply; claims only from README Product facts
 - plain JavaScript; JSDoc types only where inference fails, e.g. DOM lookup element types; TypeScript strict off
 - module/function comments state contract; follow existing pattern
@@ -29,7 +29,7 @@ README.md sections, by need:
 
 ## Testing
 
-- behavior change -> add/update `node:test` checks in `tests/`; test added to `tests/check-*.js` or `tests/*.spec.js` -> update header comment listing checks
+- behavior change -> add/update `node:test` checks in `tests/`; test added to a `tests/` file whose header lists its checks -> update that list; `tests/check-site.js` header states coverage only
 - new or edited browser test -> run it alone first, `pnpm test:browser <spec> -g "<name>"`; then full `pnpm check`
 - before finishing: `pnpm fix`, then `pnpm check` passes
 

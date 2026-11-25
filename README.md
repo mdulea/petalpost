@@ -136,11 +136,13 @@ A guest cannot see other guests' replies or the totals.
   - `previews.js` writes the link preview image of each template through `preview-card.html` and `preview-card.js`.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
   - `shot.js` writes a PNG of a page or of one element on it.
+  - `command-guard.js` is the agent hook that rejects shell commands that call `node` or `npx` directly.
 - `tests/` holds the checks that `pnpm check` runs:
-  - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of each file lists what it checks.
+  - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
-- `.github/workflows/checks.yml` runs `pnpm check` on each push and pull request.
+- `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
+- `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
 - `docs/petalpost-flow.html` is a diagram of the site flow, and `docs/decisions/` holds the recorded decisions.
 - The root keeps the configs that ESLint, TypeScript, Playwright, pnpm and Vercel look for there, `package.json` with the Prettier settings, and `README.md`, `AGENTS.md` and `GLOSSARY.md`.
 
@@ -153,6 +155,7 @@ A guest cannot see other guests' replies or the totals.
 | Test suite          | `pnpm test`                                                        |
 | One check file      | `pnpm exec node tests/check-invite.js`                             |
 | Filtered check file | `pnpm exec node --test-name-pattern="sitemap" tests/check-site.js` |
+| Check names         | `pnpm exec node --test --test-reporter=spec tests/check-site.js`   |
 | One browser test    | `pnpm test:browser tests/browser.spec.js -g "landing filter"`      |
 | Lint                | `pnpm lint`                                                        |
 | Format and fix      | `pnpm fix`                                                         |
@@ -166,6 +169,7 @@ A guest cannot see other guests' replies or the totals.
 | Migrations          | `pnpm migrate`                                                     |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
+The check names command runs one check file and prints the name of each check, and the `check-site.js` header names only what the file covers.
 `--test-name-pattern` runs only the tests whose names match the regular expression, and `-g` does the same for browser tests.
 Each targeted command finishes in seconds, so rerun the check you are working on with one of them and run `pnpm check` once at the end.
 `check-filter.js` fails when a check file keeps running after its filtered tests finish.
@@ -181,7 +185,7 @@ It starts `scripts/server.js` on a free port with an in-memory database, so it r
 When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
-`test` runs the Prettier format check, ESLint and the browser port, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, command guard, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
@@ -227,6 +231,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 ### Tooling notes
 
 - `.gitattributes` forces LF line endings. A CRLF checkout makes `pnpm format:check` fail on every file and makes the vendored library hash check fail.
+- Claude Code rejects an agent shell command that starts with `node` or `npx`, or calls either after a command separator, and its message names `pnpm exec`. A global Node.js install on the PATH can run another version than the one `package.json` pins. `.claude/settings.json` runs the check, and `check-command-guard.js` tests it against allowed and rejected sample commands.
 - pnpm refuses package releases younger than its minimum release age. When you upgrade a dependency, pick a release older than that age.
 
 ## Deployment
@@ -263,6 +268,14 @@ Apply schema changes with `pnpm migrate`, which applies the unapplied files in `
 DATABASE_URL_UNPOOLED='<connection string>' pnpm migrate
 ```
 
+In PowerShell, set the variable for the session, run the migration and clear the variable afterwards:
+
+```powershell
+$env:DATABASE_URL_UNPOOLED = '<connection string>'
+pnpm migrate
+Remove-Item Env:DATABASE_URL_UNPOOLED
+```
+
 No non-production Neon branch exists, so run it against production before you merge the pull request whose code needs the change.
 Never commit a connection string or an `.env` file.
 
@@ -293,7 +306,7 @@ Then run `pnpm exec node tests/check-site.js` to find any copy you missed.
 `pnpm pages` writes it from the indexed pages, so run `pnpm pages` after you change a page or add one.
 Google ignores `lastmod` dates that change without content changes, so a page's date moves only when its content changes.
 The content of a hand-written page is its text outside the generated regions, and the content of an occasion page is its copy in `scripts/occasions.js` or `scripts/occasions-ro.js`.
-`scripts/lastmod.json` keeps each page's date with a fingerprint of that content, and `pnpm pages` gives a page with a new fingerprint today's date.
+`scripts/lastmod.json` keeps each page's date with a fingerprint of that content, and `pnpm pages` gives a page with a new fingerprint the current UTC date, which the future-date check accepts at any local time.
 A change inside a generated region, such as a new footer link, or a whitespace change leaves every date alone.
 `check-site.js` fails when `sitemap.xml` or `scripts/lastmod.json` differs from the `pnpm pages` output, so a content change without `pnpm pages` fails the checks.
 `vercel.json` redirects `/index.html` to `/` with a 301, so the home page has one URL; link to `/`, never to `index.html`.
@@ -322,6 +335,8 @@ The command renders every template in Chromium and overwrites its image.
 
 Every change reaches `main` through a pull request.
 Branch protection on `main` requires a pull request and a passing `checks` job, blocks force pushes and deletion, and applies to administrators too.
+The `checks` workflow runs on each pull request event, such as opening the pull request or pushing to its branch, and on each push to `main`.
+A push to a branch without a pull request runs no checks.
 The main checkout stays on `main` and changes only through `git pull --ff-only`.
 
 1. In the main checkout, with no uncommitted changes, run `pnpm worktree add <type> <task>`.
@@ -338,6 +353,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
    The command removes the worktree, and `.worktrees/` once it is empty.
    It force-deletes the local branch, because a squash merge leaves that branch unmerged.
    It prunes the remote-tracking branches whose remote branch GitHub deleted, and deletes the remote branch when it still exists.
+   When Windows refuses to delete the worktree folder, because a shell or another program still uses it, the command retries the deletion for about 2 seconds and still deletes the branches.
+   A folder that stays behind is named in the output, and the command exits with status 1.
 
 ### Commits and pull requests
 

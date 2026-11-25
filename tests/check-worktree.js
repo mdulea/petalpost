@@ -2,13 +2,14 @@
 // branch somewhere other than the latest origin/main when local main is behind, accepts an unknown type or a task name
 // that is not lowercase and hyphenated, runs while the main checkout has uncommitted changes, or when pnpm worktree
 // remove leaves the worktree, an empty .worktrees directory, its local branch, its remote branch or its
-// remote-tracking branch behind. Each case runs the command against a throwaway repository
+// remote-tracking branch behind, or when a worktree folder that cannot be deleted at first makes remove skip a later
+// step, or one that stays undeletable goes unnamed or leaves remove exiting with status 0. Each case runs the command against a throwaway repository
 // with a local bare origin and skips the dependency install. Fails too when a GIT_DIR inherited from a git hook or
 // git rebase --exec redirects these git calls away from the throwaway repository.
 // Run: pnpm exec node tests/check-worktree.js
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -132,4 +133,72 @@ test('remove drops the remote-tracking branch of a remote branch that GitHub alr
   git(origin, 'branch', '-D', 'fix/late-reply');
   const result = worktree(main, 'remove', 'fix-late-reply');
   assert.deepEqual([result.status, git(main, 'branch', '-r', '--list', 'origin/fix/*')], [0, '']);
+});
+
+// Windows refuses to delete a folder that a process uses as its current directory, as a shell left in a worktree does.
+// POSIX systems refuse to delete a folder whose parent is read-only. Both leave git unable to delete the folder after
+// it has deleted the files. The returned function releases the folder.
+const lockFolder = (folder) => {
+  if (process.platform === 'win32') {
+    const holder = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { cwd: folder, stdio: 'ignore' });
+    return () =>
+      /** @type {Promise<void>} */ (
+        new Promise((resolve) => (holder.exitCode === null ? holder.once('exit', () => resolve()).kill() : resolve()))
+      );
+  }
+  chmodSync(join(folder, '..'), 0o555);
+  return async () => chmodSync(join(folder, '..'), 0o755);
+};
+
+// Runs remove while the worktree folder is locked. With release set, the folder is released once remove reports its
+// first retry of the deletion.
+const removeLocked = (main, name, { release }) =>
+  new Promise((resolve) => {
+    const unlock = lockFolder(join(main, '.worktrees', name));
+    const child = spawn(process.execPath, [SCRIPT, 'remove', name], { cwd: main, env });
+    let stderr = '';
+    let released;
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+      if (release && !released && /Deleting .* again/.test(stderr)) released = unlock();
+    });
+    child.on('close', async (status) => {
+      await (released ?? unlock());
+      resolve({ status, stderr });
+    });
+  });
+
+test('remove retries the deletion of a worktree folder that is locked at first and finishes the cleanup', async () => {
+  const { origin, main } = setup();
+  worktree(main, 'add', 'fix', 'locked-folder', '--no-install');
+  git(join(main, '.worktrees', 'fix-locked-folder'), 'push', '-q', '-u', 'origin', 'HEAD');
+  const result = await removeLocked(main, 'fix-locked-folder', { release: true });
+  assert.deepEqual(
+    [
+      result.status,
+      existsSync(join(main, '.worktrees')),
+      git(main, 'branch', '--list', 'fix/*'),
+      git(origin, 'branch', '--list', 'fix/*'),
+    ],
+    [0, false, '', ''],
+    result.stderr,
+  );
+});
+
+test('remove names a worktree folder that stays locked and exits with status 1 after the other cleanup', async () => {
+  const { origin, main } = setup();
+  worktree(main, 'add', 'fix', 'stuck-folder', '--no-install');
+  git(join(main, '.worktrees', 'fix-stuck-folder'), 'push', '-q', '-u', 'origin', 'HEAD');
+  const result = await removeLocked(main, 'fix-stuck-folder', { release: false });
+  assert.deepEqual(
+    [
+      result.status,
+      result.stderr.includes(join(main, '.worktrees', 'fix-stuck-folder')),
+      git(main, 'branch', '--list', 'fix/*'),
+      git(origin, 'branch', '--list', 'fix/*'),
+      git(main, 'worktree', 'list').split('\n').length,
+    ],
+    [1, true, '', '', 1],
+    result.stderr,
+  );
 });
