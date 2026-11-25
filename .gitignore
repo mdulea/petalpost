@@ -21,3 +21,6 @@ Thumbs.db
 # Build output and the local database
 dist/
 .pglite/
+
+# Wave run files: session results, retrospectives and reports
+.wave/
