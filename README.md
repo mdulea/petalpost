@@ -137,12 +137,14 @@ A guest cannot see other guests' replies or the totals.
   - `worktree.js` adds and removes the worktrees that [Workflow](#workflow) describes.
   - `shot.js` writes a PNG of a page or of one element on it.
   - `command-guard.js` is the agent hook that rejects shell commands that call `node` or `npx` directly.
+  - `wave-plan.js` prints the order in which `/wave` implements the open issues, and the issues it leaves alone.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
 - `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
+- `.claude/skills/wave/` is the Claude Code skill behind `/wave`. It writes each run's session results, retrospectives and report to `.wave/`, which git ignores.
 - `docs/petalpost-flow.html` is a diagram of the site flow, and `docs/decisions/` holds the recorded decisions.
 - The root keeps the configs that ESLint, TypeScript, Playwright, pnpm and Vercel look for there, `package.json` with the Prettier settings, and `README.md`, `AGENTS.md` and `GLOSSARY.md`.
 
@@ -166,6 +168,7 @@ A guest cannot see other guests' replies or the totals.
 | Generate pages      | `pnpm pages`                                                       |
 | Link previews       | `pnpm previews`                                                    |
 | Screenshot          | `pnpm shot <path> [<selector>] <file>`                             |
+| Wave plan           | `pnpm wave-plan [<issue numbers>]`                                 |
 | Migrations          | `pnpm migrate`                                                     |
 
 To run another check file, replace `check-invite.js` with any `tests/check-*.js` file.
@@ -363,3 +366,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
 - When a formatting-only commit lands on `main`, add its hash to `.git-blame-ignore-revs`.
 
 Agents: [AGENTS.md](AGENTS.md).
+In Claude Code, `/wave [--max <n>] [<issue numbers>]` works through the open issues in dependency order and stops after the 15th merged pull request, or after `n`.
+It runs one headless Claude Code session for each issue, at most three at once, and each session opens one pull request.
+The coordinating session merges each pull request once its checks pass, closes the parent issues and reports the pull requests with the findings of every session's retrospective.
+It holds a pull request that adds a migration until you apply the migration.
+[.claude/skills/wave/SKILL.md](.claude/skills/wave/SKILL.md) lists the steps.

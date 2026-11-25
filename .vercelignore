@@ -18,6 +18,7 @@ dist/
 README.md
 GLOSSARY.md
 .worktrees/
+.wave/
 docs/
 AGENTS.md
 .github/
