@@ -421,12 +421,29 @@ const publishButton = /** @type {HTMLButtonElement} */ (document.getElementById(
 const publishStatus = document.getElementById('publishStatus');
 const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
 const manageLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('manageLink'));
+const publishedPanel = document.getElementById('published');
+
+// A confirmation panel shows the result of the action that just succeeded. Its .outcome heading names the outcome,
+// and focus moves to the panel, so a screen reader reads it and a keyboard continues from it. A panel that shows saved
+// state, such as the links after a reload, keeps its heading hidden, and so does a panel whose last action failed.
+function showOutcome(panel, heading) {
+  panel.hidden = false;
+  setOutcome(panel, heading);
+  panel.focus();
+}
+
+function setOutcome(panel, heading) {
+  const outcome = /** @type {HTMLElement} */ (panel.querySelector('.outcome'));
+  outcome.hidden = !heading;
+  outcome.textContent = heading ?? '';
+}
 
 // The links show once the server has confirmed the event; until then the stored identity waits for a retry.
 function showPublished() {
   const cred = state.publishedEvent;
   const live = Boolean(cred && cred.version !== null);
-  document.getElementById('published').hidden = !live;
+  publishedPanel.hidden = !live;
+  if (!live) setOutcome(publishedPanel, null);
   publishButton.lastChild.textContent = live ? copy.publishChanges : copy.publish;
   eventLinkInput.value = live ? eventLink(location.origin, cred.id, lang) : '';
   manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret, lang) : '';
@@ -446,12 +463,14 @@ publishButton.addEventListener('click', async () => {
   const cred = state.publishedEvent;
   publishButton.disabled = true;
   publishStatus.textContent = copy.publishing;
+  setOutcome(publishedPanel, null);
   const result = await client.publish(cred, state);
   publishButton.disabled = false;
   if (result.ok || result.status === 409) {
     const kept = rememberEvent({ ...cred, version: result.data.version });
-    const done = cred.version === null ? copy.publishedFirst : copy.publishedUpdated;
-    publishStatus.textContent = [result.ok ? done : result.message, kept ? '' : copy.storageRefused].join(' ');
+    publishStatus.textContent = [result.ok ? '' : result.message, kept ? '' : copy.storageRefused].join(' ').trim();
+    if (result.ok)
+      showOutcome(publishedPanel, cred.version === null ? copy.publishedHeading : copy.changesPublishedHeading);
   } else if (result.status === 404 && cred.version !== null) {
     rememberEvent(null);
     publishStatus.textContent = copy.deletedOnServer;
@@ -487,8 +506,9 @@ document.getElementById('copyManageLink').addEventListener('click', () =>
 // Guest replies to a published event. The reply id and secret are made once per page. The guest view never writes
 // storage, so the first send puts them in the address as the edit link #r=<id>.<secret> before the request. A retry
 // or a reload after a lost confirmation then reuses them and cannot create a second reply. An edit link loads that
-// reply, and saving sends its version. Withdrawing sends the version too, and the page then starts over with a new
-// reply id and secret, so the next send makes a separate reply under a new edit link.
+// reply, and saving sends its version. Withdrawing sends the version too and replaces the form with the withdrawn
+// panel. Its Reply again button shows the empty form, with a new reply id and secret, so the next send makes a
+// separate reply under a new edit link.
 const rsvpForm = /** @type {HTMLFormElement} */ (document.getElementById('rsvpForm'));
 const rsvpStatus = document.getElementById('rsvpStatus');
 const replyLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('replyLink'));
@@ -502,6 +522,8 @@ partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
 const withdrawButton = /** @type {HTMLButtonElement} */ (document.getElementById('withdrawReply'));
+const replySavedPanel = document.getElementById('replySaved');
+const withdrawnPanel = document.getElementById('replyWithdrawn');
 
 // The checked answer as a boolean, or null when no choice is checked.
 function attendingChecked() {
@@ -568,7 +590,7 @@ const replyLink = () => responseLink(location.origin, state.event, replyCred.id,
 
 function showReplyLink() {
   replyLinkInput.value = replyLink();
-  document.getElementById('replySaved').hidden = false;
+  replySavedPanel.hidden = false;
 }
 
 rsvpForm.addEventListener('change', syncPartySize);
@@ -584,6 +606,7 @@ rsvpForm.addEventListener('submit', async (e) => {
     note: noteInput.value.replaceAll('\t', ' '),
   });
   showReplyErrors(invalid);
+  setOutcome(replySavedPanel, null);
   if (!reply) {
     rsvpStatus.textContent = '';
     return;
@@ -596,12 +619,14 @@ rsvpForm.addEventListener('submit', async (e) => {
   history.replaceState(null, '', replyLink());
   sendReply.disabled = true;
   rsvpStatus.textContent = copy.sendingReply;
+  const created = replyCred.version === null;
   const result = await client.saveReply(state.event, replyCred, reply);
   sendReply.disabled = false;
   if (result.ok) {
     replyCred.version = result.data.version;
     showReplyLink();
-    rsvpStatus.textContent = copy.replySaved;
+    rsvpStatus.textContent = '';
+    showOutcome(replySavedPanel, created ? copy.replySent : copy.replyUpdated);
     return;
   }
   if (result.status === 409) {
@@ -615,6 +640,7 @@ rsvpForm.addEventListener('submit', async (e) => {
 withdrawButton.addEventListener('click', async () => {
   if (!window.confirm(copy.withdrawConfirm)) return;
   withdrawButton.disabled = true;
+  setOutcome(replySavedPanel, null);
   rsvpStatus.textContent = copy.withdrawingReply;
   const result = await client.withdrawReply(state.event, replyCred);
   withdrawButton.disabled = false;
@@ -624,8 +650,11 @@ withdrawButton.addEventListener('click', async () => {
     rsvpForm.reset();
     syncPartySize();
     showCounts();
-    document.getElementById('replySaved').hidden = true;
-    rsvpStatus.textContent = copy.replyWithdrawn;
+    replySavedPanel.hidden = true;
+    rsvpStatus.textContent = '';
+    rsvpForm.hidden = true;
+    withdrawnPanel.hidden = false;
+    withdrawnPanel.focus();
     return;
   }
   if (result.status === 409) {
@@ -633,6 +662,12 @@ withdrawButton.addEventListener('click', async () => {
     fillReply(result.data);
   }
   rsvpStatus.textContent = result.message;
+});
+
+document.getElementById('replyAgain').addEventListener('click', () => {
+  withdrawnPanel.hidden = true;
+  rsvpForm.hidden = false;
+  nameInput.focus();
 });
 
 document.getElementById('copyReplyLink').addEventListener('click', () =>

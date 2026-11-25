@@ -1,13 +1,17 @@
 // Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the post-RSVP prompt or the management page break in Chromium against the real API of
 // scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
 // link, post-RSVP template prompt and an edit that keeps one reply; the management totals and reply list; a guest's note, which the edit link loads
-// and the management page shows under its reply as text with its line breaks; the invitation link and a guessed
+// and the management page shows under its reply as text with its line breaks; the replies CSV download with its
+// byte order mark, file name, columns, answers, browser time zone times, empty "Changed" cell, formula apostrophe
+// and quoting, with no totals row, in English with commas and in Romanian with semicolons; the invitation link and a guessed
 // secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
 // the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
 // after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer; a confirmed
-// withdrawal clears the form and the address, its old edit link says no reply is saved yet and can send, and a stale
+// withdrawal replaces the form with its panel and clears the address, Reply again shows the empty form, its old edit link says no reply is saved yet and can send, and a stale
 // withdrawal loads the latest answer; the Romanian withdrawal copy; a Moț invitation published in Romanian takes a guest's reply;
-// publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
+// the confirmation panels of a sent, updated and withdrawn reply and of a first and a repeated publish, with their
+// headings in English and Romanian, the links they show and the focus move, and no panel after a failed send,
+// withdrawal or publish; publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
 // publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
 // analytics gets page addresses without the fragment; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; no page breaks the Content-Security-Policy or throws.
@@ -25,9 +29,9 @@ function watch(page) {
   return problems;
 }
 
-// A page in a browser context of its own, as on another device.
-async function newBrowser(browser) {
-  const page = await (await browser.newContext()).newPage();
+// A page in a browser context of its own, as on another device. options are Playwright context options.
+async function newBrowser(browser, options = {}) {
+  const page = await (await browser.newContext(options)).newPage();
   return { page, problems: watch(page) };
 }
 
@@ -53,14 +57,15 @@ test('an invitation published in one browser opens in another', async ({ browser
   expect([...host.problems, ...guest.problems]).toEqual([]);
 });
 
-// Fills and sends the reply form on an opened invitation and waits for the saved confirmation.
-async function reply(page, { name, attending = true, partySize = 1, note = '' }) {
+// Fills and sends the reply form on an opened invitation and waits for the confirmation panel with the heading.
+async function reply(page, { name, attending = true, partySize = 1, note = '', heading = 'Reply sent' }) {
   await page.fill('#guestName', name);
   await page.check(`input[name="attending"][value="${attending ? 'yes' : 'no'}"]`);
   if (attending) await page.fill('#partySize', String(partySize));
   await page.fill('#guestNote', note);
   await page.click('#sendReply');
-  await expect(page.locator('#rsvpStatus')).toHaveText('Your reply is saved. The host can see it now.');
+  await expect(page.locator('#replyOutcome')).toBeVisible();
+  await expect(page.locator('#replyOutcome')).toHaveText(heading);
 }
 
 // The totals and replies the management page shows, as text.
@@ -85,7 +90,7 @@ test('a guest edits a reply through the edit link, and the host sees one reply a
   await samLater.page.goto(editLink);
   await expect(samLater.page.locator('#guestName')).toHaveValue('Sam');
   await expect(samLater.page.locator('#partySize')).toHaveValue('2');
-  await reply(samLater.page, { name: 'Sam Lee', partySize: 3 });
+  await reply(samLater.page, { name: 'Sam Lee', partySize: 3, heading: 'Reply updated' });
   const ana = await newBrowser(browser);
   await ana.page.goto(invitation);
   await reply(ana.page, { name: 'Ana', attending: false });
@@ -123,6 +128,59 @@ test('a guest note loads through the edit link, and the host sees it under the r
   expect([...host.problems, ...sam.problems, ...samLater.problems, ...ana.problems]).toEqual([]);
 });
 
+// The year-month-day hours:minutes of each minute from start to end in timeZone, as the CSV writes its times.
+function minutesIn(timeZone, start, end) {
+  const format = new Intl.DateTimeFormat('sv-SE', { timeZone, dateStyle: 'short', timeStyle: 'short' });
+  const minutes = new Set();
+  for (let t = start - (start % 60000); t <= end; t += 60000) minutes.add(format.format(t));
+  return [...minutes];
+}
+
+// Clicks Download CSV on the management page and returns the file name and the file text with its byte order mark.
+async function downloadCsv(page) {
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#downloadCsv')]);
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return { name: download.suggestedFilename(), bytes: Buffer.concat(chunks) };
+}
+
+test('the host downloads every reply as a CSV file in the browser time zone', async ({ browser }) => {
+  // A time zone 14 hours ahead of UTC, so a time in the server's UTC would show another hour.
+  const timeZone = 'Pacific/Kiritimati';
+  const host = await newBrowser(browser, { timezoneId: timeZone });
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  const start = Date.now();
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: '=1+1', partySize: 2, note: 'No nuts, please.\nWe say "hi" at 3.' });
+  const ana = await newBrowser(browser);
+  await ana.page.goto(invitation);
+  await reply(ana.page, { name: 'Ana', partySize: 1 });
+  await reply(ana.page, { name: 'Ana Ștefănescu', attending: false, heading: 'Reply updated' });
+
+  await host.page.goto(manage);
+  await expect(host.page.locator('#responseList li')).toHaveCount(2);
+  const { name, bytes } = await downloadCsv(host.page);
+  const minutes = minutesIn(timeZone, start, Date.now());
+  const time = `(?:${minutes.join('|')})`;
+  expect({
+    name,
+    bom: [...bytes.subarray(0, 3)],
+    rows: bytes.subarray(3).toString('utf8').split('\r\n'),
+  }).toEqual({
+    name: `petalpost-replies-${minutes.at(-1).slice(0, 10)}.csv`,
+    bom: [0xef, 0xbb, 0xbf],
+    rows: [
+      'Name,Attending,Party size,Note,Replied,Changed',
+      expect.stringMatching(new RegExp(`^'=1\\+1,Yes,2,"No nuts, please\\.\\nWe say ""hi"" at 3\\.",${time},$`)),
+      expect.stringMatching(new RegExp(`^Ana Ștefănescu,No,0,,${time},${time}$`)),
+      '',
+    ],
+  });
+  expect([...host.problems, ...sam.problems, ...ana.problems]).toEqual([]);
+});
+
 test('a guest withdraws a reply after confirming, and a new send makes a separate reply under a new link', async ({
   browser,
 }) => {
@@ -139,15 +197,17 @@ test('a guest withdraws a reply after confirming, and a new send makes a separat
   await expect(sam.page.locator('#guestName')).toHaveValue('Sam');
   sam.page.once('dialog', (dialog) => dialog.accept());
   await sam.page.click('#withdrawReply');
-  await expect(sam.page.locator('#rsvpStatus')).toHaveText(
-    'Your reply is withdrawn. The host no longer sees it. You can send a new reply.',
-  );
+  await expect(sam.page.locator('#replyWithdrawn')).toBeVisible();
+  await expect(sam.page.locator('#rsvpForm')).toBeHidden();
+  expect(sam.page.url()).toBe(invitation);
+
+  await sam.page.click('#replyAgain');
+  await expect(sam.page.locator('#replyWithdrawn')).toBeHidden();
   expect({
     name: await sam.page.locator('#guestName').inputValue(),
+    note: await sam.page.locator('#guestNote').inputValue(),
     saved: await sam.page.locator('#replySaved').isVisible(),
-    url: sam.page.url(),
-  }).toEqual({ name: '', saved: false, url: invitation });
-
+  }).toEqual({ name: '', note: '', saved: false });
   await reply(sam.page, { name: 'Sam again' });
   const newLink = await sam.page.locator('#replyLink').inputValue();
   await host.page.goto(manage);
@@ -155,6 +215,42 @@ test('a guest withdraws a reply after confirming, and a new send makes a separat
     same: false,
     replies: [expect.stringMatching(/^Sam again\b/)],
   });
+  expect([...host.problems, ...sam.problems]).toEqual([]);
+});
+
+test('each confirmation panel opens with its heading and takes focus', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const { invitation, manage } = await publish(host.page, 'Zoe turns 30');
+  await expect(host.page.locator('#published')).toBeFocused();
+  expect({
+    heading: await host.page.locator('#publishOutcome').innerText(),
+    links: await host.page.locator('#published input').evaluateAll((inputs) => inputs.map((i) => i.id)),
+    status: await host.page.locator('#publishStatus').innerText(),
+  }).toEqual({ heading: 'Invitation published', links: ['eventLink', 'manageLink'], status: '' });
+  await host.page.click('#publish');
+  await expect(host.page.locator('#publishOutcome')).toHaveText('Changes published');
+  await expect(host.page.locator('#published')).toBeFocused();
+  expect([
+    await host.page.locator('#eventLink').inputValue(),
+    await host.page.locator('#manageLink').inputValue(),
+  ]).toEqual([invitation, manage]);
+
+  const sam = await newBrowser(browser);
+  await sam.page.goto(invitation);
+  await reply(sam.page, { name: 'Sam' });
+  await expect(sam.page.locator('#replySaved')).toBeFocused();
+  await expect(sam.page.locator('#replySaved #replyLink')).toHaveValue(sam.page.url());
+  await expect(sam.page.locator('#rsvpStatus')).toHaveText('');
+  await reply(sam.page, { name: 'Sam Lee', heading: 'Reply updated' });
+  await expect(sam.page.locator('#replySaved')).toBeFocused();
+
+  sam.page.once('dialog', (dialog) => dialog.accept());
+  await sam.page.click('#withdrawReply');
+  await expect(sam.page.locator('#replyWithdrawn')).toBeVisible();
+  await expect(sam.page.locator('#replyWithdrawn h2')).toHaveText('Reply withdrawn');
+  await expect(sam.page.locator('#replyWithdrawn')).toBeFocused();
+  await sam.page.click('#replyAgain');
+  await expect(sam.page.locator('#guestName')).toBeFocused();
   expect([...host.problems, ...sam.problems]).toEqual([]);
 });
 
@@ -190,13 +286,15 @@ test('a withdrawal from a stale page fails and shows the latest answer', async (
   const samPhone = await newBrowser(browser);
   await samPhone.page.goto(await sam.page.locator('#replyLink').inputValue());
   await expect(samPhone.page.locator('#guestName')).toHaveValue('Sam');
-  await reply(samPhone.page, { name: 'Sam from the phone', partySize: 4 });
+  await reply(samPhone.page, { name: 'Sam from the phone', partySize: 4, heading: 'Reply updated' });
 
   sam.page.once('dialog', (dialog) => dialog.accept());
   await sam.page.click('#withdrawReply');
   await expect(sam.page.locator('#rsvpStatus')).toHaveText(
     'This reply changed in another browser. The latest answer is shown.',
   );
+  await expect(sam.page.locator('#replyWithdrawn')).toBeHidden();
+  await expect(sam.page.locator('#replyOutcome')).toBeHidden();
   await expect(sam.page.locator('#guestName')).toHaveValue('Sam from the phone');
   await host.page.goto(manage);
   expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam from the phone\b/)]);
@@ -277,10 +375,8 @@ test('a failed reply shows the failure without a confirmation, and the retry sav
   await expect(sam.page.locator('#replySaved')).toBeHidden();
 
   await sam.page.unrouteAll();
-  await sam.page.click('#sendReply');
-  await expect(sam.page.locator('#rsvpStatus')).toHaveText('Your reply is saved. The host can see it now.');
-  await sam.page.click('#sendReply');
-  await expect(sam.page.locator('#rsvpStatus')).toHaveText('Your reply is saved. The host can see it now.');
+  await reply(sam.page, { name: 'Sam' });
+  await reply(sam.page, { name: 'Sam', heading: 'Reply updated' });
   await host.page.goto(manage);
   expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam\b/)]);
   expect([...host.problems, ...sam.problems]).toEqual([]);
@@ -308,7 +404,7 @@ test('a reply whose confirmation is lost loads again after a reload, and the res
 
   await sam.page.reload();
   await expect(sam.page.locator('#guestName')).toHaveValue('Sam');
-  await reply(sam.page, { name: 'Sam Lee' });
+  await reply(sam.page, { name: 'Sam Lee', heading: 'Reply updated' });
   await host.page.goto(manage);
   expect((await managed(host.page)).replies).toEqual([expect.stringMatching(/^Sam Lee\b/)]);
   expect([...host.problems, ...sam.problems]).toEqual([]);
@@ -324,13 +420,14 @@ test('a reply changed in another browser loads the latest answer and says so', a
   const samPhone = await newBrowser(browser);
   await samPhone.page.goto(editLink);
   await expect(samPhone.page.locator('#guestName')).toHaveValue('Sam');
-  await reply(samPhone.page, { name: 'Sam from the phone', partySize: 4 });
+  await reply(samPhone.page, { name: 'Sam from the phone', partySize: 4, heading: 'Reply updated' });
 
   await sam.page.fill('#guestName', 'Sam from the laptop');
   await sam.page.click('#sendReply');
   await expect(sam.page.locator('#rsvpStatus')).toHaveText(
     'This reply changed in another browser. The latest answer is shown.',
   );
+  await expect(sam.page.locator('#replyOutcome')).toBeHidden();
   expect([
     await sam.page.locator('#guestName').inputValue(),
     await sam.page.locator('#partySize').inputValue(),
@@ -350,13 +447,12 @@ test('publishing again updates the invitation, and a stale tab is told before it
 
   await host.page.fill('#title', 'Zoe turns 31');
   await host.page.click('#publish');
-  await expect(host.page.locator('#publishStatus')).toHaveText(
-    'Published. Guests see the changes when they open the invitation link.',
-  );
+  await expect(host.page.locator('#publishOutcome')).toHaveText('Changes published');
   await staleTab.click('#publish');
   await expect(staleTab.locator('#publishStatus')).toHaveText(
     'This invitation changed in another browser since you last published. Publishing again replaces those changes.',
   );
+  await expect(staleTab.locator('#publishOutcome')).toBeHidden();
   const guest = await newBrowser(browser);
   await guest.page.goto(invitation);
   await expect(guest.page.locator('h1')).toHaveText('Zoe turns 31');
@@ -466,7 +562,7 @@ test('a publish whose confirmation is lost keeps its event identity, and the ret
 
   await host.page.reload();
   await host.page.click('#publish');
-  await expect(host.page.locator('#publishStatus')).toHaveText('Published. Send the invitation link to your guests.');
+  await expect(host.page.locator('#publishOutcome')).toHaveText('Invitation published');
   const id = new URL(await host.page.locator('#eventLink').inputValue()).pathname.split('/').pop();
   expect(new Set(created)).toEqual(new Set([`/api/events/${id}`]));
   expect(host.problems).toEqual([]);
@@ -647,6 +743,7 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   await host.page.goto('/ro/editor.html?t=botez-porumbel');
   await host.page.fill('#title', 'Botezul lui Matei');
   await host.page.click('#publish');
+  await expect(host.page.locator('#publishOutcome')).toHaveText('Invitație publicată');
   await expect(host.page.locator('#eventLink')).toHaveValue(/\/ro\/e\/[A-Za-z0-9_-]{22}$/);
   await expect(host.page.locator('#manageLink')).toHaveValue(/\/ro\/manage\.html#/);
   const invitation = await host.page.locator('#eventLink').inputValue();
@@ -663,16 +760,31 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
   const guest = await newBrowser(browser);
   await guest.page.goto(invitation);
   await expect(guest.page.locator('h1')).toHaveText('Botezul lui Matei');
-  await guest.page.fill('#guestName', 'Andrei');
+  await guest.page.fill('#guestName', 'Ștefan');
   await guest.page.fill('#partySize', '2');
+  await guest.page.fill('#guestNote', 'Venim; mulțumim!');
   await guest.page.click('#sendReply');
-  await expect(guest.page.locator('#rsvpStatus')).toHaveText('Răspunsul tău a fost salvat. Gazda îl poate vedea acum.');
+  await expect(guest.page.locator('#replyOutcome')).toHaveText('Răspuns trimis');
+  await guest.page.click('#sendReply');
+  await expect(guest.page.locator('#replyOutcome')).toHaveText('Răspuns actualizat');
   await expect(guest.page.locator('#replyCta a')).toHaveAttribute('href', '/ro/#templates');
 
   await host.page.goto(manage);
   expect(await managed(host.page)).toEqual({
     totals: expect.stringMatching(/1\s+răspuns[\s\S]*1\s+confirmare[\s\S]*0\s+refuzuri[\s\S]*2\s+persoane confirmate/i),
-    replies: [expect.stringMatching(/Andrei[\s\S]*Da, 2 persoane/)],
+    replies: [expect.stringMatching(/Ștefan[\s\S]*Da, 2 persoane/)],
+  });
+  const { name, bytes } = await downloadCsv(host.page);
+  expect({ name, bom: [...bytes.subarray(0, 3)], rows: bytes.subarray(3).toString('utf8').split('\r\n') }).toEqual({
+    name: expect.stringMatching(/^petalpost-raspunsuri-\d{4}-\d{2}-\d{2}\.csv$/),
+    bom: [0xef, 0xbb, 0xbf],
+    rows: [
+      'Nume;Participă;Persoane;Notă;A răspuns;Modificat',
+      expect.stringMatching(
+        /^Ștefan;Da;2;"Venim; mulțumim!";\d{4}-\d{2}-\d{2} \d{2}:\d{2};\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
+      ),
+      '',
+    ],
   });
 
   const stranger = await newBrowser(browser);
@@ -686,9 +798,9 @@ test('Romanian publishing, guest RSVP and management keep links and copy in Roma
     dialog.accept();
   });
   await guest.page.click('#withdrawReply');
-  await expect(guest.page.locator('#rsvpStatus')).toHaveText(
-    'Răspunsul tău a fost retras. Gazda nu îl mai vede. Poți trimite un răspuns nou.',
-  );
+  await expect(guest.page.locator('#replyWithdrawn')).toBeVisible();
+  await expect(guest.page.locator('#replyWithdrawn h2')).toHaveText('Răspuns retras');
+  await expect(guest.page.locator('#replyAgain')).toHaveText('Răspunde din nou');
   expect({ question, url: guest.page.url() }).toEqual({
     question: 'Retragi răspunsul? Gazda nu îl va mai vedea.',
     url: invitation,
@@ -714,6 +826,6 @@ test('a Moț invitation publishes in Romanian and a guest replies through its li
   await guest.page.fill('#guestName', 'Ioana');
   await guest.page.fill('#partySize', '3');
   await guest.page.click('#sendReply');
-  await expect(guest.page.locator('#rsvpStatus')).toHaveText('Răspunsul tău a fost salvat. Gazda îl poate vedea acum.');
+  await expect(guest.page.locator('#replyOutcome')).toHaveText('Răspuns trimis');
   expect([...host.problems, ...guest.problems]).toEqual([]);
 });

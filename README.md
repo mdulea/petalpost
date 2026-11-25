@@ -81,7 +81,7 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
-- see every reply with its note and the totals on the management page, and delete the invitation with all its replies.
+- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies.
 
 A host cannot:
 
@@ -112,6 +112,7 @@ A guest cannot see other guests' replies or the totals.
     - `templates.js` is the template catalog and the `renderInvite` renderer.
     - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
     - `rsvp.js` validates replies, builds and reads private links, and is the API client. It has no DOM access, so the server and the Node checks import it.
+    - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
     - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page. `page.js` is the entry module of the occasion pages, the guides and the About page.
