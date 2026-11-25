@@ -19,10 +19,11 @@
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
 // analytics gets page addresses without the fragment; the WhatsApp link on the published panel and the management page, in
 // English and Romanian, opens wa.me in a new tab with no opener and prefills the title, the date and venue line and the
-// invitation link, never the management link, and the pages request nothing from another origin; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; a count to /api/stats with the page language after an invitation link copy, a share fallback copy, an invitation link share, a PNG share, a PNG download and a calendar file, and none after a cancelled share; the page language in publish and reply bodies in English and Romanian; no page breaks the Content-Security-Policy or throws.
+// invitation link, never the management link, and the pages request nothing from another origin; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; in English and Romanian, a count to /api/stats with the page language after an invitation link copy, a share fallback copy, an invitation link share, a PNG share, a PNG download and a calendar file, and none after a cancelled link or PNG share or a copy of the management link, the reply edit link or the invitation link on the management page; each of those actions with the same status and file when navigator.sendBeacon throws; the page language in publish and reply bodies in English and Romanian; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
+import { UI } from '../public/js/i18n.js';
 
 // Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
 function watch(page) {
@@ -774,7 +775,7 @@ test('a host sends the invitation link on WhatsApp from the published panel and 
 
 // An init script that replaces navigator.share, navigator.canShare and the clipboard. window.__shareTest records
 // each share as calls and each copied text as copied, and failNext(name) makes the next share throw a DOMException
-// with that name.
+// with that name. pending is true until that share is attempted.
 function stubShare() {
   const calls = [];
   const copied = [];
@@ -784,6 +785,9 @@ function stubShare() {
     copied,
     failNext(name) {
       nextError = name;
+    },
+    get pending() {
+      return nextError !== null;
     },
   };
   Object.defineProperty(navigator, 'canShare', {
@@ -879,61 +883,134 @@ test('native navigator.share shares invitation links and PNG files, ignores abor
   expect([...noShare.problems, ...problems]).toEqual([]);
 });
 
-test('each delivery action and the calendar file send their count with the page language, and a cancelled share sends nothing', async ({
-  browser,
-}) => {
+// A browser of its own with the share stub and any further init scripts, and the counts its page sends.
+async function stubbedBrowser(browser, ...scripts) {
   const context = await browser.newContext();
-  await context.addInitScript(stubShare);
+  for (const script of [stubShare, ...scripts]) await context.addInitScript(script);
   const page = await context.newPage();
-  const problems = watch(page);
-  const counts = recordCounts(page);
-  const { invitation } = await publish(page, 'Zoe turns 30');
-  const failNext = (name) => page.evaluate((name) => /** @type {any} */ (window).__shareTest.failNext(name), name);
+  return { page, problems: watch(page), counts: recordCounts(page) };
+}
+const failNext = (page, name) => page.evaluate((name) => /** @type {any} */ (window).__shareTest.failNext(name), name);
+const shareSettled = (page) => page.waitForFunction(() => !(/** @type {any} */ (window).__shareTest.pending));
 
-  await page.click('#copyEventLink');
-  await expect(page.locator('#publishStatus')).toHaveText(/copied/);
-  await failNext('AbortError');
-  await page.click('#shareEventLink');
-  await failNext('NotAllowedError');
-  await page.click('#shareEventLink');
-  await expect.poll(() => counts.length).toBe(2);
-  await page.click('#shareEventLink');
-  await expect(page.locator('#publishStatus')).toHaveText('Invitation link shared.');
-  await page.waitForFunction(() => typeof htmlToImage === 'object');
-  await failNext('AbortError');
-  await page.click('#sharePng');
-  await expect(page.locator('#sharePng')).toBeEnabled();
-  await page.click('#sharePng');
-  await expect(page.locator('#status')).toHaveText('Invite shared.');
-  const download = page.waitForEvent('download');
-  await page.click('#downloadPng');
-  await download;
+// Publishes the invitation that the editor address opens and returns the links the editor shows.
+async function publishFrom(page, editor) {
+  await page.goto(editor);
+  await page.click('#publish');
+  await expect(page.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
+  return {
+    invitation: await page.locator('#eventLink').inputValue(),
+    manage: await page.locator('#manageLink').inputValue(),
+  };
+}
 
-  const guest = await newBrowser(browser);
-  const guestCounts = recordCounts(guest.page);
-  await guest.page.goto(invitation);
-  const calendar = guest.page.waitForEvent('download');
-  await guest.page.click('#addCalendar');
-  await calendar;
+for (const { lang, editor } of [
+  { lang: 'en', editor: 'editor.html?t=birthday' },
+  { lang: 'ro', editor: '/ro/editor.html?t=botez-porumbel' },
+]) {
+  test(`in ${lang}, each delivery action and the calendar file send their count with the page language, and a cancelled share or another link copy sends nothing`, async ({
+    browser,
+  }) => {
+    const { editor: editorCopy, manage: manageCopy } = UI[lang];
+    const host = await stubbedBrowser(browser);
+    const { page } = host;
+    const { invitation, manage } = await publishFrom(page, editor);
+    const publishStatus = page.locator('#publishStatus');
 
-  const roHost = await newBrowser(browser);
-  const roCounts = recordCounts(roHost.page);
-  await roHost.page.goto('/ro/editor.html?t=botez-porumbel');
-  await roHost.page.waitForFunction(() => typeof htmlToImage === 'object');
-  const roDownload = roHost.page.waitForEvent('download');
-  await roHost.page.click('#downloadPng');
-  await roDownload;
+    await page.click('#copyEventLink');
+    await expect(publishStatus).toHaveText(editorCopy.eventLinkCopied);
+    await page.click('#copyManageLink');
+    await expect(publishStatus).toHaveText(editorCopy.manageLinkCopied);
+    await failNext(page, 'AbortError');
+    await page.click('#shareEventLink');
+    await shareSettled(page);
+    await failNext(page, 'NotAllowedError');
+    await page.click('#shareEventLink');
+    await expect(publishStatus).toHaveText(editorCopy.eventLinkCopied);
+    await page.click('#shareEventLink');
+    await expect(publishStatus).toHaveText(editorCopy.eventLinkShared);
+    await page.waitForFunction(() => typeof htmlToImage === 'object');
+    await failNext(page, 'AbortError');
+    await page.click('#sharePng');
+    await shareSettled(page);
+    await expect(page.locator('#sharePng')).toBeEnabled();
+    await page.click('#sharePng');
+    await expect(page.locator('#status')).toHaveText(editorCopy.inviteShared);
+    const download = page.waitForEvent('download');
+    await page.click('#downloadPng');
+    await download;
+    await page.goto(manage);
+    await expect(page.locator('#copyEventLink')).toBeVisible();
+    await page.click('#copyEventLink');
+    await expect(page.locator('#manageStatus')).toHaveText(manageCopy.eventLinkCopied);
 
-  const en = (action) => ({ action, lang: 'en' });
-  await expect
-    .poll(() => counts)
-    .toEqual(
-      ['invitation_link_copy', 'invitation_link_copy', 'invitation_link_share', 'png_share', 'png_download'].map(en),
-    );
-  await expect.poll(() => guestCounts).toEqual([en('calendar_add')]);
-  await expect.poll(() => roCounts).toEqual([{ action: 'png_download', lang: 'ro' }]);
-  expect([...problems, ...guest.problems, ...roHost.problems]).toEqual([]);
-});
+    const guest = await stubbedBrowser(browser);
+    await guest.page.goto(invitation);
+    const calendar = guest.page.waitForEvent('download');
+    await guest.page.click('#addCalendar');
+    await calendar;
+    await reply(guest.page, { name: 'Sam', heading: editorCopy.replySent });
+    await guest.page.click('#copyReplyLink');
+    await expect(guest.page.locator('#rsvpStatus')).toHaveText(editorCopy.replyLinkCopied);
+
+    const counted = (actions) => actions.map((action) => ({ action, lang }));
+    await expect
+      .poll(() => host.counts)
+      .toEqual(
+        counted(['invitation_link_copy', 'invitation_link_copy', 'invitation_link_share', 'png_share', 'png_download']),
+      );
+    await expect.poll(() => guest.counts).toEqual(counted(['calendar_add']));
+    expect([...host.problems, ...guest.problems]).toEqual([]);
+  });
+
+  test(`in ${lang}, each delivery action and the calendar file work the same when the count cannot be sent`, async ({
+    browser,
+  }) => {
+    const editorCopy = UI[lang].editor;
+    const failingBeacon = () =>
+      Object.defineProperty(navigator, 'sendBeacon', {
+        configurable: true,
+        value: () => {
+          throw new TypeError('sendBeacon is blocked');
+        },
+      });
+    const host = await stubbedBrowser(browser, failingBeacon);
+    const { page } = host;
+    const { invitation } = await publishFrom(page, editor);
+    const publishStatus = page.locator('#publishStatus');
+    await page.click('#copyEventLink');
+    await expect(publishStatus).toHaveText(editorCopy.eventLinkCopied);
+    await failNext(page, 'NotAllowedError');
+    await page.click('#shareEventLink');
+    await shareSettled(page);
+    await expect(publishStatus).toHaveText(editorCopy.eventLinkCopied);
+    await page.click('#shareEventLink');
+    await expect(publishStatus).toHaveText(editorCopy.eventLinkShared);
+    await page.waitForFunction(() => typeof htmlToImage === 'object');
+    await page.click('#sharePng');
+    await expect(page.locator('#status')).toHaveText(editorCopy.inviteShared);
+    const download = page.waitForEvent('download');
+    await page.click('#downloadPng');
+    expect((await download).suggestedFilename()).toMatch(/\.png$/);
+    await expect(page.locator('#status')).toHaveText(editorCopy.downloaded);
+
+    const guest = await stubbedBrowser(browser, failingBeacon);
+    await guest.page.goto(invitation);
+    const calendar = guest.page.waitForEvent('download');
+    await guest.page.click('#addCalendar');
+    expect((await calendar).suggestedFilename()).toMatch(/\.ics$/);
+
+    const recorded = await page.evaluate(() => {
+      const { calls, copied } = /** @type {any} */ (window).__shareTest;
+      return { shares: calls.length, copied: copied.length };
+    });
+    expect({ recorded, counts: [...host.counts, ...guest.counts] }).toEqual({
+      recorded: { shares: 2, copied: 2 },
+      counts: [],
+    });
+    expect([...host.problems, ...guest.problems]).toEqual([]);
+  });
+}
 
 test('publish and reply requests carry the page language in English and Romanian', async ({ browser }) => {
   // Records the lang of each PUT body to /api/events.
