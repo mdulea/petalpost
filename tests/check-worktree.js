@@ -141,7 +141,10 @@ test('remove drops the remote-tracking branch of a remote branch that GitHub alr
 const lockFolder = (folder) => {
   if (process.platform === 'win32') {
     const holder = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { cwd: folder, stdio: 'ignore' });
-    return () => new Promise((resolve) => (holder.exitCode === null ? holder.once('exit', resolve).kill() : resolve()));
+    return () =>
+      /** @type {Promise<void>} */ (
+        new Promise((resolve) => (holder.exitCode === null ? holder.once('exit', () => resolve()).kill() : resolve()))
+      );
   }
   chmodSync(join(folder, '..'), 0o555);
   return async () => chmodSync(join(folder, '..'), 0o755);
