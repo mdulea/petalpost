@@ -37,7 +37,7 @@
         </div>
 
         <div>
-          <section class="panel" aria-labelledby="h-replies">
+          <section class="panel" id="replies" aria-labelledby="h-replies">
             <h2 id="h-replies">
               <svg class="icon"><use href="#i-send" /></svg>Confirmări
             </h2>
@@ -54,7 +54,14 @@
             </div>
           </section>
 
-          <section class="panel" aria-labelledby="h-share">
+          <section class="panel" id="guestList" aria-labelledby="h-guest-list" hidden>
+            <h2 id="h-guest-list">
+              <svg class="icon"><use href="#i-heart" /></svg>Lista de invitați
+            </h2>
+            <p class="hint">Încă nu există invitați pe listă.</p>
+          </section>
+
+          <section class="panel" id="invitationLink" aria-labelledby="h-share">
             <h2 id="h-share">
               <svg class="icon"><use href="#i-link" /></svg>Linkul invitației
             </h2>
@@ -68,13 +75,17 @@
                 >
               </div>
             </div>
+            <p class="hint" id="eventLinkNoReplies" hidden>
+              Acest link arată invitația fără formularul de confirmare. Invitații confirmă doar prin linkurile
+              personale.
+            </p>
             <p class="warning">
               Păstrează privat linkul acestei pagini. Oricine îl are poate vedea confirmările și șterge invitația.
               Petalpost nu poate recupera un link de administrare pierdut.
             </p>
           </section>
 
-          <section class="panel" aria-labelledby="h-delete">
+          <section class="panel" id="deleteInvitation" aria-labelledby="h-delete">
             <h2 id="h-delete">
               <svg class="icon"><use href="#i-trash" /></svg>Ștergere
             </h2>

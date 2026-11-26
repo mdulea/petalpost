@@ -6,12 +6,14 @@
 //
 // A PUT without version creates the event: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
-// or 409 with the error and the current {version, t, d} when the version is stale.
+// or 409 with the error and the current {version, t, d} when the version is stale. The mode in d is set when the
+// event is created, and an update keeps the stored mode whatever the body sends, so a page loaded before invitations
+// had modes cannot open a guest-list invitation to replies.
 // A new event counts invitation_publish under the body's lang normalized to en or ro; updates, replays and refusals
 // count nothing. Each client IP may create dailyEvents events per UTC day, DAILY_EVENTS unless createApi sets
 // another number; the 429 stores nothing.
 import { normalizeLang } from '../../public/js/i18n.js';
-import { readPublished } from '../../public/js/invite.js';
+import { modeOf, readPublished } from '../../public/js/invite.js';
 import { addCount, bearer, hash, json, ownedEvent, readBody, Refusal, today } from './shared.js';
 
 export const DAILY_EVENTS = 20;
@@ -43,7 +45,7 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
       }
       await tx.query(
         'update events set t = $2, d = $3::text::jsonb, version = version + 1, updated_at = now() where id = $1',
-        [id, record.t, JSON.stringify(record.d)],
+        [id, record.t, JSON.stringify({ ...record.d, mode: modeOf(event.d) })],
       );
       return json(200, { version: event.version + 1, created: false });
     }

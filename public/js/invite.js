@@ -21,8 +21,13 @@ export const FIELDS = Object.keys(FIELD_LIMITS);
 // The characters left in a field whose text has the length, once it passes 80% of the limit, or null at or below
 // 80%. Text past the limit leaves 0.
 export const charsLeft = (length, limit) => (length > limit * 0.8 ? Math.max(0, limit - length) : null);
+// The modes of a published invitation. In the open mode any guest with the invitation link replies. In the guest-list
+// mode the invitation link shows the invitation without a reply form. The open mode is the default.
+export const MODES = ['open', 'guestList'];
+// The mode of untrusted invitation data. A d without a mode, such as one stored before invitations had modes, is open.
+export const modeOf = (d) => (MODES.includes(d?.mode) ? d.mode : 'open');
 // Every name the editor form writes, and every key of a record.
-export const EDITABLE = [...FIELDS, 'photoY', 'accent'];
+export const EDITABLE = [...FIELDS, 'photoY', 'accent', 'mode'];
 // Date and time take the editor input formats, YYYY-MM-DD for a real day and HH:MM, or empty for a cleared input.
 const FIELD_FORMATS = {
   date: (v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00Z`).toJSON()?.startsWith(v)),
@@ -40,6 +45,7 @@ export function makeInviteData(template, source, lang = 'en') {
   // The photo position is a percentage within the editor slider's 0 to 100 range.
   d.photoY = s.photoY != null && Number.isFinite(Number(s.photoY)) ? Math.min(100, Math.max(0, Number(s.photoY))) : 50;
   d.accent = ACCENTS.some((a) => a.hex === s.accent) ? s.accent : null;
+  d.mode = modeOf(s);
   return d;
 }
 
@@ -50,9 +56,9 @@ export function updateInvite(state, name, value, lang = 'en') {
   return true;
 }
 
-// Text goes back to the template sample, the accent to the template default; the photo position stays.
+// Text goes back to the template sample, the accent to the template default; the photo position and mode stay.
 export function resetInvite(state, lang = 'en') {
-  state.d = makeInviteData(getTemplate(state.t, lang), { photoY: state.d.photoY }, lang);
+  state.d = makeInviteData(getTemplate(state.t, lang), { photoY: state.d.photoY, mode: state.d.mode }, lang);
 }
 
 // Fields still holding the old template's sample text take the new template's text; edited and cleared fields stay.
@@ -75,12 +81,16 @@ function restoreInvite(value, lang = 'en') {
 }
 
 // Untrusted {t, d} for a published event becomes {t, d}, or null. Unlike makeInviteData it repairs nothing:
-// t names a template, d has exactly the text fields and accent, each text within its limit and format, and the
-// accent is null or one of ACCENTS. The photo position stays with the owner's draft, so d has no photoY.
+// t names a template, d has exactly the text fields, the accent and an optional mode, each text within its limit and
+// format, the accent is null or one of ACCENTS, and the mode is one of MODES. A d without a mode, which a page loaded
+// before invitations had modes sends, gets the open mode. The photo position stays with the owner's draft, so d has
+// no photoY.
 export function readPublished(value) {
   if (!value || typeof value !== 'object' || !TEMPLATES.some((t) => t.id === value.t)) return null;
   const s = value.d;
-  if (!s || typeof s !== 'object' || Object.keys(s).length !== FIELDS.length + 1) return null;
+  if (!s || typeof s !== 'object') return null;
+  const hasMode = Object.hasOwn(s, 'mode');
+  if (Object.keys(s).length !== FIELDS.length + (hasMode ? 2 : 1) || (hasMode && !MODES.includes(s.mode))) return null;
   const valid = FIELDS.every(
     (f) =>
       typeof s[f] === 'string' &&
@@ -92,6 +102,7 @@ export function readPublished(value) {
   [...FIELDS, 'accent'].forEach((f) => {
     d[f] = s[f];
   });
+  d.mode = modeOf(s);
   return { t: value.t, d };
 }
 

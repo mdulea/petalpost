@@ -81,6 +81,7 @@ A host can:
 - choose a template, add a photo, names, a date, a time, a venue, an address and a note, and pick one of six accent colors;
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
+- choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies.
 
@@ -88,6 +89,8 @@ A host cannot:
 
 - put the photo on the published invitation, which shows the template art instead;
 - recover a lost management link;
+- change the mode after the first publish;
+- add parties to a guest list, so a guest-list invitation takes no replies yet;
 - edit or delete a single reply;
 - publish changes from another browser, because only the publishing browser keeps the management secret;
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
@@ -117,7 +120,8 @@ A guest cannot see other guests' replies or the totals.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
-    - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page. `page.js` is the entry module of the occasion pages, the guides and the About page.
+    - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page.
+    - `tracker/` holds one module for each section of the management page, the tracker. `public/js/tracker/sections.js` lists them with the modes that show each one. A new section adds its module, one entry in that list and its `<section>` element in `manage.html` and `ro/manage.html`, and `check-site.js` fails when the list and the pages disagree. `page.js` is the entry module of the occasion pages, the guides and the About page.
     - `icons.js` injects the inline SVG sprite.
     - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
   - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
@@ -142,7 +146,7 @@ A guest cannot see other guests' replies or the totals.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `api-setup.js` starts the API against an in-memory PGlite database and publishes an invitation for the Node checks, and `browser-setup.js` holds the page watcher, the separate browser and the publish step of the browser tests.
-  - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
+  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
 - `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
@@ -317,10 +321,11 @@ Read the totals in the Neon console SQL editor:
 select day, action, lang, count from action_counts order by day desc, action, lang;
 ```
 
-Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features, and no code reads them yet.
+Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features, and no code reads the new tables yet.
 It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `access_tokens` tables, which an invitation's deletion deletes with it.
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
+`d.mode` is `open` or `guestList`, and a `d` without a mode, stored before invitations had modes, is open.
 `tests/check-migrations.js` applies the migrations to an empty database and to one with the earlier schema and data.
 
 Every page loads Vercel Web Analytics.

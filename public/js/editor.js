@@ -491,10 +491,14 @@ function setOutcome(panel, heading) {
   outcome.textContent = heading ?? '';
 }
 
-// The links show once the server has confirmed the event; until then the stored identity waits for a retry.
+// The links show once the server has confirmed the event; until then the stored identity waits for a retry. The
+// server keeps the mode of the first publish, so the mode choice locks once the event is live.
 function showPublished() {
   const cred = state.publishedEvent;
   const live = Boolean(cred && cred.version !== null);
+  form.querySelectorAll('input[name="mode"]').forEach((/** @type {HTMLInputElement} */ input) => {
+    input.disabled = live;
+  });
   publishedPanel.hidden = !live;
   if (!live) setOutcome(publishedPanel, null);
   publishButton.lastChild.textContent = live ? editorCopy.publishChanges : editorCopy.publish;
@@ -759,14 +763,17 @@ async function openEvent() {
   render();
   revealInvite();
   showCountdown();
-  rsvpForm.hidden = false;
   /** @type {HTMLAnchorElement} */ (document.getElementById('reportLink')).href = reportLink(
     eventLink(location.origin, state.event, lang),
     lang,
   );
   document.getElementById('replyCta').hidden = false;
   document.getElementById('reportRow').hidden = false;
-  if (!fromLink) return;
+  // The invitation link of a guest-list invitation takes no reply, so it shows a notice in place of the form.
+  const takesReplies = state.d.mode === 'open';
+  rsvpForm.hidden = !takesReplies;
+  document.getElementById('guestListNotice').hidden = takesReplies;
+  if (!takesReplies || !fromLink) return;
   const saved = await client.loadReply(state.event, replyCred);
   // The event exists, so the reply was never saved or was withdrawn. The empty form sends it as a new reply.
   if (saved.status === 404) {

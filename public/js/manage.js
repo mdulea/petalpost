@@ -1,13 +1,13 @@
-// Entry module of manage.html and ro/manage.html, the host's page for one published event. The management link
-// manage.html#<id>.<secret> is the only credential; the page shows the invitation, the reply totals and list,
-// and the invitation link, downloads the replies as a CSV file, and deletes the event on request.
+// Entry module of manage.html and ro/manage.html, the tracker of one published event. The management link
+// manage.html#<id>.<secret> is the only credential. The page loads the event with its replies, shows the invitation,
+// and hands the rest to the sections in tracker/sections.js, which show only in the modes they list.
 import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
-import { eventLink, makeInviteData, whatsappLink } from './invite.js';
+import { makeInviteData, modeOf } from './invite.js';
 import { createClient, readCredential } from './rsvp.js';
-import { repliesCsv, repliesCsvName } from './csv.js';
+import { SECTIONS } from './tracker/sections.js';
 
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
@@ -17,10 +17,6 @@ const client = createClient(fetch, { lang });
 const cred = readCredential(location.hash, '');
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
-const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById('eventLink'));
-const whatsappEventLink = /** @type {HTMLAnchorElement} */ (document.getElementById('whatsappEventLink'));
-// The replies of the last load, which the CSV download writes.
-let loadedReplies = [];
 
 // A heading and message for a page that cannot show the event, such as after a failed load or a deletion.
 function showOnly(heading, message) {
@@ -30,58 +26,26 @@ function showOnly(heading, message) {
   content.hidden = true;
 }
 
-// Guest names and notes are untrusted text, so every value enters the page as textContent.
-function item(className, ...parts) {
-  const li = document.createElement('li');
-  li.className = className;
-  for (const [tag, text] of parts) {
-    const el = document.createElement(tag);
-    el.textContent = text;
-    li.append(el);
-  }
-  return li;
-}
+const setStatus = (text) => {
+  statusEl.textContent = text;
+};
 
-function showEvent({ t, d, responses, totals }) {
-  const template = getTemplate(t, lang);
-  const data = makeInviteData(template, d, lang);
-  const heading = data.title || copy.defaultHeading;
+const page = { lang, locale, copy, client, cred, setStatus, showOnly, load };
+
+function showEvent(data) {
+  const template = getTemplate(data.t, lang);
+  const invite = makeInviteData(template, data.d, lang);
+  const heading = invite.title || copy.defaultHeading;
   document.getElementById('manageHeading').textContent = heading;
   document.title = `${heading} | Petalpost`;
   content.hidden = false;
-  mountInvites(document.getElementById('managePreview'), renderInvite(template, data, { locale }));
-  const total = (n, one, many) => item('total', ['strong', String(n)], ['span', n === 1 ? one : many]);
-  document
-    .getElementById('totals')
-    .replaceChildren(
-      total(totals.responses, copy.replyOne, copy.replyMany),
-      total(totals.yes, copy.yesOne, copy.yesMany),
-      total(totals.no, copy.noOne, copy.noMany),
-      total(totals.attending, copy.attendingOne, copy.attendingMany),
-    );
-  const when = (iso) =>
-    new Date(iso).toLocaleString(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      ...(lang === 'ro' ? { hour12: false } : {}),
-    });
-  document
-    .getElementById('responseList')
-    .replaceChildren(
-      ...responses.map((r) =>
-        item(
-          'reply',
-          ['strong', r.name],
-          ['span', r.attending ? copy.yesCount(r.partySize) : copy.no],
-          ...(r.note ? [['p', r.note]] : []),
-          ['span', `${r.updatedAt === r.createdAt ? copy.replied : copy.changed} ${when(r.updatedAt)}`],
-        ),
-      ),
-    );
-  document.getElementById('noReplies').hidden = responses.length > 0;
-  loadedReplies = responses;
-  eventLinkInput.value = eventLink(location.origin, cred.id, lang);
-  whatsappEventLink.href = whatsappLink(data, localeOf(lang), eventLinkInput.value);
+  mountInvites(document.getElementById('managePreview'), renderInvite(template, invite, { locale }));
+  const view = { ...data, invite, mode: modeOf(data.d) };
+  for (const section of SECTIONS) {
+    const el = document.getElementById(section.id);
+    el.hidden = !section.modes.includes(view.mode);
+    if (!el.hidden) section.show?.(view, page);
+  }
 }
 
 async function load() {
@@ -99,35 +63,7 @@ async function load() {
   }
 }
 
-document.getElementById('refresh').addEventListener('click', load);
-
-// The browser builds the file from the loaded replies, so the download sends nothing to the server.
-document.getElementById('downloadCsv').addEventListener('click', () => {
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob([repliesCsv(loadedReplies, lang)], { type: 'text/csv;charset=utf-8' }));
-  link.download = repliesCsvName(lang, new Date());
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-});
-
-document.getElementById('copyEventLink').addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(eventLinkInput.value);
-    statusEl.textContent = copy.eventLinkCopied;
-  } catch {
-    window.prompt(copy.copyPrompt, eventLinkInput.value);
-  }
-});
-
-document.getElementById('deleteEvent').addEventListener('click', async (e) => {
-  if (!window.confirm(copy.deleteConfirm)) return;
-  const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
-  button.disabled = true;
-  const result = await client.deleteEvent(cred);
-  button.disabled = false;
-  if (result.ok) showOnly(copy.deletedHeading, copy.deletedMessage);
-  else statusEl.textContent = result.message;
-});
+SECTIONS.forEach((section) => section.init?.(page));
 
 if (cred) load();
 else showOnly(copy.incompleteHeading, copy.incompleteMessage);
