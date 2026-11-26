@@ -19,6 +19,7 @@ import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
+import { isSeatingPublished } from '../../public/js/seating.js';
 import { presentationOf } from './events.js';
 import { addCount, bearer, hash, isEnded, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
@@ -264,7 +265,7 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
     defaultSeats: party.default_seats,
     reply: replyOf(party),
     deadlineClosed: isDeadlinePassed(party.d?.deadline, now()),
-    table: party.d?.seatingPublished === true ? (party.table_name ?? null) : null,
+    table: isSeatingPublished(party.d) ? (party.table_name ?? null) : null,
   });
 }
 

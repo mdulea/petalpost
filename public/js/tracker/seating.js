@@ -4,7 +4,7 @@
 import { UI } from '../i18n.js';
 import { animate } from '../motion.js';
 import { newId } from '../rsvp.js';
-import { TABLE_LIMITS } from '../seating.js';
+import { isSeatingPublished, TABLE_LIMITS } from '../seating.js';
 
 function field(labelText, control) {
   const container = document.createElement('div');
@@ -153,7 +153,7 @@ function partyLine(party, lang) {
 
 function show({ d, tables, parties }, page) {
   const words = UI[page.lang].seating;
-  published = d?.seatingPublished === true;
+  published = isSeatingPublished(d);
   document.getElementById('seatingSummary').textContent = published ? words.published : words.unpublished;
   document.getElementById('publishSeating').textContent = published ? words.unpublish : words.publish;
   const rows = tables.map((table) => {

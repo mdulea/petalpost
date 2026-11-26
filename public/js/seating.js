@@ -11,4 +11,6 @@ export function tableSeats(tables, parties) {
     return { ...table, filled, free: Math.max(0, table.capacity - filled), over: Math.max(0, filled - table.capacity) };
   });
 }
+// True while the host has published the seating plan stored in the invitation content d.
+export const isSeatingPublished = (d) => d?.seatingPublished === true;
 export const TABLE_LIMITS = { name: 80, capacity: 2_147_483_647 };

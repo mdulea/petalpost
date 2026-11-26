@@ -19,6 +19,7 @@
 import { isValidDate } from '../../public/js/countdown.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { MODES, modeOf, readPublished, UPDATE_NOTICE_LIMIT } from '../../public/js/invite.js';
+import { isSeatingPublished } from '../../public/js/seating.js';
 import { addCount, bearer, hash, isEnded, json, ownedEvent, readBody, Refusal, today } from './shared.js';
 
 export const DAILY_EVENTS = 20;
@@ -68,7 +69,7 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
         mode,
         ...(isValidDate(event.d?.deadline) ? { deadline: event.d.deadline } : {}),
         updateNotice: event.d.updateNotice,
-        ...(event.d?.seatingPublished === true ? { seatingPublished: true } : {}),
+        ...(isSeatingPublished(event.d) ? { seatingPublished: true } : {}),
       };
       await tx.query(
         'update events set t = $2, d = $3::text::jsonb, version = version + 1, updated_at = now() where id = $1',
