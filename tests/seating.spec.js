@@ -10,8 +10,7 @@ const COPY = {
     addTable: 'Add table',
     tableName: 'Table name or number',
     capacity: 'Capacity',
-    addParty: 'Add party',
-    partyName: 'Party name',
+    addParty: 'Add to guest list',
     picker: 'Move to table',
     move: 'Move party',
     save: 'Save table',
@@ -25,8 +24,7 @@ const COPY = {
     addTable: 'Adaugă o masă',
     tableName: 'Numele sau numărul mesei',
     capacity: 'Număr de locuri',
-    addParty: 'Adaugă un grup',
-    partyName: 'Numele grupului',
+    addParty: 'Adaugă pe lista de invitați',
     picker: 'Mută la masă',
     move: 'Mută grupul',
     save: 'Salvează masa',
@@ -59,7 +57,7 @@ for (const lang of ['en', 'ro']) {
     await addTable.getByRole('button', { name: words.addTable }).click();
     const table = plan.getByRole('listitem');
     await expect(table.getByLabel(words.tableName)).toHaveValue('7');
-    await page.getByLabel(words.partyName, { exact: true }).fill('Familia Radu');
+    await page.locator('#partyName').fill('Familia Radu');
     await page.locator('#defaultSeats').fill('3');
     await page.getByRole('button', { name: words.addParty }).click();
     const link = page.locator('#partyList input[readonly]');
