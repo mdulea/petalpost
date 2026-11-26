@@ -1,8 +1,11 @@
 // A personal-link reply stays on the same page for save, edit and withdrawal. Only the server's confirmed version
-// goes in a subsequent mutation. Conflict responses replace the form values with the current reply.
+// goes in a subsequent mutation. Conflict responses replace the form values with the current reply. An invitation
+// with sub-events asks for an answer to each in place of the single answer and seats.
+import { subEventLabels } from '../invite.js';
 import { PARTY_LIMITS } from '../rsvp.js';
+import { answerFields } from '../sub-event-answers.js';
 
-export function renderReply(party, { client, eventId, credential, copy, guestCopy, unavailable }) {
+export function renderReply(party, { client, eventId, credential, copy, guestCopy, lang, unavailable }) {
   const form = document.createElement('form');
   form.className = 'panel rsvp';
   form.id = 'personalReply';
@@ -45,6 +48,14 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
   const status = form.querySelector('[role="status"]');
   seats.max = String(PARTY_LIMITS.seats);
   const cred = { ...credential, version: undefined };
+  const labels = subEventLabels(party.d, lang);
+  const answers = labels.length
+    ? answerFields(labels, { prefix: 'personalAnswer', limit: PARTY_LIMITS.seats, lang })
+    : null;
+  if (answers) {
+    form.querySelector('[role="radiogroup"]').replaceWith(answers.element);
+    seats.closest('.field').remove();
+  }
   let closed = Boolean(party.deadlineClosed);
 
   function lockClosed(message) {
@@ -65,6 +76,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     no.checked = !yes.checked;
     seats.value = String(reply?.attending ? reply.partySize : party.defaultSeats);
     seats.disabled = !yes.checked;
+    answers?.fill(reply, party.defaultSeats);
     note.value = reply?.note ?? '';
     withdraw.hidden = closed || !reply;
   }
@@ -95,6 +107,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     const result = await client.savePartyReply(eventId, cred, {
       attending: yes.checked,
       partySize: yes.checked ? seats.valueAsNumber : 0,
+      answers: answers?.read(),
       note: note.value.replaceAll('\t', ' '),
     });
     if (result.ok) {

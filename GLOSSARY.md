@@ -61,7 +61,7 @@ _Avoid_ `household`, `family` and `invitee` for this concept, and `guest` for th
 **Reply**
 
 A submitted RSVP for one published invitation. It records the name given by the guest, whether the party will attend, how many people will attend, and an optional note. The name is a label, so two replies with the same name are still two replies.
-In the open mode, any guest with the invitation link can add a reply. In the guest-list mode, a reply belongs to one party, each party has at most one reply, and the reply answers each sub-event the party is invited to. The host can also set or change a party's reply seats in the tracker at any time, and the guest sees the change on the party's personal link. Replies added before the host switched the invitation to the guest-list mode belong to no party until the host attaches each one to a party.
+In the open mode, any guest with the invitation link can add a reply. In the guest-list mode, a reply belongs to one party, and each party has at most one reply. In both modes, a reply to an invitation with sub-events answers each sub-event with yes or no and a party size, and a reply saved before the host added a sub-event has no answer to it. The host can also set or change a party's reply seats in the tracker at any time, and the guest sees the change on the party's personal link. Replies added before the host switched the invitation to the guest-list mode belong to no party until the host attaches each one to a party.
 A reply answers the published invitation as it is at any time, so it stays valid when the host changes the invitation's details.
 _Avoid_ `response` when naming this concept in the domain model.
 

@@ -2,8 +2,9 @@
 //
 // GET /api/events/{id}/responses                host credential; {t, d, version, responses, totals, parties?,
 //                                               tables?, updateNotice?}
-// PUT /api/events/{id}/responses/{rid}          edit secret; {name, attending, partySize, note?, version?, lang?}
-// GET /api/events/{id}/responses/{rid}          edit secret; {name, attending, partySize, note, version}
+// PUT /api/events/{id}/responses/{rid}          edit secret; {name, attending, partySize, answers?, note?, version?,
+//                                               lang?}
+// GET /api/events/{id}/responses/{rid}          edit secret; {name, attending, partySize, answers, note, version}
 // DELETE /api/events/{id}/responses/{rid}       edit secret; {version} withdraws the reply; 204, also when it is gone
 // POST /api/events/{id}/responses/{rid}/attach  management secret; {partyId} attaches an earlier reply to a party; 204
 //
@@ -15,9 +16,12 @@
 // replies; the 429 stores nothing, and existing replies stay editable. Updates, replays, withdrawals and refusals
 // count nothing. A guest-list invitation takes no reply through its invitation link, so every PUT to it gets a 403
 // that stores nothing.
+// A reply to an invitation with sub-events answers each sub-event, as makeReply in public/js/rsvp.js describes, and a
+// reply that misses one gets a 400. Each reply in the management read carries its stored answers, which may lack a
+// sub-event that the host added after the reply was saved.
 import { normalizeLang } from '../../public/js/i18n.js';
-import { modeOf } from '../../public/js/invite.js';
-import { ID_PATTERN, makeReply, tally } from '../../public/js/rsvp.js';
+import { modeOf, subEventIds } from '../../public/js/invite.js';
+import { answersOf, ID_PATTERN, makeReply, tally } from '../../public/js/rsvp.js';
 import { tableSeats } from '../../public/js/seating.js';
 import { presentationOf } from './events.js';
 import { listParties } from './parties.js';
@@ -49,7 +53,7 @@ async function readResponses(tx, id, secret) {
   const event = await ownedEvent(tx, id, secret, { lock: false });
   const hasGuestList = modeOf(event.d) === 'guestList';
   const { rows } = await tx.query(
-    `select id, name, attending, party_size, note, created_at, updated_at from responses
+    `select id, name, attending, party_size, answers, note, created_at, updated_at from responses
      where event_id = $1${hasGuestList ? ' and party_id is null' : ''} order by created_at, updated_at`,
     [id],
   );
@@ -58,6 +62,7 @@ async function readResponses(tx, id, secret) {
     name: r.name,
     attending: r.attending,
     partySize: r.party_size,
+    ...answersOf(r.answers),
     note: r.note,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
@@ -80,7 +85,7 @@ async function readResponses(tx, id, secret) {
 async function ownedReply(tx, eventId, id, secret) {
   const reply = (
     await tx.query(
-      'select event_id, secret_hash, name, attending, party_size, note, version from responses where id = $1 and secret_hash is not null for update',
+      'select event_id, secret_hash, name, attending, party_size, answers, note, version from responses where id = $1 and secret_hash is not null for update',
       [id],
     )
   ).rows[0];
@@ -91,7 +96,13 @@ async function ownedReply(tx, eventId, id, secret) {
   return reply;
 }
 
-const replyOf = (row) => ({ name: row.name, attending: row.attending, partySize: row.party_size, note: row.note });
+const replyOf = (row) => ({
+  name: row.name,
+  attending: row.attending,
+  partySize: row.party_size,
+  ...answersOf(row.answers),
+  note: row.note,
+});
 
 async function getReply({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
@@ -108,13 +119,14 @@ async function getReply({ db, request, ids: [eventId, id] }) {
 async function putReply({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
   const body = await readBody(request);
-  const { reply } = makeReply(body);
-  if (!reply) throw new Refusal(400, 'reply');
   return db.transaction(async (tx) => {
     // The event row lock serializes the count and insert below across concurrent replies to one event.
     const event = (await tx.query('select d from events where id = $1 for update', [eventId])).rows[0];
     if (!event) throw new Refusal(404, 'eventMissing');
     if (modeOf(event.d) === 'guestList') throw new Refusal(403, 'guestListReply');
+    const { reply } = makeReply(body, { subEventIds: subEventIds(event.d) });
+    if (!reply) throw new Refusal(400, 'reply');
+    const answers = JSON.stringify(reply.answers ?? {});
     const existing = await ownedReply(tx, eventId, id, secret);
     if (existing) {
       if (body.version === undefined) return json(200, { version: existing.version, created: false });
@@ -122,10 +134,17 @@ async function putReply({ db, request, ids: [eventId, id] }) {
         throw new Refusal(409, 'replyChanged', { version: existing.version, ...replyOf(existing) });
       }
       await tx.query(
-        `update responses set name = $2, attending = $3, party_size = $4, note = $5, version = version + 1,
+        `update responses set name = $2, attending = $3, party_size = $4, note = $5, answers = $6, version = version + 1,
          updated_at = now() where id = $1`,
         // A page loaded before replies had notes sends none, so an update without the field keeps the stored note.
-        [id, reply.name, reply.attending, reply.partySize, body.note === undefined ? existing.note : reply.note],
+        [
+          id,
+          reply.name,
+          reply.attending,
+          reply.partySize,
+          body.note === undefined ? existing.note : reply.note,
+          answers,
+        ],
       );
       return json(200, { version: existing.version + 1, created: false });
     }
@@ -134,9 +153,9 @@ async function putReply({ db, request, ids: [eventId, id] }) {
       .rows[0];
     if (count >= EVENT_RESPONSES) throw new Refusal(429, 'eventFull');
     await tx.query(
-      `insert into responses (id, event_id, secret_hash, name, attending, party_size, note)
-       values ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, eventId, hash(secret), reply.name, reply.attending, reply.partySize, reply.note],
+      `insert into responses (id, event_id, secret_hash, name, attending, party_size, answers, note)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, eventId, hash(secret), reply.name, reply.attending, reply.partySize, answers, reply.note],
     );
     await addCount(tx, 'reply_submit', normalizeLang(body.lang));
     return json(201, { version: 1, created: true });

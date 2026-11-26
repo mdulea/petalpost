@@ -1,14 +1,18 @@
-// Edits the guest list and renders its parties, replies, earlier unattached replies, totals and personal links.
+// Edits the guest list and renders its parties, replies, earlier unattached replies, totals and personal links. With
+// sub-events, each reply also lists its answer to each sub-event, the totals add a line for each sub-event, the CSV
+// adds the answers, and the host edits the seats of each sub-event through the reply form in place of the seat editor.
 import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
-import { partyInviteLinks, personalMessage, whatsappUrl } from '../invite.js';
+import { partyInviteLinks, personalMessage, subEventLabels, whatsappUrl } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyStatus } from '../rsvp.js';
+import { answerFields, answerList, answerTotals } from '../sub-event-answers.js';
 import { downloadCsv } from './download.js';
 import { partyHandle, tablePicker } from './seating.js';
 import { renderTotals } from './totals.js';
 
 let loadedParties = [];
+let loadedLabels = [];
 let rows = [];
 let writing = false;
 
@@ -51,7 +55,7 @@ function init({ client, cred, lang, load, signedIn }) {
   document.getElementById('partySearch').addEventListener('input', filterRows);
   document.getElementById('partyFilter').addEventListener('change', filterRows);
   document.getElementById('downloadGuestList').addEventListener('click', () => {
-    downloadCsv(guestListCsv(loadedParties, lang), guestListCsvName(lang, new Date()));
+    downloadCsv(guestListCsv(loadedParties, lang, loadedLabels), guestListCsvName(lang, new Date()));
   });
   form.hidden = signedIn;
   document.getElementById('partyManagementLinkRequired').hidden = !signedIn;
@@ -144,7 +148,7 @@ function seatEditor(party, { client, cred, load }, words) {
   return form;
 }
 
-function buildHostReplyForm(party, { client, cred, load }, words) {
+function buildHostReplyForm(party, { client, cred, load, lang }, labels, words) {
   const form = document.createElement('form');
   form.hidden = true;
   form.autocomplete = 'off';
@@ -182,6 +186,14 @@ function buildHostReplyForm(party, { client, cred, load }, words) {
   seats.value = String(party.reply?.attending ? party.reply.partySize : party.defaultSeats);
   seats.disabled = !yes.checked;
   note.value = party.reply?.note ?? '';
+  const answers = labels.length
+    ? answerFields(labels, { prefix: `hostAnswer-${party.id}`, limit: PARTY_LIMITS.seats, lang })
+    : null;
+  if (answers) {
+    form.querySelector('[role="radiogroup"]').replaceWith(answers.element);
+    seats.closest('.field').remove();
+    answers.fill(party.reply, party.defaultSeats);
+  }
 
   form.addEventListener('change', () => {
     seats.disabled = !yes.checked;
@@ -196,6 +208,7 @@ function buildHostReplyForm(party, { client, cred, load }, words) {
         const result = await client.saveHostPartyReply(cred, party.id, {
           attending: yes.checked,
           partySize: yes.checked ? seats.valueAsNumber : 0,
+          answers: answers?.read(),
           note: note.value.replaceAll('\t', ' '),
           version: party.reply?.version,
         });
@@ -209,7 +222,8 @@ function buildHostReplyForm(party, { client, cred, load }, words) {
 }
 
 async function renderParty(party, tables, page, invite, words) {
-  const { client, cred, load, signedIn, formatTime } = page;
+  const { client, cred, load, lang, signedIn, formatTime } = page;
+  const labels = subEventLabels(invite, lang);
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
@@ -230,6 +244,7 @@ async function renderParty(party, tables, page, invite, words) {
     over.textContent = words.overBy(party.reply.partySize - party.defaultSeats);
     row.append(over);
   }
+  if (party.reply && labels.length) row.append(answerList(labels, party.reply, lang));
   if (party.firstOpenedAt) {
     const opened = document.createElement('span');
     opened.textContent = `${words.firstOpened(formatTime(party.firstOpenedAt))} · ${words.lastOpened(formatTime(party.lastOpenedAt))}`;
@@ -245,7 +260,14 @@ async function renderParty(party, tables, page, invite, words) {
     revoked.textContent = words.revoked;
     row.append(revoked);
   }
-  row.append(seatEditor(party, { client, cred, load }, words), tablePicker(party, tables, page));
+  if (labels.length) {
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = UI[lang].subEventReplies.seatsBySubEvent;
+    row.append(hint, tablePicker(party, tables, page));
+  } else {
+    row.append(seatEditor(party, { client, cred, load }, words), tablePicker(party, tables, page));
+  }
   const actions = document.createElement('div');
   row.append(actions);
   actions.className = 'reply-actions';
@@ -267,7 +289,7 @@ async function renderParty(party, tables, page, invite, words) {
       linkAction('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
     }
     linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
-    const editForm = buildHostReplyForm(party, { client, cred, load }, words);
+    const editForm = buildHostReplyForm(party, { client, cred, load, lang }, labels, words);
     actions.append(
       button(words.editReply, () => {
         editForm.hidden = !editForm.hidden;
@@ -331,7 +353,7 @@ async function personalLinkControls(party, cred, invite, words, linkControls) {
 }
 
 // An earlier open-mode reply without a party, with a picker of parties without a reply to attach it to.
-function unattachedRow(reply, available, { client, cred, copy, signedIn, load }, words) {
+function unattachedRow(reply, available, labels, { client, cred, copy, lang, signedIn, load }, words) {
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
@@ -339,6 +361,7 @@ function unattachedRow(reply, available, { client, cred, copy, signedIn, load },
   const answer = document.createElement('span');
   answer.textContent = reply.attending ? copy.yesCount(reply.partySize) : copy.no;
   row.append(name, answer);
+  if (labels.length) row.append(answerList(labels, reply, lang));
   if (reply.note) {
     const note = document.createElement('p');
     note.textContent = reply.note;
@@ -376,6 +399,8 @@ function unattachedRow(reply, available, { client, cred, copy, signedIn, load },
 
 async function show({ parties, tables, invite, responses }, page) {
   loadedParties = parties;
+  const labels = subEventLabels(invite, page.lang);
+  loadedLabels = labels;
   const words = UI[page.lang].guestList;
   const rendered = await Promise.all(parties.map((party) => renderParty(party, tables, page, invite, words)));
   if (loadedParties !== parties) return;
@@ -386,11 +411,13 @@ async function show({ parties, tables, invite, responses }, page) {
     [declined, words.declinedParties(declined)],
     [pending, words.pendingParties(pending)],
   ]);
+  const replies = [...parties.map((party) => party.reply).filter(Boolean), ...responses];
+  document.getElementById('partyTotals').append(...answerTotals(labels, replies, page.lang));
   const available = parties.filter((party) => !party.reply);
   document.getElementById('unattachedReplies').hidden = responses.length === 0;
   document
     .getElementById('unattachedList')
-    .replaceChildren(...responses.map((reply) => unattachedRow(reply, available, page, words)));
+    .replaceChildren(...responses.map((reply) => unattachedRow(reply, available, labels, page, words)));
   document.getElementById('partyList').replaceChildren(...rows.map(({ row }) => row));
   filterRows();
 }

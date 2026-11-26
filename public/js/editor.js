@@ -31,6 +31,7 @@ import {
   storedPublishedEvent,
   slug,
   storedInvite,
+  subEventLabels,
   switchTemplate,
   updateInvite,
   updateSubEvent,
@@ -52,6 +53,7 @@ import {
   viewLink,
   viewLinkSecret,
 } from './rsvp.js';
+import { answerFields } from './sub-event-answers.js';
 
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
@@ -693,18 +695,45 @@ function attendingChecked() {
   return checked ? checked.value === 'yes' : null;
 }
 
+// An invitation with sub-events asks for an answer to each in place of the single answer and party size. The answer
+// fields are made once the invitation loads, in a field of their own before the note.
+const attendingField = /** @type {HTMLElement} */ (rsvpForm.querySelector('[role="radiogroup"]'));
+const answersField = document.createElement('div');
+answersField.className = 'field';
+answersField.hidden = true;
+noteInput.closest('.field').before(answersField);
+/** @type {ReturnType<typeof answerFields> | null} */
+let answers = null;
+let answerIds = [];
+
+function prepareAnswers() {
+  const labels = subEventLabels(state.d, lang);
+  if (!labels.length) return;
+  answerIds = labels.map(({ id }) => id);
+  answers = answerFields(labels, { prefix: 'answer', limit: REPLY_LIMITS.partySize, lang });
+  answers.fill(null, 1);
+  answersField.prepend(answers.element);
+  answersField.hidden = false;
+  attendingField.hidden = true;
+  /** @type {HTMLElement} */ (partySizeInput.closest('.field')).hidden = true;
+}
+
 // Each reply field shows its own error in a message below it, which joins the field's description after any hint and
 // counter. The answer's field is its radio group, and focus goes to the group's first choice.
-const replyErrors = guestCopy.replyErrors(REPLY_LIMITS);
-/** @type {Record<string, {field: Element, focusTarget: HTMLElement}>} */
+const replyErrors = {
+  ...guestCopy.replyErrors(REPLY_LIMITS),
+  answers: UI[lang].subEventReplies.error(REPLY_LIMITS.partySize),
+};
+/** @type {Record<string, {field: Element, focusTarget: () => HTMLElement}>} */
 const replyControls = {
-  name: { field: nameInput, focusTarget: nameInput },
+  name: { field: nameInput, focusTarget: () => nameInput },
   attending: {
-    field: rsvpForm.querySelector('[role="radiogroup"]'),
-    focusTarget: rsvpForm.querySelector('input[name="attending"]'),
+    field: attendingField,
+    focusTarget: () => rsvpForm.querySelector('input[name="attending"]'),
   },
-  partySize: { field: partySizeInput, focusTarget: partySizeInput },
-  note: { field: noteInput, focusTarget: noteInput },
+  partySize: { field: partySizeInput, focusTarget: () => partySizeInput },
+  answers: { field: answersField, focusTarget: () => answers?.focusTarget },
+  note: { field: noteInput, focusTarget: () => noteInput },
 };
 const replyFields = REPLY_FIELDS.map((name) => {
   const { field, focusTarget } = replyControls[name];
@@ -728,7 +757,10 @@ function showReplyErrors(invalid) {
     if (ids.length) field.setAttribute('aria-describedby', ids.join(' '));
     else field.removeAttribute('aria-describedby');
   }
-  replyFields.find(({ name }) => invalid.includes(name))?.focusTarget.focus();
+  replyFields
+    .find(({ name }) => invalid.includes(name))
+    ?.focusTarget()
+    .focus();
 }
 
 // A declined reply has no party; the size input keeps its number for a change of mind.
@@ -738,6 +770,7 @@ function syncPartySize() {
 
 function fillReply(reply) {
   nameInput.value = reply.name;
+  answers?.fill(reply, 1);
   const answer = /** @type {HTMLInputElement} */ (
     rsvpForm.querySelector(`input[name="attending"][value="${reply.attending ? 'yes' : 'no'}"]`)
   );
@@ -760,13 +793,17 @@ rsvpForm.addEventListener('change', syncPartySize);
 rsvpForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const attending = attendingChecked();
-  const { reply, invalid } = makeReply({
-    name: nameInput.value,
-    attending,
-    partySize: attending ? Number(partySizeInput.value) : 0,
-    // Text pasted from a spreadsheet can hold tabs, which makeReply refuses, so they become spaces.
-    note: noteInput.value.replaceAll('\t', ' '),
-  });
+  const { reply, invalid } = makeReply(
+    {
+      name: nameInput.value,
+      attending,
+      partySize: attending ? Number(partySizeInput.value) : 0,
+      answers: answers?.read(),
+      // Text pasted from a spreadsheet can hold tabs, which makeReply refuses, so they become spaces.
+      note: noteInput.value.replaceAll('\t', ' '),
+    },
+    { subEventIds: answerIds },
+  );
   showReplyErrors(invalid);
   setOutcome(replySavedPanel, null);
   if (!reply) {
@@ -810,6 +847,7 @@ withdrawButton.addEventListener('click', async () => {
     Object.assign(replyCred, { id: newId(), secret: newSecret(), version: null });
     history.replaceState(null, '', eventLink(location.origin, state.event, lang));
     rsvpForm.reset();
+    answers?.fill(null, 1);
     syncPartySize();
     showCounts();
     replySavedPanel.hidden = true;
@@ -911,6 +949,7 @@ async function openEvent() {
   }
   // The invitation link of a guest-list invitation takes no reply, so it shows a notice in place of the form.
   const takesReplies = state.d.mode === 'open';
+  if (takesReplies) prepareAnswers();
   rsvpForm.hidden = !takesReplies;
   const guestListNotice = document.getElementById('guestListNotice');
   guestListNotice.hidden = takesReplies;
@@ -955,6 +994,7 @@ if (state.guest) {
     const sampleNotice = document.getElementById('sampleNotice');
     sampleNotice.textContent = guestCopy.sampleNotice;
     sampleNotice.hidden = false;
+    prepareAnswers();
     rsvpForm.hidden = false;
     revealInvite();
     showCountdown();

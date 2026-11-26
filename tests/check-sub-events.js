@@ -44,9 +44,9 @@ test('a record keeps its sub-events in order, cuts long text and empties invalid
     subEvents: [civil, { name: 'x'.repeat(50), date: '2027-02-30', time: '25:00', venue: 7, extra: 'x' }, null],
   });
   assert.deepEqual(d.subEvents, [
-    civil,
-    { name: 'x'.repeat(40), date: '', time: '', venue: '' },
-    { name: '', date: '', time: '', venue: '' },
+    { id: '1', ...civil },
+    { id: '2', name: 'x'.repeat(40), date: '', time: '', venue: '' },
+    { id: '3', name: '', date: '', time: '', venue: '' },
   ]);
 });
 
@@ -75,8 +75,9 @@ test('the editor adds, changes, reorders and removes sub-events', () => {
     state.d.subEvents.map((s) => s.name),
     ['Church', 'Dinner'],
   );
+  const dinnerId = state.d.subEvents[1].id;
   assert.equal(removeSubEvent(state, 0), true);
-  assert.deepEqual(state.d.subEvents, [{ name: 'Dinner', date: '2027-06-13', time: '', venue: '' }]);
+  assert.deepEqual(state.d.subEvents, [{ id: dinnerId, name: 'Dinner', date: '2027-06-13', time: '', venue: '' }]);
   assert.equal(removeSubEvent(state, 0), true);
   assert.equal('subEvents' in state.d, false);
   assert.equal(state.d.title, 'Ana & Mihai');
@@ -166,7 +167,7 @@ test('an invitation without sub-events and its replies behave as before, also af
   cred.version = 1;
   const changed = await browser.publish(cred, wedding([civil]));
   assert.equal(changed.status, 200);
-  assert.deepEqual((await guests.loadEvent(cred.id)).data.d.subEvents, [civil]);
+  assert.deepEqual((await guests.loadEvent(cred.id)).data.d.subEvents, [{ id: '1', ...civil }]);
   const loaded = await guests.loadReply(cred.id, { ...reply, version: 1 });
   assert.deepEqual(
     { name: loaded.data.name, attending: loaded.data.attending, partySize: loaded.data.partySize },

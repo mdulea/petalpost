@@ -4,21 +4,32 @@
 // table is the party's table name while the seating plan is published, and null otherwise.
 // GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
 // Both reads also return updateNotice when the host has saved one.
-// PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
+// PATCH with the personal secret saves {attending, partySize, answers?, note?, version?, lang?} and returns {version}.
+// A reply to an invitation with sub-events answers each sub-event, as makeReply in public/js/rsvp.js describes, and
+// every read of a reply carries its stored answers.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
 // PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
 // Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
 // Both preserve the reply and return 204. A request for an older link generation returns 409.
 // PATCH on /{id}/seats accepts a host credential and {partySize, version?}. It sets 0 to PARTY_LIMITS.seats
-// reply seats and returns {version}. A stale write gets 409 and the current reply.
+// reply seats and returns {version}. A stale write gets 409 and the current reply. An invitation with sub-events
+// refuses it with 400, because its seats belong to each sub-event's answer, which the host edits through /{id}/reply.
 // On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both accept a host credential.
 // PATCH on /{id}/reply uses the management secret to record or edit the reply even after the deadline.
 // Personal-link PATCH and DELETE return 403 after the RSVP deadline in Europe/Bucharest.
 import { isDeadlinePassed } from '../../public/js/countdown.js';
 import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
-import { modeOf } from '../../public/js/invite.js';
-import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
+import { modeOf, subEventIds } from '../../public/js/invite.js';
+import {
+  answersOf,
+  ID_PATTERN,
+  makeReply,
+  newId,
+  PARTY_LIMITS,
+  partyLinkSecret,
+  viewLinkSecret,
+} from '../../public/js/rsvp.js';
 import { isSeatingPublished } from '../../public/js/seating.js';
 import { presentationOf } from './events.js';
 import { addCount, bearer, hash, isEnded, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
@@ -112,11 +123,12 @@ const replyOf = (row) =>
     : {
         attending: row.attending,
         partySize: row.party_size,
+        ...answersOf(row.answers),
         note: row.note,
         version: row.reply_version,
       };
 
-const replyColumns = 'r.attending, r.party_size, r.note, r.version as reply_version';
+const replyColumns = 'r.attending, r.party_size, r.answers, r.note, r.version as reply_version';
 
 // Reads the authenticated host's parties and prepares older view hashes when the host has the management link.
 export async function listParties(db, eventId, managementSecret) {
@@ -291,7 +303,7 @@ async function ownedPartyReply(tx, eventId, id, secret, now) {
   if (!party && (await isEnded(tx, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret);
   if (isDeadlinePassed(event?.d?.deadline, now())) throw new Refusal(403, 'deadlinePassed');
-  return { ...party, reply: await currentPartyReply(tx, id) };
+  return { ...party, d: event.d, reply: await currentPartyReply(tx, id) };
 }
 
 // Verifies the reply version, upserts the party's reply and advances the party version across withdrawals.
@@ -299,11 +311,21 @@ async function writePartyReply(tx, eventId, id, party, reply, expectedVersion) {
   if (expectedVersion !== party.reply?.version) throw new Refusal(409, 'replyChanged', { reply: party.reply });
   const version = party.version + 1;
   await tx.query(
-    `insert into responses (id, event_id, party_id, name, attending, party_size, note, version)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)
+    `insert into responses (id, event_id, party_id, name, attending, party_size, answers, note, version)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      on conflict (party_id) do update set attending = excluded.attending, party_size = excluded.party_size,
-     note = excluded.note, version = excluded.version, updated_at = now()`,
-    [newId(), eventId, id, reply.name, reply.attending, reply.partySize, reply.note, version],
+     answers = excluded.answers, note = excluded.note, version = excluded.version, updated_at = now()`,
+    [
+      newId(),
+      eventId,
+      id,
+      reply.name,
+      reply.attending,
+      reply.partySize,
+      JSON.stringify(reply.answers ?? {}),
+      reply.note,
+      version,
+    ],
   );
   await tx.query('update parties set version = $2 where id = $1', [id, version]);
   return version;
@@ -314,7 +336,10 @@ async function saveReply({ db, request, ids: [eventId, id], now }) {
   const body = await readBody(request);
   return db.transaction(async (tx) => {
     const party = await ownedPartyReply(tx, eventId, id, secret, now);
-    const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
+    const { reply } = makeReply(
+      { ...body, name: party.name },
+      { partySizeLimit: PARTY_LIMITS.seats, subEventIds: subEventIds(party.d) },
+    );
     if (!reply) throw new Refusal(400, 'partyReply');
     const version = await writePartyReply(tx, eventId, id, party, reply, body.version);
     if (!party.reply) await addCount(tx, 'reply_submit', normalizeLang(body.lang));
@@ -332,7 +357,10 @@ async function saveHostReply({ db, request, ids: [eventId, id] }) {
       rows: [party],
     } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
     if (!party) throw new Refusal(404, 'personalLink');
-    const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
+    const { reply } = makeReply(
+      { ...body, name: party.name },
+      { partySizeLimit: PARTY_LIMITS.seats, subEventIds: subEventIds(event.d) },
+    );
     if (!reply) throw new Refusal(400, 'partyReply');
     const current = await currentPartyReply(tx, id);
     const version = await writePartyReply(tx, eventId, id, { ...party, reply: current }, reply, body.version);
@@ -363,6 +391,7 @@ async function setPartySeats({ db, request, ids: [eventId, id] }) {
   return db.transaction(async (tx) => {
     const event = await ownedEvent(tx, eventId, secret);
     if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
+    if (subEventIds(event.d).length) throw new Refusal(400, 'partySeatsBySubEvent');
     const {
       rows: [party],
     } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
