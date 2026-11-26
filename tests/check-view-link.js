@@ -1,9 +1,26 @@
 // Checks read-only view links, rejection of view secrets by the reply API, and invalidation on revocation or personal link regeneration in both languages.
+// Checks that batch-created parties have working view links before their personal links are opened.
 // Run: pnpm exec node --test tests/check-view-link.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { newId, partyLinkSecret, viewLinkSecret } from '../public/js/rsvp.js';
 import { host, party, setup } from './api-setup.js';
+
+test('a batch stores a working view link for each party before any personal link is opened', async () => {
+  const { client } = await setup();
+  const cred = host();
+  const owner = client();
+  const entries = ['Sam', 'Radu'].map((name) => ({ id: newId(), name }));
+  await owner.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+  assert.equal((await owner.addParties(cred, entries, 2)).ok, true);
+  for (const { id, name } of entries) {
+    const personal = await partyLinkSecret(cred.secret, id, 'personal');
+    const secret = await viewLinkSecret(personal, id);
+    const page = await owner.loadPartyView(cred.id, { id, secret });
+    assert.equal(page.status, 200);
+    assert.equal(page.data.name, name);
+  }
+});
 
 for (const lang of ['en', 'ro']) {
   test(`in ${lang}, a view link reads only the invitation and greeting and stops working after revoke or regeneration`, async () => {

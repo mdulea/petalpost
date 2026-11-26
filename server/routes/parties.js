@@ -1,11 +1,14 @@
-// Party routes under /api/events/{eventId}/parties/{id}. A PUT with the management secret adds a party from
-// {name, defaultSeats, lang}. GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
-// GET /api/events/{eventId}/parties/{id}/view uses the view secret and returns only {t, d, name}.
+// Under /api/events/{eventId}/parties, POST with the management secret adds a batch from
+// {entries: [{id, name}], defaultSeats, lang}. PUT /{id} adds one from {name, defaultSeats, lang}.
+// On /{id}, GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
+// GET on /{id}/view uses the view secret and returns {t, d, name}.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
-// PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {action, linkGeneration}.
+// PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
 // Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
 // Both preserve the reply and return 204. A request for an older link generation returns 409.
+// On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both accept a host credential.
+import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
@@ -16,44 +19,78 @@ const viewRoute = { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/view$/,
 export const routes = [
   viewRoute,
   {
+    pattern: /^\/api\/events\/([^/]+)\/parties$/,
+    methods: { POST: addParties },
+  },
+  {
     pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)$/,
     methods: { PUT: addParty, GET: getParty, PATCH: saveReply, DELETE: withdrawReply },
   },
   { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/link$/, methods: { PATCH: changeLink } },
+  {
+    pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/manage$/,
+    methods: { PATCH: renameParty, DELETE: deleteParty },
+  },
 ];
 
 async function addParty({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
   const { name, defaultSeats, lang } = await readBody(request);
-  const trimmed = typeof name === 'string' ? name.trim() : '';
-  const length = [...trimmed].length;
-  if (
-    length < 1 ||
-    length > PARTY_LIMITS.name ||
-    /\p{Cc}/u.test(trimmed) ||
-    !Number.isInteger(defaultSeats) ||
-    defaultSeats < 1 ||
-    defaultSeats > PARTY_LIMITS.seats
-  )
+  const created = await insertParties(db, eventId, secret, [{ id, name }], defaultSeats, lang);
+  return json(created ? 201 : 200, { id });
+}
+
+async function addParties({ db, request, ids: [eventId] }) {
+  const secret = bearer(request);
+  const { entries, defaultSeats, lang } = await readBody(request);
+  if (!Array.isArray(entries) || !entries.length) throw new Refusal(400, 'party');
+  if (entries.length > PARTY_LIMITS.count) throw new Refusal(429, 'partyLimit');
+  const created = await insertParties(db, eventId, secret, entries, defaultSeats, lang);
+  return json(created ? 201 : 200, {});
+}
+
+async function insertParties(db, eventId, secret, entries, defaultSeats, lang) {
+  const parties = new Map();
+  for (const entry of entries) {
+    const name = typeof entry?.name === 'string' ? entry.name.trim() : '';
+    if (typeof entry?.id !== 'string' || !ID_PATTERN.test(entry.id) || parties.has(entry.id))
+      throw new Refusal(400, 'id');
+    if (!validPartyName(name)) throw new Refusal(400, 'party');
+    parties.set(entry.id, name);
+  }
+  if (!Number.isInteger(defaultSeats) || defaultSeats < 1 || defaultSeats > PARTY_LIMITS.seats)
     throw new Refusal(400, 'party');
 
   return db.transaction(async (tx) => {
     const event = await ownedEvent(tx, eventId, secret, { token: false });
     if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
-    const existing = (await tx.query('select event_id from parties where id = $1', [id])).rows[0];
-    if (existing?.event_id === eventId) return json(200, { id });
+    const { rows: existing } = await tx.query('select id, event_id from parties where id = any($1::text[])', [
+      [...parties.keys()],
+    ]);
+    for (const party of existing) {
+      if (party.event_id !== eventId) throw new Refusal(409, 'partyId');
+      parties.delete(party.id);
+    }
+    if (!parties.size) return false;
     const { count } = (await tx.query('select count(*)::int as count from parties where event_id = $1', [eventId]))
       .rows[0];
-    if (count >= PARTY_LIMITS.count) throw new Refusal(429, 'partyLimit');
-    const personal = await partyLinkSecret(secret, id, 'personal');
-    const view = await viewLinkSecret(personal, id);
+    if (count + parties.size > PARTY_LIMITS.count) throw new Refusal(429, 'partyLimit');
+    const entries = await Promise.all(
+      [...parties].map(async ([id, name]) => {
+        const personal = await partyLinkSecret(secret, id, 'personal');
+        const view = await viewLinkSecret(personal, id);
+        return { id, name, secret_hash: hash(personal), view_hash: hash(view) };
+      }),
+    );
     const { rows } = await tx.query(
       `insert into parties (id, event_id, name, lang, default_seats, secret_hash, view_hash)
-       values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing returning id`,
-      [id, eventId, trimmed, normalizeLang(lang), defaultSeats, hash(personal), hash(view)],
+       select id, $1, name, $2, $3, secret_hash, view_hash
+       from jsonb_to_recordset($4) as entry(id text, name text, secret_hash text, view_hash text)
+       on conflict (id) do nothing returning id`,
+      [eventId, normalizeLang(lang), defaultSeats, JSON.stringify(entries)],
     );
-    if (!rows.length) throw new Refusal(409, 'partyId');
-    return json(201, { id });
+    if (rows.length !== parties.size) throw new Refusal(409, 'partyId');
+    return true;
   });
 }
 
@@ -133,6 +170,31 @@ async function getView({ db, request, ids: [eventId, id] }) {
   );
   if (!party || party.revoked || !matches(secret, party.view_hash)) throw new Refusal(404, 'personalLink');
   return json(200, { t: party.t, d: party.d, name: party.name });
+}
+
+async function renameParty({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const { name } = await readBody(request);
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (!validPartyName(trimmed)) throw new Refusal(400, 'partyName');
+  return db.transaction(async (tx) => {
+    await ownedEvent(tx, eventId, secret);
+    const result = await tx.query(
+      'update parties set name = $3, updated_at = now() where id = $1 and event_id = $2 returning id',
+      [id, eventId, trimmed],
+    );
+    if (!result.rows.length) throw new Refusal(404, 'partyMissing');
+    return json(204, null);
+  });
+}
+
+async function deleteParty({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  return db.transaction(async (tx) => {
+    await ownedEvent(tx, eventId, secret);
+    await tx.query('delete from parties where id = $1 and event_id = $2', [id, eventId]);
+    return json(204, null);
+  });
 }
 
 async function getParty({ db, request, ids: [eventId, id] }) {

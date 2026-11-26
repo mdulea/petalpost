@@ -1,6 +1,7 @@
 // Checks party creation, personal access, one versioned reply, and withdrawal through the API in both languages.
 // Checks that revoking or regenerating a link blocks old guest access and keeps replies and tracker totals.
 // A passkey session can read the guest list. Adding parties and changing links need the management secret.
+// A host can rename a party and delete it with its reply. The guest credential cannot manage the party.
 // Run: pnpm exec node --test tests/check-personal-link.js
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
@@ -10,6 +11,36 @@ import { host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
 
 const hash = (secret) => createHash('sha256').update(secret).digest('hex');
+
+test('renaming preserves the personal link and reply and deleting removes the party and reply', async () => {
+  const { client } = await setup();
+  const cred = host();
+  const owner = client();
+  await owner.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+  const id = newId();
+  const guest = { id, secret: await partyLinkSecret(cred.secret, id, 'personal'), version: undefined };
+  await owner.addParty(cred, id, { name: 'Familia Radu', defaultSeats: 2 });
+  await owner.savePartyReply(cred.id, guest, { attending: true, partySize: 2, note: 'Fără nuci' });
+
+  const refused = await owner.deleteParty({ ...cred, secret: guest.secret }, id);
+  const renamed = await owner.renameParty(cred, id, 'Familia Dima');
+  const updated = await owner.loadParty(cred.id, guest);
+  const removed = await owner.deleteParty(cred, id);
+  const gone = await owner.loadParty(cred.id, guest);
+  const list = await owner.loadResponses(cred);
+  assert.deepEqual(
+    [
+      refused.status,
+      renamed.status,
+      updated.data.name,
+      updated.data.reply.note,
+      removed.status,
+      gone.status,
+      list.data.parties,
+    ],
+    [403, 204, 'Familia Dima', 'Fără nuci', 204, 404, []],
+  );
+});
 
 test('a passkey session reads the guest list but cannot create parties or change their links', async () => {
   const { client } = await setup();

@@ -12,5 +12,5 @@ import { section as invitationLink } from './invitation-link.js';
 import { section as passkey } from './passkey.js';
 import { section as replies } from './replies.js';
 
-/** @type {{id: string, modes: string[], init?: (page: any) => void, show?: (view: any, page: any) => void}[]} */
+/** @type {{id: string, modes: string[], init?: (page: any) => void, show?: (view: any, page: any) => void | Promise<void>}[]} */
 export const SECTIONS = [replies, guestList, invitationLink, passkey, deleteInvitation];

@@ -4,9 +4,13 @@
 // shows the invitation, an empty guest list and a note that the link takes no replies, with no replies section; the
 // invitation link of an open invitation keeps the reply form, and its tracker keeps the replies section without a
 // guest list; no page breaks the Content-Security-Policy or throws.
+// The tracker also pastes, searches, filters, exports, renames and deletes parties in both languages.
+// A maximum-length paste fills the list, and the page refuses an extra party.
+// A retry after a lost batch response keeps the same names and seats and creates no duplicates.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser tests/guest-list.spec.js
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { newBrowser } from './browser-setup.js';
 
 const COPY = {
@@ -16,6 +20,17 @@ const COPY = {
     notice: 'The host takes replies only through the personal link sent to each guest. This link shows the invitation.',
     emptyGuestList: 'No parties on the guest list yet.',
     noReplies: 'This link shows the invitation without a reply form. Guests reply only through their personal links.',
+    add: 'Add to guest list',
+    csv: 'Download guest-list CSV',
+    rename: 'Rename',
+    remove: 'Delete party',
+    totals: ['2 accepted seats', '1 declined party', '1 party without a reply'],
+    csvLines: [
+      '\ufeffName,Status,Seats,Attending,Note',
+      'Ana,Replied,2,Yes,Fără nuci',
+      'Daria,Replied,0,No,',
+      'Victor,No reply yet,3,,',
+    ],
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
@@ -24,6 +39,17 @@ const COPY = {
     emptyGuestList: 'Încă nu există invitați pe listă.',
     noReplies:
       'Acest link arată invitația fără formularul de confirmare. Invitații confirmă doar prin linkurile personale.',
+    add: 'Adaugă pe lista de invitați',
+    csv: 'Descarcă lista de invitați în format CSV',
+    rename: 'Redenumește',
+    remove: 'Șterge grupul',
+    totals: ['2 locuri confirmate', '1 grup a refuzat', '1 grup fără răspuns'],
+    csvLines: [
+      '\ufeffNume;Stare;Locuri;Participă;Notă',
+      'Ana;A răspuns;2;Da;Fără nuci',
+      'Daria;A răspuns;0;Nu;',
+      'Victor;Fără răspuns;3;;',
+    ],
   },
 };
 
@@ -87,4 +113,99 @@ for (const lang of ['en', 'ro']) {
     await expect(host.page.locator('#eventLink')).toHaveValue(invitation);
     expect([...host.problems, ...guest.problems]).toEqual([]);
   });
+
+  test(`in ${lang}, the tracker pastes, searches, filters and exports the guest list`, async ({ browser }) => {
+    const host = await newBrowser(browser);
+    const { page } = host;
+    const { manage } = await publishIn(page, lang, 'guestList');
+    await page.goto(manage);
+    await page.locator('#partyName').fill(' Ana \n\nDaria\n Victor ');
+    await page.locator('#defaultSeats').fill('3');
+    await page.getByRole('button', { name: copy.add }).click();
+    const rows = page.locator('#partyList > li');
+    await expect(rows).toHaveCount(3);
+
+    for (const name of ['Ana', 'Daria']) {
+      const row = rows.filter({ hasText: name });
+      const guest = await newBrowser(browser);
+      await guest.page.goto(await row.locator('input[readonly]').inputValue());
+      const form = guest.page.locator('#personalReply');
+      if (name === 'Ana') {
+        await form.locator('[name="partySize"]').fill('2');
+        await form.locator('[name="note"]').fill('Fără nuci');
+      } else {
+        await form.getByRole('radio').last().check();
+      }
+      await form.locator('button[type="submit"]').click();
+      await expect(form.getByRole('status')).toHaveText(/Reply sent|Răspuns trimis/);
+    }
+
+    await page.locator('#refreshParties').click();
+    await expect(page.locator('#partyTotals li')).toHaveText(copy.totals);
+    await page.locator('#partySearch').fill('i');
+    await expect(rows.filter({ visible: true })).toHaveCount(2);
+    await expect(rows.filter({ hasText: 'Daria' })).toBeVisible();
+    await expect(rows.filter({ hasText: 'Victor' })).toBeVisible();
+    await page.locator('#partyFilter').selectOption('replied');
+    await expect(rows.filter({ visible: true }).locator('strong')).toHaveText(['Daria']);
+    await page.locator('#partyFilter').selectOption('pending');
+    await expect(rows.filter({ visible: true }).locator('strong')).toHaveText(['Victor']);
+    await expect(page.locator('#partyTotals li')).toHaveText(copy.totals);
+    const downloadReady = page.waitForEvent('download');
+    await page.getByRole('button', { name: copy.csv }).click();
+    const download = await downloadReady;
+    const lines = (await readFile(await download.path(), 'utf8')).split('\r\n');
+    expect([lines[0], ...lines.slice(1, -1).sort()]).toEqual(copy.csvLines);
+
+    const victor = rows.filter({ hasText: 'Victor' });
+    page.once('dialog', (dialog) => dialog.accept('Violeta'));
+    await victor.getByRole('button', { name: copy.rename }).click();
+    const violeta = rows.filter({ hasText: 'Violeta' });
+    await expect(violeta).toBeVisible();
+    await page.locator('#partyFilter').selectOption('replied');
+    page.once('dialog', (dialog) => dialog.accept());
+    await rows.filter({ hasText: 'Daria' }).getByRole('button', { name: copy.remove }).click();
+    await expect(rows).toHaveCount(2);
+    expect(host.problems).toEqual([]);
+  });
 }
+
+test('the tracker fills a list with 300 maximum-length names and refuses the 301st', async ({ browser }) => {
+  const { page } = await newBrowser(browser);
+  const { manage } = await publishIn(page, 'en', 'guestList');
+  await page.goto(manage);
+  const names = Array.from({ length: 300 }, (_, i) => String(i).padStart(3, '0') + '🎉'.repeat(77));
+  await page.locator('#partyName').fill(names.join('\n'));
+  await page.getByRole('button', { name: COPY.en.add }).click();
+  await expect(page.locator('#partyList > li')).toHaveCount(300);
+  await page.locator('#partyName').fill('One more');
+  await page.getByRole('button', { name: COPY.en.add }).click();
+  await expect(page.locator('#partyStatus')).toHaveText('The guest list can have up to 300 parties.');
+});
+
+test('a lost batch response retries the same names and default seats', async ({ browser }) => {
+  const { page } = await newBrowser(browser);
+  const { manage } = await publishIn(page, 'en', 'guestList');
+  await page.goto(manage);
+  await page.route(
+    '**/api/events/*/parties',
+    async (route) => {
+      await route.fetch();
+      await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Lost."}' });
+    },
+    { times: 1 },
+  );
+  const names = Array.from({ length: 30 }, (_, i) => String(i).padStart(3, '0') + '🎉'.repeat(77));
+  await page.locator('#partyName').fill(names.join('\n'));
+  await page.locator('#defaultSeats').fill('3');
+  const add = page.getByRole('button', { name: COPY.en.add });
+  await add.click();
+  await expect(page.locator('#partyStatus')).toContainText('Lost.');
+  await expect(page.locator('#partyName')).not.toBeEditable();
+  await expect(page.locator('#defaultSeats')).not.toBeEditable();
+  await add.click();
+  const rows = page.locator('#partyList > li');
+  await expect(rows).toHaveCount(30);
+  await expect(rows.filter({ hasText: 'Default seats: 3' })).toHaveCount(30);
+  await expect(page.locator('#partyName')).toBeEditable();
+});
