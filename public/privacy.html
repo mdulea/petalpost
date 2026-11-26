@@ -125,6 +125,13 @@
         and gives the page an access token that works for one hour. Petalpost stores only a hash of the token, and the
         page keeps the token in its address after the <code>#</code>. No cookie is set.
       </p>
+      <p>
+        When a management link opens, the page adds the invitation's title, date and management link to "My invitations"
+        in the browser's local storage, so the home page can open the management page again. The list stays in this
+        browser and sets no cookie. To check that each listed invitation still exists, the home page asks Petalpost for
+        it by its invitation id, as its invitation link does, and shows a deleted or expired invitation as ended. Remove
+        one invitation with its "Remove" button, or clear the whole list by clearing site data in the browser.
+      </p>
 
       <h2>Why Petalpost may process this data</h2>
       <ul>

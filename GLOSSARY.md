@@ -140,6 +140,10 @@ _Avoid_ `share link` and `friend link`.
 A WhatsApp message that the host sends from the tracker to a party without a reply. It greets the party in the party's language, asks for a reply and includes the party's personal link. The reminder queue in the tracker lists every party without a reply, and marks the parties whose reminder the host opened in the current tab session.
 _Avoid_ `nudge` and `follow-up`.
 
+**My invitations**
+
+The list on the home pages of the published invitations whose management link this browser opened, with each one's title, date and management link. It stays in the browser's local storage. An invitation that was deleted or expired stays listed as ended until the host removes it.
+
 **Reply edit link**
 
 The private link that gives its holder access to view, change, or withdraw a single reply in the open mode. A withdrawn reply no longer belongs to the invitation. In the guest-list mode, guests change a party's reply through the party's personal link instead.
