@@ -1,5 +1,6 @@
-// At /api/events/{eventId}/parties/{id}, a PUT with the management secret adds a party from
+// Party routes under /api/events/{eventId}/parties/{id}. A PUT with the management secret adds a party from
 // {name, defaultSeats, lang}. GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
+// GET /api/events/{eventId}/parties/{id}/view uses the view secret and returns only {t, d, name}.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
 // PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {action, linkGeneration}.
@@ -7,10 +8,13 @@
 // Both preserve the reply and return 204. A request for an older link generation returns 409.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
-import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret } from '../../public/js/rsvp.js';
+import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
+const viewRoute = { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/view$/, methods: { GET: getView } };
+
 export const routes = [
+  viewRoute,
   {
     pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)$/,
     methods: { PUT: addParty, GET: getParty, PATCH: saveReply, DELETE: withdrawReply },
@@ -42,7 +46,7 @@ async function addParty({ db, request, ids: [eventId, id] }) {
       .rows[0];
     if (count >= PARTY_LIMITS.count) throw new Refusal(429, 'partyLimit');
     const personal = await partyLinkSecret(secret, id, 'personal');
-    const view = await partyLinkSecret(secret, id, 'view');
+    const view = await viewLinkSecret(personal, id);
     const { rows } = await tx.query(
       `insert into parties (id, event_id, name, lang, default_seats, secret_hash, view_hash)
        values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing returning id`,
@@ -104,7 +108,7 @@ async function changeLink({ db, request, ids: [eventId, id] }) {
     } else {
       const generation = newId();
       const personal = await partyLinkSecret(secret, id, 'personal', generation);
-      const view = await partyLinkSecret(secret, id, 'view', generation);
+      const view = await viewLinkSecret(personal, id);
       await tx.query(
         'update parties set revoked = false, link_generation = $2, secret_hash = $3, view_hash = $4 where id = $1',
         [id, generation, hash(personal), hash(view)],
@@ -118,17 +122,39 @@ function checkPersonalLink(party, secret) {
   if (!party || party.revoked || !matches(secret, party.secret_hash)) throw new Refusal(404, 'personalLink');
 }
 
+async function getView({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const {
+    rows: [party],
+  } = await db.query(
+    `select p.name, p.view_hash, p.revoked, e.t, e.d
+     from parties p join events e on e.id = p.event_id where p.id = $1 and p.event_id = $2`,
+    [id, eventId],
+  );
+  if (!party || party.revoked || !matches(secret, party.view_hash)) throw new Refusal(404, 'personalLink');
+  return json(200, { t: party.t, d: party.d, name: party.name });
+}
+
 async function getParty({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
   const {
     rows: [party],
   } = await db.query(
-    `select p.name, p.default_seats, p.secret_hash, p.revoked, e.t, e.d, ${replyColumns}
+    `select p.name, p.default_seats, p.secret_hash, p.view_hash, p.revoked, e.t, e.d, ${replyColumns}
      from parties p join events e on e.id = p.event_id left join responses r on r.party_id = p.id
      where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
   checkPersonalLink(party, secret);
+  const view = await viewLinkSecret(secret, id);
+  if (!matches(view, party.view_hash)) {
+    // Sync view_hash if a regenerated personal link stored a placeholder hash while the link is still valid.
+    await db.query(
+      `update parties set view_hash = $1
+       where id = $2 and event_id = $3 and secret_hash = $4 and not revoked`,
+      [hash(view), id, eventId, party.secret_hash],
+    );
+  }
   return json(200, {
     t: party.t,
     d: party.d,
