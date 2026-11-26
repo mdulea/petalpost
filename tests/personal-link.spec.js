@@ -33,6 +33,7 @@ const COPY = {
     revoked: 'Personal link revoked.',
     regenerated: 'Personal link regenerated.',
     unavailable: 'This link no longer works. Ask the host for a new one.',
+    seatsLabel: 'Reply seats',
     saveSeats: 'Save seats',
     seatsSaved: 'Seats updated.',
     overBy: (n) => `Over by ${n}`,
@@ -63,6 +64,7 @@ const COPY = {
     revoked: 'Linkul personal a fost revocat.',
     regenerated: 'Noul link personal a fost generat.',
     unavailable: 'Acest link nu mai funcționează. Cere-i gazdei un link nou.',
+    seatsLabel: 'Locuri confirmate',
     saveSeats: 'Salvează locurile',
     seatsSaved: 'Locurile au fost actualizate.',
     overBy: (n) => `Cu ${n} în plus`,
@@ -289,7 +291,7 @@ for (const lang of ['en', 'ro']) {
     await expect(acceptedSeats).toHaveText('5');
 
     // Host edits the party's seats in the tracker and the guest sees the change.
-    await row.locator('input[name="partySize"]').fill('6');
+    await row.getByRole('spinbutton', { name: `${copy.seatsLabel} · Familia Radu` }).fill('6');
     await row.getByRole('button', { name: copy.saveSeats }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.seatsSaved);
     await expect(row).toContainText(copy.overBy(3));

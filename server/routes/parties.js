@@ -322,10 +322,7 @@ async function saveHostReply({ db, request, ids: [eventId, id] }) {
     if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
     const {
       rows: [party],
-    } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [
-      id,
-      eventId,
-    ]);
+    } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
     if (!party) throw new Refusal(404, 'personalLink');
     const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
     if (!reply) throw new Refusal(400, 'partyReply');

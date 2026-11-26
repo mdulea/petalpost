@@ -265,9 +265,11 @@ async function renderParty(party, { client, cred, load, signedIn, formatTime }, 
     }
     linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
     const editForm = buildHostReplyForm(party, { client, cred, load }, words);
-    actions.append(button(words.editReply, () => {
-      editForm.hidden = !editForm.hidden;
-    }));
+    actions.append(
+      button(words.editReply, () => {
+        editForm.hidden = !editForm.hidden;
+      }),
+    );
     row.append(editForm);
   }
   actions.append(
