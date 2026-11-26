@@ -873,7 +873,7 @@ const apiLimits = {
   eventResponses: 1,
   eventPasskeys: 1,
   partyNameLimit: 1,
-  defaultSeatsLimit: 1,
+  partySeatsLimit: 1,
   eventParties: 1,
 };
 const parityGaps = (groups) => {

@@ -5,6 +5,7 @@ import { eventLink } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, partyStatus, personalLink, viewLink, viewLinkSecret } from '../rsvp.js';
 import { downloadCsv } from './download.js';
+import { renderTotals } from './totals.js';
 
 let loadedParties = [];
 let rows = [];
@@ -94,27 +95,6 @@ function init({ client, cred, lang, load, signedIn }) {
       return { ...result, message };
     });
   });
-}
-
-function renderTotals(parties, words) {
-  const { accepted, declined, pending } = partyTotals(parties);
-  const totals = [
-    [accepted, words.acceptedSeats(accepted)],
-    [declined, words.declinedParties(declined)],
-    [pending, words.pendingParties(pending)],
-  ];
-  document.getElementById('partyTotals').replaceChildren(
-    ...totals.map(([count, label]) => {
-      const item = document.createElement('li');
-      item.className = 'total';
-      const number = document.createElement('strong');
-      number.textContent = String(count);
-      const text = document.createElement('span');
-      text.textContent = String(label);
-      item.append(number, ' ', text);
-      return item;
-    }),
-  );
 }
 
 function button(label, click) {
@@ -268,7 +248,12 @@ async function show({ parties }, page) {
   const rendered = await Promise.all(parties.map((party) => renderParty(party, page, words)));
   if (loadedParties !== parties) return;
   rows = rendered;
-  renderTotals(parties, words);
+  const { accepted, declined, pending } = partyTotals(parties);
+  renderTotals(document.getElementById('partyTotals'), [
+    [accepted, words.acceptedSeats(accepted)],
+    [declined, words.declinedParties(declined)],
+    [pending, words.pendingParties(pending)],
+  ]);
   document.getElementById('partyList').replaceChildren(...rows.map(({ row }) => row));
   filterRows();
 }

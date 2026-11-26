@@ -15,6 +15,7 @@ const COPY = {
     greeting: 'Hello, Familia Radu!',
     notOpened: 'Not opened',
     opened: 'Opened',
+    noReply: 'No reply yet',
     firstOpened: 'First opened',
     lastOpened: 'Last opened',
     sent: 'Reply sent',
@@ -39,6 +40,7 @@ const COPY = {
     greeting: 'Bună, Familia Radu!',
     notOpened: 'Nedeschis',
     opened: 'Deschis',
+    noReply: 'Fără răspuns',
     firstOpened: 'Deschis prima dată',
     lastOpened: 'Ultima deschidere',
     sent: 'Răspuns trimis',
@@ -198,7 +200,7 @@ for (const lang of ['en', 'ro']) {
     await row.getByRole('button', { name: copy.copy }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
     await guest.page.goto(await host.page.evaluate(() => navigator.clipboard.readText()));
-    await expect(form.getByRole('status')).toHaveText(copy.notOpened);
+    await expect(form.getByRole('status')).toHaveText(copy.noReply);
     await expectUnavailable(newLink);
     expect([...host.problems, ...guest.problems, ...oldLink.problems]).toEqual([]);
   });
@@ -241,14 +243,15 @@ for (const lang of ['en', 'ro']) {
 
     await host.page.reload();
     await expect(row).toContainText(copy.overBy(2));
-    await expect(host.page.locator('#partyTotals .total').first()).toContainText('5');
+    const acceptedSeats = host.page.locator('#partyTotals .total').first().locator('strong');
+    await expect(acceptedSeats).toHaveText('5');
 
     // Host edits the party's seats in the tracker and the guest sees the change.
     await row.locator('input[name="partySize"]').fill('6');
     await row.getByRole('button', { name: copy.saveSeats }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.seatsSaved);
     await expect(row).toContainText(copy.overBy(3));
-    await expect(host.page.locator('#partyTotals .total').first()).toContainText('6');
+    await expect(acceptedSeats).toHaveText('6');
 
     await guest.page.reload();
     await expect(form.locator('[name="partySize"]')).toHaveValue('6');

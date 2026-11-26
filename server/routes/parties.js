@@ -257,6 +257,13 @@ async function getParty({ db, request, ids: [eventId, id] }) {
   });
 }
 
+const currentPartyReply = async (tx, id) => {
+  const {
+    rows: [reply],
+  } = await tx.query(`select ${replyColumns} from responses r where party_id = $1`, [id]);
+  return replyOf(reply);
+};
+
 // Serializes reply changes through the party row. A fresh read after locking sees the latest reply.
 async function ownedPartyReply(tx, eventId, id, secret) {
   // The event is the parent of both rows. Lock it first to keep the order of a concurrent invitation deletion.
@@ -264,14 +271,26 @@ async function ownedPartyReply(tx, eventId, id, secret) {
   const {
     rows: [party],
   } = await tx.query(
-    'select name, default_seats, secret_hash, revoked, version from parties where id = $1 and event_id = $2 for update',
+    'select name, secret_hash, revoked, version from parties where id = $1 and event_id = $2 for update',
     [id, eventId],
   );
   checkPartyLink(party, secret);
-  const {
-    rows: [reply],
-  } = await tx.query(`select ${replyColumns} from responses r where party_id = $1`, [id]);
-  return { ...party, reply: replyOf(reply) };
+  return { ...party, reply: await currentPartyReply(tx, id) };
+}
+
+// Verifies the reply version, upserts the party's reply and advances the party version across withdrawals.
+async function writePartyReply(tx, eventId, id, party, reply, expectedVersion) {
+  if (expectedVersion !== party.reply?.version) throw new Refusal(409, 'replyChanged', { reply: party.reply });
+  const version = party.version + 1;
+  await tx.query(
+    `insert into responses (id, event_id, party_id, name, attending, party_size, note, version)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)
+     on conflict (party_id) do update set attending = excluded.attending, party_size = excluded.party_size,
+     note = excluded.note, version = excluded.version, updated_at = now()`,
+    [newId(), eventId, id, reply.name, reply.attending, reply.partySize, reply.note, version],
+  );
+  await tx.query('update parties set version = $2 where id = $1', [id, version]);
+  return version;
 }
 
 async function saveReply({ db, request, ids: [eventId, id] }) {
@@ -281,17 +300,7 @@ async function saveReply({ db, request, ids: [eventId, id] }) {
     const party = await ownedPartyReply(tx, eventId, id, secret);
     const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
     if (!reply) throw new Refusal(400, 'partyReply');
-    if (body.version !== party.reply?.version) throw new Refusal(409, 'replyChanged', { reply: party.reply });
-    // The party version advances across withdrawals, so a stale form cannot change a replacement reply.
-    const version = party.version + 1;
-    await tx.query(
-      `insert into responses (id, event_id, party_id, name, attending, party_size, note, version)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
-       on conflict (party_id) do update set attending = excluded.attending, party_size = excluded.party_size,
-       note = excluded.note, version = excluded.version, updated_at = now()`,
-      [newId(), eventId, id, reply.name, reply.attending, reply.partySize, reply.note, version],
-    );
-    await tx.query('update parties set version = $2 where id = $1', [id, version]);
+    const version = await writePartyReply(tx, eventId, id, party, reply, body.version);
     if (!party.reply) await addCount(tx, 'reply_submit', normalizeLang(body.lang));
     return json(party.reply ? 200 : 201, { version });
   });
@@ -324,20 +333,15 @@ async function setPartySeats({ db, request, ids: [eventId, id] }) {
       rows: [party],
     } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
     if (!party) throw new Refusal(404, 'partyMissing');
-    const {
-      rows: [replyRow],
-    } = await tx.query(`select ${replyColumns} from responses r where party_id = $1`, [id]);
-    const current = replyOf(replyRow);
-    if (version !== current?.version) throw new Refusal(409, 'replyChanged', { reply: current });
-    const nextVersion = party.version + 1;
-    await tx.query(
-      `insert into responses (id, event_id, party_id, name, attending, party_size, note, version)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
-       on conflict (party_id) do update set attending = excluded.attending, party_size = excluded.party_size,
-       version = excluded.version, updated_at = now()`,
-      [newId(), eventId, id, party.name, partySize > 0, partySize, current?.note ?? '', nextVersion],
+    const current = await currentPartyReply(tx, id);
+    const nextVersion = await writePartyReply(
+      tx,
+      eventId,
+      id,
+      { ...party, reply: current },
+      { name: party.name, attending: partySize > 0, partySize, note: current?.note ?? '' },
+      version,
     );
-    await tx.query('update parties set version = $2 where id = $1', [id, nextVersion]);
     return json(200, { version: nextVersion });
   });
 }

@@ -1,6 +1,7 @@
 // The tracker section of an open invitation's replies: the totals, the reply list, a refresh and the CSV download.
 import { repliesCsv, repliesCsvName } from '../csv.js';
 import { downloadCsv } from './download.js';
+import { renderTotals } from './totals.js';
 
 // The replies of the last load, which the CSV download writes.
 let loadedReplies = [];
@@ -25,15 +26,13 @@ function init({ lang, load }) {
 }
 
 function show({ responses, totals }, { copy, formatTime }) {
-  const total = (n, one, many) => item('total', ['strong', String(n)], ['span', n === 1 ? one : many]);
-  document
-    .getElementById('totals')
-    .replaceChildren(
-      total(totals.responses, copy.replyOne, copy.replyMany),
-      total(totals.yes, copy.yesOne, copy.yesMany),
-      total(totals.no, copy.noOne, copy.noMany),
-      total(totals.attending, copy.attendingOne, copy.attendingMany),
-    );
+  const { responses: count, yes, no, attending } = totals;
+  renderTotals(document.getElementById('totals'), [
+    [count, count === 1 ? copy.replyOne : copy.replyMany],
+    [yes, yes === 1 ? copy.yesOne : copy.yesMany],
+    [no, no === 1 ? copy.noOne : copy.noMany],
+    [attending, attending === 1 ? copy.attendingOne : copy.attendingMany],
+  ]);
   document
     .getElementById('responseList')
     .replaceChildren(

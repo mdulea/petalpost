@@ -21,7 +21,7 @@ const LIMITS = {
   eventResponses: EVENT_RESPONSES,
   eventPasskeys: EVENT_PASSKEYS,
   partyNameLimit: PARTY_LIMITS.name,
-  defaultSeatsLimit: PARTY_LIMITS.seats,
+  partySeatsLimit: PARTY_LIMITS.seats,
   eventParties: PARTY_LIMITS.count,
 };
 const MESSAGES = {

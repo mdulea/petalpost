@@ -15,6 +15,8 @@ import { host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
 
 const hash = (secret) => createHash('sha256').update(secret).digest('hex');
+const linkSecret = (secret, id, purpose = 'personal') =>
+  createHmac('sha256', secret).update(`petalpost:${purpose}:${id}`).digest('base64url');
 
 test('the tracker prepares a preview for a party created before guest sharing', async () => {
   const { db, client } = await setup();
@@ -186,8 +188,8 @@ for (const lang of ['en', 'ro']) {
     };
     const guestFor = (id) => ({
       id,
-      secret: createHmac('sha256', cred.secret).update(`petalpost:personal:${id}`).digest('base64url'),
-      view: createHmac('sha256', cred.secret).update(`petalpost:view:${id}`).digest('base64url'),
+      secret: linkSecret(cred.secret, id, 'personal'),
+      view: linkSecret(cred.secret, id, 'view'),
     });
     const a = guestFor(newId());
     const b = guestFor(newId());
@@ -327,8 +329,7 @@ for (const lang of ['en', 'ro']) {
     await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
     const partyId = newId();
     assert.equal((await tracker.addParty(cred, partyId, { name: 'Familia Pop', defaultSeats: 2 })).status, 201);
-    const secret = createHmac('sha256', cred.secret).update(`petalpost:personal:${partyId}`).digest('base64url');
-    const pCred = { id: partyId, secret };
+    const pCred = { id: partyId, secret: linkSecret(cred.secret, partyId) };
 
     const overCap = await guestClient.savePartyReply(cred.id, pCred, { attending: true, partySize: 21, note: '' });
     assert.equal(overCap.status, 400);
@@ -362,10 +363,7 @@ for (const lang of ['en', 'ro']) {
     const repliedParty = newId();
     assert.equal((await tracker.addParty(cred, phoneParty, { name: 'Familia Ionescu', defaultSeats: 2 })).status, 201);
     assert.equal((await tracker.addParty(cred, repliedParty, { name: 'Familia Marin', defaultSeats: 3 })).status, 201);
-    const personalCred = (id) => ({
-      id,
-      secret: createHmac('sha256', cred.secret).update(`petalpost:personal:${id}`).digest('base64url'),
-    });
+    const personalCred = (id) => ({ id, secret: linkSecret(cred.secret, id) });
     const phoneCred = personalCred(phoneParty);
     const repliedCred = personalCred(repliedParty);
 
@@ -399,7 +397,11 @@ for (const lang of ['en', 'ro']) {
     });
 
     // Totals count both parties' edited seats.
-    assert.deepEqual(partyTotals((await tracker.loadResponses(cred)).data.parties), { accepted: 10, declined: 0, pending: 0 });
+    assert.deepEqual(partyTotals((await tracker.loadResponses(cred)).data.parties), {
+      accepted: 10,
+      declined: 0,
+      pending: 0,
+    });
 
     // Stale version gets 409 with the current reply.
     const stale = await tracker.setPartySeats(cred, repliedParty, {
@@ -421,7 +423,11 @@ for (const lang of ['en', 'ro']) {
       note: 'Fără gluten',
       version: declined.data.version,
     });
-    assert.deepEqual(partyTotals((await tracker.loadResponses(cred)).data.parties), { accepted: 4, declined: 1, pending: 0 });
+    assert.deepEqual(partyTotals((await tracker.loadResponses(cred)).data.parties), {
+      accepted: 4,
+      declined: 1,
+      pending: 0,
+    });
 
     // Invalid counts, missing party and non-host credentials are refused.
     const overCap = await tracker.setPartySeats(cred, phoneParty, { partySize: 21, version: firstEdit.data.version });

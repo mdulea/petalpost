@@ -247,6 +247,6 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
       call('DELETE', partyPath(eventId, cred.id), cred.secret, { version: cred.version }),
     loadPartyView: (eventId, cred) => call('GET', `${partyPath(eventId, cred.id)}/view`, cred.secret),
     // Sets a party's reply seats from the tracker; data is {version}.
-    setPartySeats: (cred, id, seats) => call('PATCH', `${partyPath(cred.id, id)}/seats`, cred.secret, seats),
+    setPartySeats: (cred, id, update) => call('PATCH', `${partyPath(cred.id, id)}/seats`, cred.secret, update),
   };
 }
