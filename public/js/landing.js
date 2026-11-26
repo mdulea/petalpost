@@ -12,6 +12,8 @@ import {
 import { mountInvites } from './mount.js';
 import { editorUrl, makeInviteData } from './invite.js';
 import { animate, stopMotion } from './motion.js';
+import { findInvitation, passkeysSupported } from './passkey.js';
+import { createClient, signedInLink } from './rsvp.js';
 
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
@@ -117,3 +119,14 @@ function keepFocusAboveBar() {
   if (rect.bottom > top && rect.top < innerHeight) scrollBy({ top: rect.bottom - top + 16, behavior: 'instant' });
 }
 document.addEventListener('focusin', () => requestAnimationFrame(keepFocusAboveBar));
+
+// "Find my invitations" signs in with a passkey of this site and opens that invitation's management page.
+const findButton = /** @type {HTMLButtonElement} */ (document.getElementById('findInvitations'));
+findButton.hidden = !passkeysSupported(globalThis);
+findButton.addEventListener('click', async () => {
+  findButton.disabled = true;
+  const result = await findInvitation(createClient(fetch, { lang }), navigator.credentials, lang);
+  findButton.disabled = false;
+  document.getElementById('findStatus').textContent = result.message;
+  if (result.ok) location.assign(signedInLink(location.origin, result.data.eventId, result.data.token, lang));
+});

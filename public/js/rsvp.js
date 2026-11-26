@@ -58,9 +58,13 @@ export const responseLink = (origin, eventId, responseId, secret, lang = 'en') =
 // readCredential(hash, '') reads the management link back.
 export const manageLink = (origin, id, secret, lang = 'en') =>
   `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#${id}.${secret}`;
+// A passkey sign-in opens the management page with its access token in place of the secret.
+// readCredential(hash, 't=') reads it back.
+export const signedInLink = (origin, id, token, lang = 'en') =>
+  `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#t=${id}.${token}`;
 
 // A private link fragment #<prefix><id>.<secret> gives {id, secret}, or null when it is incomplete or malformed.
-// The prefix is '' for management links and 'r=' for response edit links.
+// The prefix is '' for management links, 't=' for passkey sign-ins and 'r=' for response edit links.
 export function readCredential(hash, prefix) {
   if (!hash.startsWith(`#${prefix}`)) return null;
   const [id, secret, ...rest] = hash.slice(prefix.length + 1).split('.');
@@ -68,14 +72,15 @@ export function readCredential(hash, prefix) {
   return { id, secret };
 }
 
-// base64url text of size random bytes.
-function randomToken(size) {
-  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(size));
-  return btoa(String.fromCharCode(...bytes))
+// base64url text without padding of the bytes, a Uint8Array or ArrayBuffer.
+export const toBase64url = (bytes) =>
+  btoa(String.fromCharCode(...new Uint8Array(bytes)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
-}
+
+// base64url text of size random bytes.
+const randomToken = (size) => toBase64url(globalThis.crypto.getRandomValues(new Uint8Array(size)));
 
 // The browser generates every id and secret, so a retry after a lost confirmation reuses them.
 export const newId = () => randomToken(16);
@@ -166,5 +171,15 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // Removes the guest's reply at cred.version; a reply that is already gone counts as withdrawn. data is null.
     withdrawReply: (eventId, cred) =>
       call('DELETE', replyPath(eventId, cred.id), cred.secret, { version: cred.version }),
+    // A registration challenge for a passkey of the event; data is {challenge}. cred.secret must be the
+    // management secret, because an access token cannot save passkeys.
+    passkeyChallenge: (cred) => call('POST', `${eventPath(cred.id)}/passkeys/challenge`, cred.secret, {}),
+    // Saves the passkey from the base64url registration {clientDataJSON, attestationObject}; data is {}.
+    savePasskey: (cred, registration) => call('POST', `${eventPath(cred.id)}/passkeys`, cred.secret, registration),
+    // A sign-in challenge without a known invitation; data is {challenge}.
+    signInChallenge: () => call('POST', '/api/passkeys/challenge', null, {}),
+    // Signs in with the base64url {id, clientDataJSON, authenticatorData, signature}; data is
+    // {eventId, token, expiresAt}, and the token works in place of the management secret until expiresAt.
+    signIn: (assertion) => call('POST', '/api/passkeys/sign-in', null, assertion),
   };
 }

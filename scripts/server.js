@@ -84,7 +84,8 @@ export async function startServer({ port, memory = false, dailyEvents }) {
   const eventPage = createEventPage(db);
 
   const server = createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://localhost');
+    // The Host header gives the API the origin that the browser sees, as the request URL on Vercel does.
+    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
     const headers = {};
     for (const rule of RULES.filter((r) => r.pattern.test(url.pathname))) {
       for (const { key, value } of rule.headers) headers[key] = value;

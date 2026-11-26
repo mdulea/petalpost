@@ -2,8 +2,9 @@
 // matches the whole path and captures the ids, and methods maps an HTTP method to its action. A new module adds
 // one entry here.
 import { routes as events } from './events.js';
+import { routes as passkeys } from './passkeys.js';
 import { routes as replies } from './replies.js';
 import { routes as retention } from './retention.js';
 import { routes as stats } from './stats.js';
 
-export const ROUTES = [events, replies, retention, stats].flat();
+export const ROUTES = [events, passkeys, replies, retention, stats].flat();

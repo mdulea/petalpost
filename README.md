@@ -83,12 +83,15 @@ A host can:
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
-- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies.
+- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
+- save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
+
+For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies and delete the invitation, and cannot save another passkey.
 
 A host cannot:
 
 - put the photo on the published invitation, which shows the template art instead;
-- recover a lost management link;
+- recover a lost management link, although a saved passkey still opens the management page;
 - change the mode after the first publish;
 - add parties to a guest list, so a guest-list invitation takes no replies yet;
 - edit or delete a single reply;
@@ -118,6 +121,7 @@ A guest cannot see other guests' replies or the totals.
     - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
     - `rsvp.js` validates replies, builds and reads private links, is the API client and sends the action counts. It has no DOM access, so the server and the Node checks import it.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
+    - `passkey.js` saves a passkey on the management page and signs in with one on the home page. It has no DOM access, so the Node checks import it.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
     - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page.
@@ -131,7 +135,7 @@ A guest cannot see other guests' replies or the totals.
   - `og-image.png`, `ro/og-image.png`, `favicon.svg` and `robots.txt` are the remaining site files.
 - `types/globals.d.ts` declares the types of the `htmlToImage` and analytics globals for the type check.
 - `api/index.js` is the Vercel Function for `/api/`, `/e/{id}` and `/ro/e/{id}` paths. Vercel requires it in `api/`.
-- `server/` holds the server code. `server/api.js` matches each `/api/` request to a route and turns refusals into error responses. `server/routes/` holds one route module each for invitations, replies, retention and stats, `server/routes/index.js` lists them, and `server/routes/shared.js` holds the helpers they share. `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
+- `server/` holds the server code. `server/api.js` matches each `/api/` request to a route and turns refusals into error responses. `server/routes/` holds one route module each for invitations, passkeys, replies, retention and stats, `server/routes/index.js` lists them, and `server/routes/shared.js` holds the helpers they share. `server/webauthn.js` verifies passkey registrations and sign-ins with `node:crypto`, `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
 - `scripts/` holds the scripts a developer runs:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `browser-port.js` picks the port that the browser tests run the server on.
@@ -145,8 +149,8 @@ A guest cannot see other guests' replies or the totals.
   - `sweep-plan.js` prints the order in which `/sweep` implements the open issues, and the issues it leaves alone.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
-  - `api-setup.js` starts the API against an in-memory PGlite database and publishes an invitation for the Node checks, and `browser-setup.js` holds the page watcher, the separate browser and the publish step of the browser tests.
-  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
+  - `api-setup.js` starts the API against an in-memory PGlite database and publishes an invitation for the Node checks, `passkey-authenticator.js` is the software authenticator of the passkey checks, and `browser-setup.js` holds the page watcher, the separate browser and the publish step of the browser tests.
+  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js`, `passkey.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
 - `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
@@ -216,7 +220,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 ### UI strings
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
-The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, and `manage` has the management page.
+The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.
@@ -321,7 +325,7 @@ Read the totals in the Neon console SQL editor:
 select day, action, lang, count from action_counts order by day desc, action, lang;
 ```
 
-Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features, and no code reads the new tables yet.
+Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features. The passkey routes read and write `passkeys`, `passkey_challenges` and `access_tokens`, and no code reads the other new tables yet.
 It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `access_tokens` tables, which an invitation's deletion deletes with it.
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.

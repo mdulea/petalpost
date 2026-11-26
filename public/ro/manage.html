@@ -85,6 +85,20 @@
             </p>
           </section>
 
+          <section class="panel" id="passkeyPanel" aria-labelledby="h-passkey" hidden>
+            <h2 id="h-passkey">
+              <svg class="icon"><use href="#i-key" /></svg>Cheie de acces
+            </h2>
+            <p class="hint">
+              Salvează o cheie de acces cu Face ID, amprenta sau Windows Hello. Pe alt dispozitiv cu același cont Apple,
+              Google sau Microsoft, „Găsește invitațiile mele” de pe pagina principală deschide această pagină cu ea.
+            </p>
+            <button class="btn btn-ghost btn-small" type="button" id="savePasskey">
+              <svg class="icon"><use href="#i-key" /></svg>Salvează o cheie de acces
+            </button>
+            <p class="status" id="passkeyStatus" role="status"></p>
+          </section>
+
           <section class="panel" id="deleteInvitation" aria-labelledby="h-delete">
             <h2 id="h-delete">
               <svg class="icon"><use href="#i-trash" /></svg>Ștergere

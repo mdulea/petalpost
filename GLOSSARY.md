@@ -102,6 +102,11 @@ A missing invitation, a storage error, or an unknown template shows the generic 
 
 The private link that opens the tracker of a published invitation. It gives its holder access to the replies and lets them delete the invitation.
 
+**Passkey**
+
+A credential that a host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. Signing in with it gives the host the same access as the management link for a limited time, except saving another passkey.
+_Avoid_ `account`, `login` and `password` for this concept.
+
 **Tracker**
 
 The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply.

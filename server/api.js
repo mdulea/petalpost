@@ -9,6 +9,7 @@ import { apiMessages, normalizeLang } from '../public/js/i18n.js';
 import { ID_PATTERN, REPLY_LIMITS } from '../public/js/rsvp.js';
 import { DAILY_EVENTS } from './routes/events.js';
 import { ROUTES } from './routes/index.js';
+import { EVENT_PASSKEYS } from './routes/passkeys.js';
 import { EVENT_RESPONSES } from './routes/replies.js';
 import { json, Refusal } from './routes/shared.js';
 
@@ -18,6 +19,7 @@ const LIMITS = {
   replyNoteLimit: REPLY_LIMITS.note,
   dailyEvents: DAILY_EVENTS,
   eventResponses: EVENT_RESPONSES,
+  eventPasskeys: EVENT_PASSKEYS,
 };
 const MESSAGES = {
   en: apiMessages('en', LIMITS),

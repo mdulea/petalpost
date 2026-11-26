@@ -1,6 +1,7 @@
-// Entry module of manage.html and ro/manage.html, the tracker of one published event. The management link
-// manage.html#<id>.<secret> is the only credential. The page loads the event with its replies, shows the invitation,
-// and hands the rest to the sections in tracker/sections.js, which show only in the modes they list.
+// Entry module of manage.html and ro/manage.html, the tracker of one published event. The credential is the
+// management link manage.html#<id>.<secret>, or after a passkey sign-in manage.html#t=<id>.<token> with an access
+// token. The page loads the event with its replies, shows the invitation, and hands the rest to the sections in
+// tracker/sections.js, which show only in the modes they list.
 import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
@@ -14,7 +15,8 @@ const locale = lang === 'ro' ? localeOf('ro') : undefined;
 const copy = UI[lang].manage;
 
 const client = createClient(fetch, { lang });
-const cred = readCredential(location.hash, '');
+const signedIn = readCredential(location.hash, 't=');
+const cred = readCredential(location.hash, '') ?? signedIn;
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
 
@@ -30,7 +32,7 @@ const setStatus = (text) => {
   statusEl.textContent = text;
 };
 
-const page = { lang, locale, copy, client, cred, setStatus, showOnly, load };
+const page = { lang, locale, copy, client, cred, signedIn: Boolean(signedIn), setStatus, showOnly, load };
 
 function showEvent(data) {
   const template = getTemplate(data.t, lang);
