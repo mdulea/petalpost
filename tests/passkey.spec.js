@@ -74,7 +74,8 @@ test('a passkey session manages parties without personal link controls', async (
   await page.fill('#partyName', 'Sam');
   await page.click('#addParty button[type="submit"]');
   const party = page.locator('#partyList li').filter({ hasText: 'Sam' });
-  await expect(party.getByRole('button', { name: 'Copy personal link' })).toBeVisible();
+  await expect(party.getByRole('button', { name: 'Copy message' })).toBeVisible();
+  await expect(party.getByRole('link', { name: 'Send on WhatsApp' })).toBeVisible();
 
   await page.click('#savePasskey');
   await expect(page.locator('#passkeyStatus')).toHaveText(UI.en.passkey.saved);
@@ -83,7 +84,8 @@ test('a passkey session manages parties without personal link controls', async (
   await expect(page).toHaveURL(/\/manage\.html#t=/);
   await expect(party).toContainText('Not opened');
   await expect(page.locator('#addParty')).toBeHidden({ timeout: 5000 });
-  await expect(party.getByRole('button', { name: 'Copy personal link' })).toBeHidden();
+  await expect(party.getByRole('button', { name: 'Copy message' })).toBeHidden();
+  await expect(party.getByRole('link', { name: 'Send on WhatsApp' })).toBeHidden();
   await expect(party.getByRole('link', { name: 'Preview as this guest' })).toBeHidden();
   await expect(page.locator('#refreshParties')).toBeVisible();
   page.once('dialog', (dialog) => dialog.accept('Daria'));

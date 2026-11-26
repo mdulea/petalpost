@@ -1,4 +1,4 @@
-// Checks party creation, personal access, opened times, view link read-only access, one versioned reply,
+// Checks party creation with default and explicit languages, personal access, opened times, view link read-only access, one versioned reply,
 // and withdrawal through the API in both languages.
 // The management tracker can preview an older party before it opens a personal link.
 // Also checks replies above default seats, host seat edits and whole-list seat totals.
@@ -167,6 +167,35 @@ for (const lang of ['en', 'ro']) {
       const changed = { attending: false, partySize: 0, note: 'Noi planuri' };
       assert.equal((await guest.savePartyReply(cred.id, newLink, changed)).status, hadReply ? 200 : 201);
     }
+  });
+
+  test(`in ${lang}, addParties keeps an explicit party language and defaults omitted language to the invitation language`, async () => {
+    const { client } = await setup();
+    const cred = host();
+    const tracker = client(newId(), lang);
+    const other = lang === 'en' ? 'ro' : 'en';
+    await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+    assert.equal((await tracker.addParties(cred, [{ id: newId(), name: 'Default party' }], 2)).added, 1);
+    assert.equal(
+      (
+        await tracker.addParties(
+          cred,
+          [
+            { id: newId(), name: 'Abroad party' },
+            { id: newId(), name: 'Second abroad party' },
+          ],
+          3,
+          other,
+        )
+      ).added,
+      2,
+    );
+    const list = await tracker.loadResponses(cred);
+    assert.deepEqual(list.data.parties.map(({ name, lang: partyLang }) => [name, partyLang]).sort(), [
+      ['Abroad party', other],
+      ['Default party', lang],
+      ['Second abroad party', other],
+    ]);
   });
 
   test(`in ${lang}, each party can manage only its own reply through its personal link`, async () => {

@@ -1,6 +1,7 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
-// Romanian with empty lines left out, invite records and their mode, published records with an optional mode, the
+// Romanian with empty lines left out, the personal link message with its greeting, invitation details and personal
+// link in English and Romanian, invite records and their mode, published records with an optional mode, the
 // characters left in a limited field, storage writes, the stored published event identity, template switching,
 // template ids, Romanian localization coverage, the same UI string and API message keys in English and Romanian, the
 // Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
@@ -533,6 +534,42 @@ check(
     ),
   )[1],
   'Botezul lui Matei\nsâmbătă, 15 mai 2027, ora 14:30 · Biserica Sf. Nicolae\nhttps://www.petalpost.ro/ro/e/AAAAAAAAAAAAAAAAAAAAAA',
+);
+const PERSONAL_EN = `${INVITATION}#p=BBBBBBBBBBBBBBBBBBBBBB.secret`;
+const PERSONAL_RO = 'https://www.petalpost.ro/ro/e/AAAAAAAAAAAAAAAAAAAAAA#p=BBBBBBBBBBBBBBBBBBBBBB.secret';
+check(
+  'personalMessage builds a greeting, details and personal link in English and Romanian',
+  [
+    ctx.personalMessage({ name: 'Anna & Tom', lang: 'en' }, ctx.makeInviteData(birthday, zoeParty), PERSONAL_EN),
+    ctx.personalMessage(
+      { name: 'Familia Radu', lang: 'ro' },
+      ctx.makeInviteData(
+        ctx.getTemplate('botez-porumbel', 'ro'),
+        { title: 'Botezul lui Matei', date: '2027-05-15', time: '14:30', venue: 'Biserica Sf. Nicolae', address: '' },
+        'ro',
+      ),
+      PERSONAL_RO,
+    ),
+  ],
+  [
+    `Hello, Anna & Tom!\nZoe turns 30\nSaturday, December 12, 2026 at 2:00 PM · Willow Park\n${PERSONAL_EN}`,
+    `Bună, Familia Radu!\nBotezul lui Matei\nsâmbătă, 15 mai 2027, ora 14:30 · Biserica Sf. Nicolae\n${PERSONAL_RO}`,
+  ],
+);
+check(
+  'personalMessage leaves out empty date and venue lines and whatsappUrl encodes the same text',
+  (() => {
+    const message = ctx.personalMessage(
+      { name: 'Anna & Tom', lang: 'en' },
+      ctx.makeInviteData(birthday, { ...zoeParty, date: '', time: '', venue: '' }),
+      PERSONAL_EN,
+    );
+    return [message, whatsappText(ctx.whatsappUrl(message))];
+  })(),
+  [
+    `Hello, Anna & Tom!\nZoe turns 30\n${PERSONAL_EN}`,
+    ['https://wa.me/', `Hello, Anna & Tom!\nZoe turns 30\n${PERSONAL_EN}`],
+  ],
 );
 check(
   'eventPreviewMeta builds title and description from title, date, time and venue',

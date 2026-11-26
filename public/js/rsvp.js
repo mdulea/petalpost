@@ -220,12 +220,12 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     changePartyLink: (cred, id, action, linkGeneration = null) =>
       call('PATCH', `${partyPath(cred.id, id)}/link`, cred.secret, { action, linkGeneration }),
     // Adds entries with retryable ids. added counts the entries the API confirmed, including replays.
-    async addParties(cred, entries, defaultSeats) {
+    async addParties(cred, entries, defaultSeats, lang = code) {
       const path = `${eventPath(cred.id)}/parties`;
       const encoder = new TextEncoder();
       let added = 0;
       while (added < entries.length) {
-        const body = { entries: [], defaultSeats, lang: code };
+        const body = { entries: [], defaultSeats, lang };
         for (const entry of entries.slice(added)) {
           body.entries.push(entry);
           if (encoder.encode(JSON.stringify(body)).byteLength <= API_BODY_LIMIT) continue;
