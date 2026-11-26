@@ -62,31 +62,39 @@ function init({ client, cred, lang, load, signedIn }) {
   const namesInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('partyName'));
   const seats = /** @type {HTMLInputElement} */ (document.getElementById('defaultSeats'));
   seats.max = String(PARTY_LIMITS.seats);
-  let pending = [];
+  // Hold the remaining request unchanged until an ambiguous result can be retried.
+  let retry;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (writing) return;
-    const names = parsePartyNames(namesInput.value);
-    if (!names.length || !names.every(validPartyName)) {
-      setStatus(words.invalidName(PARTY_LIMITS.name));
-      return;
+    let addition = retry;
+    if (!addition) {
+      const names = parsePartyNames(namesInput.value);
+      if (!names.length || !names.every(validPartyName)) {
+        setStatus(words.invalidName(PARTY_LIMITS.name));
+        return;
+      }
+      if (loadedParties.length + names.length > PARTY_LIMITS.count) {
+        setStatus(words.limit(PARTY_LIMITS.count));
+        return;
+      }
+      addition = { entries: names.map((name) => ({ name, id: newId() })), defaultSeats: seats.valueAsNumber };
     }
-    const entries = names.map((name, index) => ({
-      name,
-      id: pending[index]?.name === name ? pending[index].id : newId(),
-    }));
-    const existing = new Set(loadedParties.map(({ id }) => id));
-    if (existing.size + entries.filter(({ id }) => !existing.has(id)).length > PARTY_LIMITS.count) {
-      setStatus(words.limit(PARTY_LIMITS.count));
-      return;
-    }
-    const defaultSeats = seats.valueAsNumber;
     await change(load, form.elements, async () => {
+      const { entries, defaultSeats } = addition;
       const result = await client.addParties(cred, entries, defaultSeats);
-      pending = entries.slice(result.added);
-      if (result.ok) form.reset();
-      else namesInput.value = pending.map(({ name }) => name).join('\n');
-      return result.ok || !result.added ? result : { ...result, message: `${words.partial} ${result.message}` };
+      const remaining = entries.slice(result.added);
+      retry = !result.ok && (result.status === 0 || result.status >= 500) ? { entries: remaining, defaultSeats } : null;
+      namesInput.readOnly = seats.readOnly = Boolean(retry);
+      if (result.ok) {
+        form.reset();
+        return result;
+      }
+      namesInput.value = remaining.map(({ name }) => name).join('\n');
+      const message = [result.message, result.added ? words.partial : '', retry ? words.retryPaste : '']
+        .filter(Boolean)
+        .join(' ');
+      return { ...result, message };
     });
   });
 }
@@ -148,53 +156,34 @@ async function renderParty(party, { client, cred, copy, load, signedIn }, words)
     revoked.textContent = words.revoked;
     row.append(revoked);
   }
-  if (signedIn) return { party, row };
-
-  const linkControls = [];
   const actions = document.createElement('div');
   actions.className = 'reply-actions';
-  const linkAction = (action, { label, confirm, done }) => {
-    const element = button(label, () => {
-      if (writing || !window.confirm(confirm)) return;
-      return change(load, linkControls, async () => {
-        const result = await client.changePartyLink(cred, party.id, action, party.linkGeneration);
-        return result.ok ? { ...result, message: done } : result;
+  if (!signedIn) {
+    const linkControls = [];
+    const linkAction = (action, { label, confirm, done }) => {
+      const element = button(label, () => {
+        if (writing || !window.confirm(confirm)) return;
+        return change(load, linkControls, async () => {
+          const result = await client.changePartyLink(cred, party.id, action, party.linkGeneration);
+          return result.ok ? { ...result, message: done } : result;
+        });
       });
-    });
-    linkControls.push(element);
-    actions.append(element);
-  };
-  if (!party.revoked) {
-    const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
-    const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
-    const copyLink = button(words.copy, async () => {
-      try {
-        await navigator.clipboard.writeText(link);
-        setStatus(words.copied);
-      } catch {
-        window.prompt(copy.copyPrompt, link);
-      }
-    });
-    const input = document.createElement('input');
-    input.className = 'input';
-    input.readOnly = true;
-    input.value = link;
-    linkControls.push(input, copyLink);
-    input.setAttribute('aria-label', `${words.link} · ${party.name}`);
-    const controls = document.createElement('div');
-    controls.className = 'copy-row';
-    controls.append(input, copyLink);
-    row.append(controls);
-    linkAction('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
+      linkControls.push(element);
+      actions.append(element);
+    };
+    if (!party.revoked) {
+      row.append(await personalLinkControls(party, cred, copy, words, linkControls));
+      linkAction('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
+    }
+    linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
   }
-  linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
   actions.append(
     button(words.rename, (element) => {
       if (writing) return;
       const value = window.prompt(words.renamePrompt, party.name)?.trim();
       if (value === undefined || value === party.name) return;
       if (!validPartyName(value)) {
-        setStatus(words.invalidName(PARTY_LIMITS.name));
+        setStatus(words.renameInvalid(PARTY_LIMITS.name));
         return;
       }
       return change(load, [element], () => client.renameParty(cred, party.id, value));
@@ -207,6 +196,29 @@ async function renderParty(party, { client, cred, copy, load, signedIn }, words)
   );
   row.append(actions);
   return { party, row };
+}
+
+async function personalLinkControls(party, cred, copy, words, linkControls) {
+  const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
+  const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
+  const copyLink = button(words.copy, async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setStatus(words.copied);
+    } catch {
+      window.prompt(copy.copyPrompt, link);
+    }
+  });
+  const input = document.createElement('input');
+  input.className = 'input';
+  input.readOnly = true;
+  input.value = link;
+  linkControls.push(input, copyLink);
+  input.setAttribute('aria-label', `${words.link} · ${party.name}`);
+  const controls = document.createElement('div');
+  controls.className = 'copy-row';
+  controls.append(input, copyLink);
+  return controls;
 }
 
 async function show({ parties }, page) {

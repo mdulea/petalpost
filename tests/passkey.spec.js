@@ -2,7 +2,7 @@
 // and Romanian, the host saves a passkey on the management page with a virtual authenticator; another browser whose
 // authenticator holds the synced passkey uses "Find my invitations" on the home page and opens that invitation's
 // management page with an access token, which shows the replies and no passkey panel; a cancelled sign-in shows its
-// message and stays on the home page; a passkey session can read the guest list and requires the management link
+// message and stays on the home page; a passkey session can read the guest list, rename and delete parties, and requires the management link
 // to add parties or copy personal links; no page breaks the Content-Security-Policy or throws.
 // Run: pnpm test:browser tests/passkey.spec.js
 import { expect, test } from '@playwright/test';
@@ -61,7 +61,7 @@ for (const lang of ['en', 'ro']) {
   });
 }
 
-test('a passkey session shows the guest list without personal link controls', async ({ browser }) => {
+test('a passkey session manages parties without personal link controls', async ({ browser }) => {
   const { page, problems } = await newBrowser(browser);
   await addAuthenticator(page);
   await page.goto('/editor.html?t=birthday');
@@ -85,6 +85,13 @@ test('a passkey session shows the guest list without personal link controls', as
   await expect(page.locator('#addParty')).toBeHidden({ timeout: 5000 });
   await expect(party.getByRole('button', { name: 'Copy personal link' })).toBeHidden();
   await expect(page.locator('#refreshParties')).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept('Daria'));
+  await party.getByRole('button', { name: 'Rename' }).click({ timeout: 5000 });
+  const renamed = page.locator('#partyList li').filter({ hasText: 'Daria' });
+  await expect(renamed).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
+  await renamed.getByRole('button', { name: 'Delete party' }).click();
+  await expect(page.locator('#noParties')).toBeVisible();
   expect(problems).toEqual([]);
 });
 

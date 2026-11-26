@@ -7,7 +7,7 @@
 // PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
 // Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
 // Both preserve the reply and return 204. A request for an older link generation returns 409.
-// On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both use the management secret.
+// On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both accept a host credential.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { validPartyName } from '../../public/js/party-names.js';
@@ -178,7 +178,7 @@ async function renameParty({ db, request, ids: [eventId, id] }) {
   const trimmed = typeof name === 'string' ? name.trim() : '';
   if (!validPartyName(trimmed)) throw new Refusal(400, 'partyName');
   return db.transaction(async (tx) => {
-    await ownedEvent(tx, eventId, secret, { token: false });
+    await ownedEvent(tx, eventId, secret);
     const result = await tx.query(
       'update parties set name = $3, updated_at = now() where id = $1 and event_id = $2 returning id',
       [id, eventId, trimmed],
@@ -191,7 +191,7 @@ async function renameParty({ db, request, ids: [eventId, id] }) {
 async function deleteParty({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
   return db.transaction(async (tx) => {
-    await ownedEvent(tx, eventId, secret, { token: false });
+    await ownedEvent(tx, eventId, secret);
     await tx.query('delete from parties where id = $1 and event_id = $2', [id, eventId]);
     return json(204, null);
   });

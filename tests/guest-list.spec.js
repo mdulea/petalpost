@@ -6,6 +6,7 @@
 // guest list; no page breaks the Content-Security-Policy or throws.
 // The tracker also pastes, searches, filters, exports, renames and deletes parties in both languages.
 // A maximum-length paste fills the list, and the page refuses an extra party.
+// A retry after a lost batch response keeps the same names and seats and creates no duplicates.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser tests/guest-list.spec.js
 import { expect, test } from '@playwright/test';
@@ -180,4 +181,31 @@ test('the tracker fills a list with 300 maximum-length names and refuses the 301
   await page.locator('#partyName').fill('One more');
   await page.getByRole('button', { name: COPY.en.add }).click();
   await expect(page.locator('#partyStatus')).toHaveText('The guest list can have up to 300 parties.');
+});
+
+test('a lost batch response retries the same names and default seats', async ({ browser }) => {
+  const { page } = await newBrowser(browser);
+  const { manage } = await publishIn(page, 'en', 'guestList');
+  await page.goto(manage);
+  await page.route(
+    '**/api/events/*/parties',
+    async (route) => {
+      await route.fetch();
+      await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Lost."}' });
+    },
+    { times: 1 },
+  );
+  const names = Array.from({ length: 30 }, (_, i) => String(i).padStart(3, '0') + '🎉'.repeat(77));
+  await page.locator('#partyName').fill(names.join('\n'));
+  await page.locator('#defaultSeats').fill('3');
+  const add = page.getByRole('button', { name: COPY.en.add });
+  await add.click();
+  await expect(page.locator('#partyStatus')).toContainText('Lost.');
+  await expect(page.locator('#partyName')).not.toBeEditable();
+  await expect(page.locator('#defaultSeats')).not.toBeEditable();
+  await add.click();
+  const rows = page.locator('#partyList > li');
+  await expect(rows).toHaveCount(30);
+  await expect(rows.filter({ hasText: 'Default seats: 3' })).toHaveCount(30);
+  await expect(page.locator('#partyName')).toBeEditable();
 });
