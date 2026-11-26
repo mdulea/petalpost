@@ -1678,6 +1678,9 @@ textarea.input {
 #noReplies {
   margin-bottom: 16px;
 }
+#partyFilters {
+  margin-bottom: 14px;
+}
 .reply-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,5 @@
 // DOM-free guest-list helpers: party name validation, paste parsing, whole-list totals and search/status filtering.
-import { PARTY_LIMITS } from './rsvp.js';
+import { PARTY_LIMITS, partyStatus } from './rsvp.js';
 
 export function validPartyName(name) {
   const length = [...name].length;
@@ -28,8 +28,11 @@ export function partyTotals(parties) {
 // Normalizes a search query for case- and Unicode-insensitive matching against party names.
 export const normalizePartySearch = (text) => text.trim().toLocaleLowerCase().normalize();
 
-// Reports whether a party matches the normalized search query and status filter ('all', 'replied' or 'pending').
+// Matches a normalized name query and a link status, including 'pending' for any party without a reply.
 export function partyMatches(party, query, filter) {
-  const status = party.reply ? 'replied' : 'pending';
-  return party.name.toLocaleLowerCase().normalize().includes(query) && (filter === 'all' || status === filter);
+  const status = partyStatus(party);
+  return (
+    party.name.toLocaleLowerCase().normalize().includes(query) &&
+    (filter === 'all' || status === filter || (filter === 'pending' && status !== 'replied'))
+  );
 }

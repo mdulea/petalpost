@@ -3,7 +3,7 @@ import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
 import { eventLink } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
-import { newId, PARTY_LIMITS, partyLinkSecret, personalLink } from '../rsvp.js';
+import { newId, PARTY_LIMITS, partyLinkSecret, partyStatus, personalLink, viewLink, viewLinkSecret } from '../rsvp.js';
 import { downloadCsv } from './download.js';
 
 let loadedParties = [];
@@ -126,7 +126,7 @@ function button(label, click) {
   return element;
 }
 
-async function renderParty(party, { client, cred, copy, load, signedIn }, words) {
+async function renderParty(party, { client, cred, copy, load, signedIn, formatTime }, words) {
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
@@ -134,8 +134,15 @@ async function renderParty(party, { client, cred, copy, load, signedIn }, words)
   const seats = document.createElement('span');
   seats.textContent = words.defaultSeats(party.defaultSeats);
   const reply = document.createElement('span');
-  reply.textContent = party.reply ? words.answer(party.reply.attending, party.reply.partySize) : words.noReply;
+  reply.textContent = party.reply
+    ? words.answer(party.reply.attending, party.reply.partySize)
+    : words[partyStatus(party)];
   row.append(name, seats, reply);
+  if (party.firstOpenedAt) {
+    const opened = document.createElement('span');
+    opened.textContent = `${words.firstOpened(formatTime(party.firstOpenedAt))} · ${words.lastOpened(formatTime(party.lastOpenedAt))}`;
+    row.append(opened);
+  }
   if (party.reply?.note) {
     const note = document.createElement('p');
     note.textContent = party.reply.note;
@@ -190,7 +197,8 @@ async function renderParty(party, { client, cred, copy, load, signedIn }, words)
 
 async function personalLinkControls(party, cred, copy, words, linkControls) {
   const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
-  const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
+  const base = eventLink(location.origin, cred.id, party.lang);
+  const link = personalLink(base, party.id, secret);
   const copyLink = button(words.copy, async () => {
     try {
       await navigator.clipboard.writeText(link);
@@ -207,7 +215,13 @@ async function personalLinkControls(party, cred, copy, words, linkControls) {
   input.setAttribute('aria-label', `${words.link} · ${party.name}`);
   const controls = document.createElement('div');
   controls.className = 'copy-row';
-  controls.append(input, copyLink);
+  const preview = document.createElement('a');
+  preview.className = 'btn btn-ghost btn-small';
+  preview.href = viewLink(base, party.id, await viewLinkSecret(secret, party.id));
+  preview.target = '_blank';
+  preview.rel = 'noopener';
+  preview.textContent = words.preview;
+  controls.append(input, copyLink, preview);
   return controls;
 }
 

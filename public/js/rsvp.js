@@ -65,8 +65,12 @@ export const manageLink = (origin, id, secret, lang = 'en') =>
 export const signedInLink = (origin, id, token, lang = 'en') =>
   `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#t=${id}.${token}`;
 
-// The tracker reconstructs the party's link from its management secret without reading any secret from the API.
+// The tracker reconstructs the party's links from its management secret without reading any secret from the API.
 export const personalLink = (url, id, secret) => `${url}#p=${id}.${secret}`;
+export const viewLink = (url, id, secret) => `${url}#v=${id}.${secret}`;
+
+// A party's tracker status: 'replied' when it has a reply, 'opened' after a personal link load, or 'notOpened'.
+export const partyStatus = (party) => (party.reply ? 'replied' : party.firstOpenedAt ? 'opened' : 'notOpened');
 
 // Separate HMAC domains derive each party's personal secret from the management secret for each link generation
 // and its view secret from the personal secret. The original links have no generation. Only their hashes are stored.

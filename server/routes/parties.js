@@ -1,7 +1,7 @@
 // Under /api/events/{eventId}/parties, POST with the management secret adds a batch from
 // {entries: [{id, name}], defaultSeats, lang}. PUT /{id} adds one from {name, defaultSeats, lang}.
-// On /{id}, GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
-// GET on /{id}/view uses the view secret and returns {t, d, name}.
+// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply}.
+// GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
 // PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
@@ -110,7 +110,7 @@ const replyColumns = 'r.attending, r.party_size, r.note, r.version as reply_vers
 // Reads only the authenticated host's parties, joined to each party's current reply.
 export async function listParties(db, eventId) {
   const { rows } = await db.query(
-    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, ${replyColumns} from parties p
+    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, p.first_opened_at, p.last_opened_at, ${replyColumns} from parties p
      left join responses r on r.party_id = p.id where p.event_id = $1 order by p.created_at, p.id`,
     [eventId],
   );
@@ -121,6 +121,8 @@ export async function listParties(db, eventId) {
     defaultSeats: p.default_seats,
     revoked: p.revoked,
     linkGeneration: p.link_generation,
+    firstOpenedAt: p.first_opened_at ? new Date(p.first_opened_at).toISOString() : null,
+    lastOpenedAt: p.last_opened_at ? new Date(p.last_opened_at).toISOString() : null,
     reply: replyOf(p),
   }));
 }
@@ -155,8 +157,8 @@ async function changeLink({ db, request, ids: [eventId, id] }) {
   });
 }
 
-function checkPersonalLink(party, secret) {
-  if (!party || party.revoked || !matches(secret, party.secret_hash)) throw new Refusal(404, 'personalLink');
+function checkPartyLink(party, secret, hashColumn = 'secret_hash') {
+  if (!party || party.revoked || !matches(secret, party[hashColumn])) throw new Refusal(404, 'personalLink');
 }
 
 async function getView({ db, request, ids: [eventId, id] }) {
@@ -168,7 +170,7 @@ async function getView({ db, request, ids: [eventId, id] }) {
      from parties p join events e on e.id = p.event_id where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
-  if (!party || party.revoked || !matches(secret, party.view_hash)) throw new Refusal(404, 'personalLink');
+  checkPartyLink(party, secret, 'view_hash');
   return json(200, { t: party.t, d: party.d, name: party.name });
 }
 
@@ -202,21 +204,22 @@ async function getParty({ db, request, ids: [eventId, id] }) {
   const {
     rows: [party],
   } = await db.query(
-    `select p.name, p.default_seats, p.secret_hash, p.view_hash, p.revoked, e.t, e.d, ${replyColumns}
+    `select p.name, p.default_seats, p.secret_hash, p.revoked, e.t, e.d, ${replyColumns}
      from parties p join events e on e.id = p.event_id left join responses r on r.party_id = p.id
      where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
-  checkPersonalLink(party, secret);
+  checkPartyLink(party, secret);
   const view = await viewLinkSecret(secret, id);
-  if (!matches(view, party.view_hash)) {
-    // Sync view_hash if a regenerated personal link stored a placeholder hash while the link is still valid.
-    await db.query(
-      `update parties set view_hash = $1
-       where id = $2 and event_id = $3 and secret_hash = $4 and not revoked`,
-      [hash(view), id, eventId, party.secret_hash],
-    );
-  }
+  // Use the current credential so a concurrent revoke or regeneration cannot record a stale open.
+  const opened = await db.query(
+    `update parties
+     set first_opened_at = coalesce(first_opened_at, now()), last_opened_at = greatest(last_opened_at, now()),
+         view_hash = $1
+     where id = $2 and event_id = $3 and secret_hash = $4 and not revoked returning id`,
+    [hash(view), id, eventId, party.secret_hash],
+  );
+  if (!opened.rows.length) throw new Refusal(404, 'personalLink');
   return json(200, {
     t: party.t,
     d: party.d,
@@ -236,7 +239,7 @@ async function ownedPartyReply(tx, eventId, id, secret) {
     'select name, default_seats, secret_hash, revoked, version from parties where id = $1 and event_id = $2 for update',
     [id, eventId],
   );
-  checkPersonalLink(party, secret);
+  checkPartyLink(party, secret);
   const {
     rows: [reply],
   } = await tx.query(`select ${replyColumns} from responses r where party_id = $1`, [id]);

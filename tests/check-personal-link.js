@@ -1,4 +1,5 @@
-// Checks party creation, personal access, one versioned reply, and withdrawal through the API in both languages.
+// Checks party creation, personal access, opened times, view link read-only access, one versioned reply,
+// and withdrawal through the API in both languages.
 // Checks that revoking or regenerating a link blocks old guest access and keeps replies and tracker totals.
 // A passkey session can read the guest list. Adding parties and changing links need the management secret.
 // A host can rename a party and delete it with its reply. The guest credential cannot manage the party.
@@ -6,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { test } from 'node:test';
-import { newId, partyLinkSecret } from '../public/js/rsvp.js';
+import { newId, partyLinkSecret, partyStatus, readCredential, viewLink, viewLinkSecret } from '../public/js/rsvp.js';
 import { host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
 
@@ -222,5 +223,70 @@ for (const lang of ['en', 'ro']) {
     assert.equal((await request(path, a.secret)).data.reply, null);
     assert.equal((await request(path, a.secret, 'PATCH', answer)).status, 201);
     assert.equal((await request(path, a.secret, 'DELETE', { version: changed.data.version })).status, 409);
+  });
+
+  test(`in ${lang}, loading a personal link records first and last opened times while a view link records none`, async () => {
+    const { client, raw } = await setup();
+    const cred = host();
+    const tracker = client(newId(), lang);
+    await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+    const id = newId();
+    assert.equal((await tracker.addParty(cred, id, { name: 'Familia Radu', defaultSeats: 3 })).status, 201);
+    const personalSecret = createHmac('sha256', cred.secret).update(`petalpost:personal:${id}`).digest('base64url');
+    const viewSecret = await viewLinkSecret(personalSecret, id);
+
+    const link = viewLink(`https://petalpost.example/e/${cred.id}`, id, viewSecret);
+    assert.deepEqual(readCredential(link.slice(link.indexOf('#')), 'v='), { id, secret: viewSecret });
+
+    const before = (await tracker.loadResponses(cred)).data.parties[0];
+    assert.deepEqual([before.firstOpenedAt, before.lastOpenedAt, partyStatus(before)], [null, null, 'notOpened']);
+
+    const viewPath = `/api/events/${cred.id}/parties/${id}/view`;
+    const viewBad = await raw(viewPath, {
+      headers: { authorization: `Bearer ${personalSecret}`, 'accept-language': lang },
+    });
+    assert.equal(viewBad.status, 404);
+
+    const view = await client(newId(), lang).loadPartyView(cred.id, { id, secret: viewSecret });
+    assert.deepEqual([view.status, Object.keys(view.data).sort(), view.data.name], [200, ['d', 'name', 't'], 'Familia Radu']);
+
+    const afterView = (await tracker.loadResponses(cred)).data.parties[0];
+    assert.deepEqual(
+      [afterView.firstOpenedAt, afterView.lastOpenedAt, partyStatus(afterView)],
+      [null, null, 'notOpened'],
+    );
+
+    const guestClient = client(newId(), lang);
+    assert.equal((await guestClient.loadParty(cred.id, { id, secret: personalSecret })).status, 200);
+    const first = (await tracker.loadResponses(cred)).data.parties[0];
+    assert.ok(first.firstOpenedAt && first.lastOpenedAt);
+    assert.equal(first.firstOpenedAt, first.lastOpenedAt);
+    assert.equal(partyStatus(first), 'opened');
+
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    assert.equal((await guestClient.loadParty(cred.id, { id, secret: personalSecret })).status, 200);
+    const second = (await tracker.loadResponses(cred)).data.parties[0];
+    assert.equal(second.firstOpenedAt, first.firstOpenedAt);
+    assert.ok(new Date(second.lastOpenedAt).getTime() >= new Date(first.lastOpenedAt).getTime());
+    assert.ok(second.lastOpenedAt > first.lastOpenedAt);
+
+    assert.equal(
+      (
+        await guestClient.savePartyReply(
+          cred.id,
+          { id, secret: personalSecret },
+          {
+            attending: true,
+            partySize: 2,
+            note: '',
+          },
+        )
+      ).status,
+      201,
+    );
+    const replied = (await tracker.loadResponses(cred)).data.parties[0];
+    assert.equal(partyStatus(replied), 'replied');
+    const viewAfterReply = await client(newId(), lang).loadPartyView(cred.id, { id, secret: viewSecret });
+    assert.deepEqual([viewAfterReply.status, 'reply' in viewAfterReply.data], [200, false]);
   });
 }

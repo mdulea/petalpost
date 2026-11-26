@@ -1,5 +1,5 @@
 // Checks DOM-free guest-list logic: pasted names keep one name per non-empty line, totals count accepted seats,
-// declined parties and pending parties, and search with the status filter matches normalized names and reply state.
+// declined parties and pending parties, and search with the status filter matches normalized names and link or reply state.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals } from '../public/js/guest-list.js';
@@ -26,6 +26,7 @@ test('totals sum accepted seats, declined parties and parties without a reply', 
 test('search and status filter match normalized party names and reply state', () => {
   const replied = { name: 'Ștefan Popescu', reply: { attending: true, partySize: 2 } };
   const pending = { name: 'Ana Ionescu', reply: null };
+  const opened = { ...pending, firstOpenedAt: '2026-11-26T12:00:00.000Z' };
   const query = normalizePartySearch('  ștefan ');
   assert.deepEqual(
     [
@@ -35,7 +36,12 @@ test('search and status filter match normalized party names and reply state', ()
       partyMatches(pending, query, 'all'),
       partyMatches(pending, '', 'pending'),
       partyMatches(pending, '', 'replied'),
+      partyMatches(pending, '', 'notOpened'),
+      partyMatches(pending, '', 'opened'),
+      partyMatches(opened, 'ana', 'opened'),
+      partyMatches(opened, 'ana', 'pending'),
+      partyMatches(opened, 'stefan', 'opened'),
     ],
-    [true, true, false, false, true, false],
+    [true, true, false, false, true, false, true, false, true, true, false],
   );
 });

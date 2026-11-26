@@ -49,7 +49,7 @@
     <main class="prose" id="main">
       <h1>Privacy</h1>
       <p class="lead">Petalpost has no accounts and no cookies. This page lists every place your data goes.</p>
-      <p>Last updated: 15 November 2026.</p>
+      <p>Last updated: 26 November 2026.</p>
 
       <h2>Who is responsible</h2>
       <p>
@@ -83,7 +83,10 @@
         an open invitation. A reply can include a note of up to 300 characters, which the host sees. The note is
         optional, so a guest who writes a health detail in it, such as an allergy, chooses to share it with the host.
       </p>
-      <p>Petalpost also stores when each invitation and each reply was created and last changed.</p>
+      <p>
+        Petalpost also stores when each invitation and each reply was created and last changed, and when each personal
+        link was first and last opened. Opening a view link records no opened time.
+      </p>
       <p>
         Petalpost limits how many invitations one connection can publish per day. For that limit it stores a count with
         a hash of the IP address and a random value that Petalpost makes each day. During that day, someone with access
@@ -137,12 +140,12 @@
 
       <h2>Deletion and retention</h2>
       <p>
-        The host can delete the invitation from the tracker. That removes the invitation, the party names and all
-        replies. Petalpost also deletes them automatically 90 days after the later of the event date and the last change
-        to the invitation. For an invitation without an event date, the 90 days start at the last change. A guest can
-        withdraw a reply through its edit link or personal link. Deleting an invitation also deletes its passkeys and
-        access tokens. A passkey of a deleted invitation stays on the host's device until the host removes it there. It
-        can no longer open the invitation.
+        The host can delete the invitation from the tracker. That removes the invitation, the party names, the personal
+        link opened times and all replies. Petalpost also deletes them automatically 90 days after the later of the
+        event date and the last change to the invitation. For an invitation without an event date, the 90 days start at
+        the last change. A guest can withdraw a reply through its edit link or personal link. Deleting an invitation
+        also deletes its passkeys and access tokens. A passkey of a deleted invitation stays on the host's device until
+        the host removes it there. It can no longer open the invitation.
       </p>
 
       <h2>Your rights</h2>
