@@ -3,12 +3,17 @@
 // On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply, deadlineClosed, table}.
 // table is the party's table name while the seating plan is published, and null otherwise.
 // GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
-// Both reads also return updateNotice when the host has saved one.
+// Both reads also return updateNotice when the host has saved one. Their d holds only the party's sub-events, from
+// partyInvite in public/js/invite.js, and the reply holds only its answers to them, from partyReply in rsvp.js.
+// PATCH on /parties accepts a host credential and {ids, subEvents}. It invites every party of ids to the sub-events
+// of subEvents, a list of the invitation's sub-event ids, and returns 204. A list of every sub-event is stored as the
+// default empty list, so the parties also get the sub-events the host adds later. An unknown party gets 404.
 // PATCH with the personal secret saves {attending, partySize, answers?, meals?, note?, version?, lang?} and returns
 // {version}.
-// A reply to an invitation with sub-events answers each sub-event, as makeReply in public/js/rsvp.js describes, and
-// every read of a reply carries its stored answers. An attending reply to an invitation with menu options gives a meal
-// count for each option, and the counts add up to its party size. Every read of a reply carries its stored meal counts.
+// A reply to an invitation with sub-events answers each sub-event of the party, as makeReply in public/js/rsvp.js
+// describes, and every read of a reply carries its stored answers. An attending reply to an invitation with menu
+// options gives a meal count for each option, and the counts add up to its party size. Every read of a reply carries
+// its stored meal counts.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
 // PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
 // Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
@@ -23,7 +28,7 @@
 import { isDeadlinePassed } from '../../public/js/countdown.js';
 import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
-import { menuOptionIds, modeOf, subEventIds } from '../../public/js/invite.js';
+import { menuOptionIds, modeOf, partyInvite, partySubEventIds, subEventIds } from '../../public/js/invite.js';
 import {
   answersOf,
   ID_PATTERN,
@@ -32,6 +37,7 @@ import {
   newId,
   PARTY_LIMITS,
   partyLinkSecret,
+  partyReply,
   storedAnswers,
   storedMeals,
   viewLinkSecret,
@@ -46,7 +52,7 @@ export const routes = [
   viewRoute,
   {
     pattern: /^\/api\/events\/([^/]+)\/parties$/,
-    methods: { POST: addParties },
+    methods: { POST: addParties, PATCH: setSubEvents },
   },
   {
     pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)$/,
@@ -122,42 +128,51 @@ async function insertParties(db, eventId, secret, entries, defaultSeats, lang) {
   });
 }
 
-// Reads a basic party reply from an explicitly selected row. No reply is represented by null.
-const replyOf = (row) =>
+// Reads a basic party reply from an explicitly selected row, narrowed to the sub-event ids the party is invited to.
+// No reply is represented by null.
+const replyOf = (row, ids) =>
   row?.reply_version == null
     ? null
-    : {
-        attending: row.attending,
-        partySize: row.party_size,
-        ...answersOf(row.answers),
-        ...mealsOf(row.meals),
-        note: row.note,
-        version: row.reply_version,
-      };
+    : partyReply(
+        {
+          attending: row.attending,
+          partySize: row.party_size,
+          ...answersOf(row.answers),
+          ...mealsOf(row.meals),
+          note: row.note,
+          version: row.reply_version,
+        },
+        ids,
+      );
 
 const replyColumns = 'r.attending, r.party_size, r.answers, r.meals, r.note, r.version as reply_version';
 
-// Reads the authenticated host's parties and prepares older view hashes when the host has the management link.
-export async function listParties(db, eventId, managementSecret) {
+// Reads the authenticated host's parties of the invitation with settings d and prepares older view hashes when the
+// host has the management link. subEvents lists the ids of the sub-events each party is invited to.
+export async function listParties(db, eventId, d, managementSecret) {
   const { rows } = await db.query(
-    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, p.secret_hash, p.view_hash, p.table_id,
+    `select p.id, p.name, p.lang, p.default_seats, p.sub_events, p.revoked, p.link_generation, p.secret_hash, p.view_hash, p.table_id,
             p.first_opened_at, p.last_opened_at, ${replyColumns} from parties p
      left join responses r on r.party_id = p.id where p.event_id = $1 order by p.created_at, p.id`,
     [eventId],
   );
   if (managementSecret) await preparePreviews(db, eventId, managementSecret, rows);
-  return rows.map((p) => ({
-    id: p.id,
-    name: p.name,
-    lang: p.lang,
-    defaultSeats: p.default_seats,
-    revoked: p.revoked,
-    linkGeneration: p.link_generation,
-    firstOpenedAt: p.first_opened_at ? new Date(p.first_opened_at).toISOString() : null,
-    lastOpenedAt: p.last_opened_at ? new Date(p.last_opened_at).toISOString() : null,
-    tableId: p.table_id,
-    reply: replyOf(p),
-  }));
+  return rows.map((p) => {
+    const subEvents = partySubEventIds(d, p.sub_events);
+    return {
+      id: p.id,
+      name: p.name,
+      lang: p.lang,
+      defaultSeats: p.default_seats,
+      revoked: p.revoked,
+      linkGeneration: p.link_generation,
+      firstOpenedAt: p.first_opened_at ? new Date(p.first_opened_at).toISOString() : null,
+      lastOpenedAt: p.last_opened_at ? new Date(p.last_opened_at).toISOString() : null,
+      tableId: p.table_id,
+      subEvents,
+      reply: replyOf(p, subEvents),
+    };
+  });
 }
 
 async function preparePreviews(db, eventId, managementSecret, parties) {
@@ -222,13 +237,14 @@ async function getView({ db, request, ids: [eventId, id] }) {
   const {
     rows: [party],
   } = await db.query(
-    `select p.name, p.view_hash, p.revoked, e.t, e.d
+    `select p.name, p.view_hash, p.revoked, p.sub_events, e.t, e.d
      from parties p join events e on e.id = p.event_id where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
   if (!party && (await isEnded(db, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret, 'view_hash');
-  return json(200, { ...presentationOf(party, true), name: party.name });
+  const invite = { t: party.t, d: partyInvite(party.d, party.sub_events) };
+  return json(200, { ...presentationOf(invite, true), name: party.name });
 }
 
 async function renameParty({ db, request, ids: [eventId, id] }) {
@@ -261,7 +277,8 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
   const {
     rows: [party],
   } = await db.query(
-    `select p.name, p.default_seats, p.secret_hash, p.revoked, e.t, e.d, ${replyColumns}, t.name as table_name
+    `select p.name, p.default_seats, p.sub_events, p.secret_hash, p.revoked, e.t, e.d, ${replyColumns},
+            t.name as table_name
      from parties p join events e on e.id = p.event_id left join responses r on r.party_id = p.id
      left join seating_tables t on t.id = p.table_id where p.id = $1 and p.event_id = $2`,
     [id, eventId],
@@ -279,23 +296,25 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
   );
   if (!opened.rows.length) throw new Refusal(404, 'personalLink');
   return json(200, {
-    ...presentationOf(party, true),
+    ...presentationOf({ t: party.t, d: partyInvite(party.d, party.sub_events) }, true),
     name: party.name,
     defaultSeats: party.default_seats,
-    reply: replyOf(party),
+    reply: replyOf(party, partySubEventIds(party.d, party.sub_events)),
     deadlineClosed: isDeadlinePassed(party.d?.deadline, now()),
     table: isSeatingPublished(party.d) ? (party.table_name ?? null) : null,
   });
 }
 
-const currentPartyReply = async (tx, id) => {
+// The party's reply narrowed to the sub-event ids the party is invited to.
+const currentPartyReply = async (tx, id, ids) => {
   const {
     rows: [reply],
   } = await tx.query(`select ${replyColumns} from responses r where party_id = $1`, [id]);
-  return replyOf(reply);
+  return replyOf(reply, ids);
 };
 
-// Serializes reply changes through the party row. A fresh read after locking sees the latest reply.
+// Serializes reply changes through the party row. A fresh read after locking sees the latest reply. subEventIds
+// lists the sub-events the party is invited to.
 async function ownedPartyReply(tx, eventId, id, secret, now) {
   // The event is the parent of both rows. Lock it first to keep the order of a concurrent invitation deletion.
   const {
@@ -304,13 +323,14 @@ async function ownedPartyReply(tx, eventId, id, secret, now) {
   const {
     rows: [party],
   } = await tx.query(
-    'select name, secret_hash, revoked, version from parties where id = $1 and event_id = $2 for update',
+    'select name, secret_hash, revoked, version, sub_events from parties where id = $1 and event_id = $2 for update',
     [id, eventId],
   );
   if (!party && (await isEnded(tx, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret);
   if (isDeadlinePassed(event?.d?.deadline, now())) throw new Refusal(403, 'deadlinePassed');
-  return { ...party, d: event.d, reply: await currentPartyReply(tx, id) };
+  const ids = partySubEventIds(event.d, party.sub_events);
+  return { ...party, d: event.d, subEventIds: ids, reply: await currentPartyReply(tx, id, ids) };
 }
 
 // Verifies the reply version, upserts the party's reply and advances the party version across withdrawals.
@@ -347,7 +367,7 @@ async function saveReply({ db, request, ids: [eventId, id], now }) {
     const party = await ownedPartyReply(tx, eventId, id, secret, now);
     const { reply } = makeReply(
       { ...body, name: party.name },
-      { partySizeLimit: PARTY_LIMITS.seats, subEventIds: subEventIds(party.d), menuIds: menuOptionIds(party.d) },
+      { partySizeLimit: PARTY_LIMITS.seats, subEventIds: party.subEventIds, menuIds: menuOptionIds(party.d) },
     );
     if (!reply) throw new Refusal(400, 'partyReply');
     const version = await writePartyReply(tx, eventId, id, party, reply, body.version);
@@ -364,14 +384,18 @@ async function saveHostReply({ db, request, ids: [eventId, id] }) {
     if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
     const {
       rows: [party],
-    } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
+    } = await tx.query('select name, version, sub_events from parties where id = $1 and event_id = $2 for update', [
+      id,
+      eventId,
+    ]);
     if (!party) throw new Refusal(404, 'personalLink');
+    const ids = partySubEventIds(event.d, party.sub_events);
     const { reply } = makeReply(
       { ...body, name: party.name },
-      { partySizeLimit: PARTY_LIMITS.seats, subEventIds: subEventIds(event.d), menuIds: menuOptionIds(event.d) },
+      { partySizeLimit: PARTY_LIMITS.seats, subEventIds: ids, menuIds: menuOptionIds(event.d) },
     );
     if (!reply) throw new Refusal(400, 'partyReply');
-    const current = await currentPartyReply(tx, id);
+    const current = await currentPartyReply(tx, id, ids);
     const version = await writePartyReply(tx, eventId, id, { ...party, reply: current }, reply, body.version);
     return json(current ? 200 : 201, { version });
   });
@@ -405,7 +429,8 @@ async function setPartySeats({ db, request, ids: [eventId, id] }) {
       rows: [party],
     } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
     if (!party) throw new Refusal(404, 'partyMissing');
-    const current = await currentPartyReply(tx, id);
+    // The invitation has no sub-events here, so the reply has no answers to keep.
+    const current = await currentPartyReply(tx, id, []);
     const { reply } = makeReply(
       { name: party.name, attending: partySize > 0, partySize, meals, note: current?.note ?? '' },
       { partySizeLimit: PARTY_LIMITS.seats, menuIds: menuOptionIds(event.d) },
@@ -413,5 +438,30 @@ async function setPartySeats({ db, request, ids: [eventId, id] }) {
     if (!reply) throw new Refusal(400, 'partyMeals');
     const nextVersion = await writePartyReply(tx, eventId, id, { ...party, reply: current }, reply, version);
     return json(200, { version: nextVersion });
+  });
+}
+
+// A non-empty list of distinct items that valid accepts.
+const distinctList = (list, valid) =>
+  Array.isArray(list) && list.length > 0 && list.every(valid) && new Set(list).size === list.length;
+
+async function setSubEvents({ db, request, ids: [eventId] }) {
+  const secret = bearer(request);
+  const { ids, subEvents } = await readBody(request);
+  if (!distinctList(ids, (id) => typeof id === 'string' && ID_PATTERN.test(id)) || ids.length > PARTY_LIMITS.count)
+    throw new Refusal(400, 'partySubEvents');
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, eventId, secret);
+    if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
+    const all = subEventIds(event.d);
+    if (!distinctList(subEvents, (id) => all.includes(id))) throw new Refusal(400, 'partySubEvents');
+    const stored = subEvents.length === all.length ? [] : all.filter((id) => subEvents.includes(id));
+    const { rows } = await tx.query(
+      `update parties set sub_events = $3::text::jsonb, updated_at = now()
+       where event_id = $1 and id = any($2::text[]) returning id`,
+      [eventId, ids, JSON.stringify(stored)],
+    );
+    if (rows.length !== ids.length) throw new Refusal(404, 'partyMissing');
+    return json(204, null);
   });
 }

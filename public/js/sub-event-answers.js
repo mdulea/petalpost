@@ -2,7 +2,7 @@
 // reply form, and the answer lines and totals in the tracker. Sub-event names are host text and guest data is
 // untrusted, so both enter the page as textContent.
 import { UI } from './i18n.js';
-import { answerTo, subEventTally } from './rsvp.js';
+import { answerTo } from './rsvp.js';
 
 /**
  * One fieldset for each sub-event of labels, from subEventLabels in invite.js, with a yes and a no choice and the
@@ -98,14 +98,11 @@ export function answerList(labels, reply, lang) {
   return list;
 }
 
-// The totals of each sub-event of labels over replies, as items for the tracker's totals list. The list is empty
-// without sub-events.
-export function answerTotals(labels, replies, lang) {
+// The totals of each sub-event of labels, from subEventTally in rsvp.js or partySubEventTally in guest-list.js in the
+// same order, as items for the tracker's totals list. The list is empty without sub-events.
+export function answerTotals(labels, tallies, lang) {
   const copy = UI[lang].subEventReplies;
-  return subEventTally(
-    labels.map(({ id }) => id),
-    replies,
-  ).map((totals, i) => {
+  return tallies.map((totals, i) => {
     const item = document.createElement('li');
     item.className = 'total total-line';
     item.textContent = copy.totals({ name: labels[i].name, ...totals });

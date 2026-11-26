@@ -1,5 +1,6 @@
-// DOM-free guest-list helpers: party name validation, paste parsing, whole-list totals and search/status filtering.
-import { PARTY_LIMITS, partyStatus } from './rsvp.js';
+// DOM-free guest-list helpers: party name validation, paste parsing, whole-list and sub-event totals and search/status
+// filtering.
+import { PARTY_LIMITS, partyStatus, subEventTally } from './rsvp.js';
 
 export function validPartyName(name) {
   const length = [...name].length;
@@ -29,6 +30,18 @@ export function partyTotals(parties, unattached = []) {
   }
   return { accepted, declined, pending };
 }
+
+// The totals of each sub-event id, in order, over the guest list. yes, no, attending and unanswered count as
+// subEventTally counts them, over the replies of the parties invited to the sub-event and the earlier replies without
+// a party. pending counts the parties invited to the sub-event without a reply. Each party lists the ids of its
+// sub-events in subEvents.
+export const partySubEventTally = (ids, parties, unattached = []) =>
+  ids.map((id) => {
+    const invited = parties.filter((party) => party.subEvents.includes(id));
+    const replies = invited.map((party) => party.reply).filter(Boolean);
+    const [totals] = subEventTally([id], [...replies, ...unattached]);
+    return { ...totals, pending: invited.length - replies.length };
+  });
 
 // Normalizes a search query for case- and Unicode-insensitive matching against party names.
 export const normalizePartySearch = (text) => text.trim().toLocaleLowerCase().normalize();

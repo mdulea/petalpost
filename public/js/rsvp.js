@@ -133,6 +133,22 @@ export function mealTally(ids, replies) {
   };
 }
 
+// reply as a party invited to the sub-events ids has it: only its answers to ids, from which it attends when any
+// answer is yes and takes the largest party size, as makeReply derives them. A reply whose answers include none to
+// ids, such as one to the sub-events the host later took from the party, has no answers key and covers no people, so
+// it holds no seats and has no meal counts, as a declining reply. A reply without answers and null stay unchanged.
+export function partyReply(reply, ids) {
+  if (!reply?.answers) return reply;
+  const { answers, ...rest } = reply;
+  const kept = ids.filter((id) => Object.hasOwn(answers, id)).map((id) => [id, answers[id]]);
+  if (!kept.length) {
+    const { meals, ...declined } = rest;
+    return { ...declined, attending: false, partySize: 0 };
+  }
+  const partySize = Math.max(...kept.map(([, answer]) => answer.partySize));
+  return { ...rest, attending: partySize > 0, partySize, answers: Object.fromEntries(kept) };
+}
+
 // The answer of reply to the sub-event id as {attending, partySize}, or null when the reply has none. A reply saved
 // before the host added the sub-event has none, and a reply saved before the invitation had sub-events has no answers.
 export const answerTo = (reply, id) => (reply.answers && Object.hasOwn(reply.answers, id) ? reply.answers[id] : null);
@@ -352,6 +368,9 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
       }
       return { ok: true, added };
     },
+    // Invites the parties of ids to the sub-events of subEventIds; data is null.
+    setPartySubEvents: (cred, ids, subEventIds) =>
+      call('PATCH', `${eventPath(cred.id)}/parties`, cred.secret, { ids, subEvents: subEventIds }),
     // Sets, changes or clears (null) the RSVP deadline of a guest-list invitation.
     setDeadline: (cred, deadline) => call('PATCH', `${eventPath(cred.id)}/deadline`, cred.secret, { deadline }),
     // Lets the host record or edit a party's reply in the tracker, even after the RSVP deadline.

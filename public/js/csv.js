@@ -22,14 +22,16 @@ function cell(value, separator) {
 }
 
 // Two columns for each sub-event of labels, from subEventLabels in invite.js: whether the reply attends it and its
-// people. Both are empty for a missing reply and for a reply without an answer to the sub-event. A spreadsheet sums a
-// people column for the sub-event's total.
+// people. Both are empty for a missing reply and for a reply without an answer to the sub-event. A party not invited to
+// the sub-event, whose sub-event ids invited lists, gets "Not invited" and no people. A spreadsheet sums a people
+// column for the sub-event's total.
 function answerColumns(labels, lang) {
   const copy = UI[normalizeLang(lang)].subEventReplies;
   return labels.flatMap(({ name }) => [copy.csvAnswer(name), copy.csvPeople(name)]);
 }
-const answerCells = (labels, reply, copy) =>
+const answerCells = (labels, reply, copy, invited = null) =>
   labels.flatMap(({ id }) => {
+    if (invited && !invited.includes(id)) return [copy.notInvited, ''];
     const answer = reply && answerTo(reply, id);
     return answer ? [answer.attending ? copy.yes : copy.no, String(answer.partySize)] : ['', ''];
   });
@@ -96,15 +98,16 @@ export const repliesCsvName = (lang, now) => `${UI[normalizeLang(lang)].csv.file
 
 // Exports every party in the management read. Seats come from the reply or the party's default before a reply. The
 // answer columns of the sub-events of labels follow the attending column, then the meal columns of the menu options
-// of menu, and a totals row of both over the replies ends the file.
+// of menu, and a totals row of both over the replies ends the file. A party with subEvents gets answers
+// only to those sub-events.
 export function guestListCsv(parties, lang, labels = [], menu = []) {
   const { csv: copy, guestList } = UI[normalizeLang(lang)];
-  const rows = parties.map(({ name, defaultSeats, reply }) => [
+  const rows = parties.map(({ name, defaultSeats, reply, subEvents }) => [
     name,
     reply ? guestList.replied : guestList.noReply,
     String(reply?.partySize ?? defaultSeats),
     reply ? (reply.attending ? copy.yes : copy.no) : '',
-    ...answerCells(labels, reply, copy),
+    ...answerCells(labels, reply, copy, subEvents),
     ...mealCells(menu, reply),
     reply?.note ?? '',
   ]);

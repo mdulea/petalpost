@@ -4,7 +4,7 @@
 import { repliesCsv, repliesCsvName } from '../csv.js';
 import { menuLabels, subEventLabels } from '../invite.js';
 import { mealLine, mealTotals } from '../meal-choices.js';
-import { answerTo } from '../rsvp.js';
+import { answerTo, subEventTally } from '../rsvp.js';
 import { answerLine, answerTotals } from '../sub-event-answers.js';
 import { downloadCsv } from './download.js';
 import { renderTotals } from './totals.js';
@@ -43,9 +43,17 @@ function show({ responses, totals, invite }, { copy, formatTime, lang }) {
     [no, no === 1 ? copy.noOne : copy.noMany],
     [attending, attending === 1 ? copy.attendingOne : copy.attendingMany],
   ]);
-  document
-    .getElementById('totals')
-    .append(...answerTotals(labels, responses, lang), ...mealTotals(menu, responses, lang));
+  document.getElementById('totals').append(
+    ...answerTotals(
+      labels,
+      subEventTally(
+        labels.map(({ id }) => id),
+        responses,
+      ),
+      lang,
+    ),
+    ...mealTotals(menu, responses, lang),
+  );
   document
     .getElementById('responseList')
     .replaceChildren(
