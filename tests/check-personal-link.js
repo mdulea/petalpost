@@ -27,8 +27,8 @@ test('a passkey session reads the guest list but cannot create parties or change
   assert.equal(signedIn.status, 200);
   const tokenCred = { id: cred.id, secret: signedIn.data.token };
   const refused = await other.addParty(tokenCred, newId(), { name: 'Lee', defaultSeats: 3 });
-  assert.equal((await other.changePartyLink(tokenCred, id, true)).status, 403);
-  assert.equal((await other.changePartyLink(tokenCred, id, false)).status, 403);
+  assert.equal((await other.changePartyLink(tokenCred, id, 'revoke')).status, 403);
+  assert.equal((await other.changePartyLink(tokenCred, id, 'regenerate')).status, 403);
   const list = await other.loadResponses(tokenCred);
   assert.deepEqual(
     { refused: refused.status, read: list.status, names: list.data.parties.map(({ name }) => name) },
@@ -47,15 +47,15 @@ for (const lang of ['en', 'ro']) {
     await tracker.addParty(cred, id, { name: 'Familia Radu', defaultSeats: 3 });
     const personal = {
       id,
-      secret: createHmac('sha256', cred.secret).update(`petalpost:personal:${id}`).digest('base64url'),
+      secret: await partyLinkSecret(cred.secret, id, 'personal'),
     };
     const answer = { attending: true, partySize: 2, note: 'Fără nuci' };
     const saved = await guest.savePartyReply(cred.id, personal, answer);
     assert.equal(saved.status, 201);
     personal.version = saved.data.version;
     const before = (await tracker.loadResponses(cred)).data;
-    assert.equal((await guest.changePartyLink({ id: cred.id, secret: personal.secret }, id, true)).status, 403);
-    assert.equal((await tracker.changePartyLink(cred, id, true)).status, 204);
+    assert.equal((await guest.changePartyLink({ id: cred.id, secret: personal.secret }, id, 'revoke')).status, 403);
+    assert.equal((await tracker.changePartyLink(cred, id, 'revoke')).status, 204);
     const unavailable =
       lang === 'en'
         ? 'This link no longer works. Ask the host for a new one.'
@@ -87,15 +87,15 @@ for (const lang of ['en', 'ro']) {
       const old = { id, secret: await partyLinkSecret(cred.secret, id, 'personal') };
       if (hadReply) assert.equal((await guest.savePartyReply(cred.id, old, answer)).status, 201);
       const before = (await tracker.loadResponses(cred)).data;
-      if (hadReply) assert.equal((await tracker.changePartyLink(cred, id, true)).status, 204);
-      assert.equal((await tracker.changePartyLink(cred, id, false)).status, 204);
+      if (hadReply) assert.equal((await tracker.changePartyLink(cred, id, 'revoke')).status, 204);
+      assert.equal((await tracker.changePartyLink(cred, id, 'regenerate')).status, 204);
       const after = (await tracker.loadResponses(cred)).data;
       const entry = after.parties.find((entry) => entry.id === id);
       assert.equal(entry.revoked, false);
       assert.deepEqual(after.totals, before.totals);
       assert.deepEqual(entry.reply, before.parties.find((entry) => entry.id === id).reply);
-      assert.equal((await tracker.changePartyLink(cred, id, false)).status, 409);
-      assert.equal((await tracker.changePartyLink(cred, id, true)).status, 409);
+      assert.equal((await tracker.changePartyLink(cred, id, 'regenerate')).status, 409);
+      assert.equal((await tracker.changePartyLink(cred, id, 'revoke')).status, 409);
       const secret = await partyLinkSecret(cred.secret, id, 'personal', entry.linkGeneration);
       assert.notEqual(secret, old.secret);
       const newLink = { id, secret };

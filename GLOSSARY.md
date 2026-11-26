@@ -114,7 +114,7 @@ _Avoid_ `dashboard`, `admin page` and `management page`.
 
 **Personal link**
 
-The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
+The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
 _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 **View link**

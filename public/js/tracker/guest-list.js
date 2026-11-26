@@ -69,20 +69,16 @@ async function show({ parties }, { client, cred, lang, copy, signedIn, load }) {
       const actions = document.createElement('div');
       actions.className = 'reply-actions';
       const linkControls = [];
-      const change = (revoked) => {
-        const button = linkButton(revoked ? words.revoke : words.regenerate);
+      const change = (action, { label, confirm, done }) => {
+        const button = linkButton(label);
         linkControls.push(button);
         actions.append(button);
         button.addEventListener('click', async () => {
-          if (!window.confirm(revoked ? words.revokeConfirm : words.regenerateConfirm)) return;
+          if (!window.confirm(confirm)) return;
           for (const control of linkControls) control.disabled = true;
           status.textContent = '';
-          const result = await client.changePartyLink(cred, party.id, revoked, party.linkGeneration);
-          if (result.ok) {
-            status.textContent = revoked ? words.revoked : words.regenerated;
-          } else {
-            status.textContent = result.message;
-          }
+          const result = await client.changePartyLink(cred, party.id, action, party.linkGeneration);
+          status.textContent = result.ok ? done : result.message;
           await load();
         });
       };
@@ -108,9 +104,9 @@ async function show({ parties }, { client, cred, lang, copy, signedIn, load }) {
         controls.className = 'copy-row';
         controls.append(input, button);
         row.append(controls);
-        change(true);
+        change('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
       }
-      change(false);
+      change('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
       row.append(actions);
       return row;
     }),

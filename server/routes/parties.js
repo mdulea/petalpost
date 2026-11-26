@@ -2,9 +2,9 @@
 // {name, defaultSeats, lang}. GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
-// PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {revoked, linkGeneration}.
-// True revokes. False replaces both secrets and enables the new links. Both preserve the reply and return 204.
-// A request for an older link generation returns 409.
+// PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {action, linkGeneration}.
+// Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
+// Both preserve the reply and return 204. A request for an older link generation returns 409.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret } from '../../public/js/rsvp.js';
@@ -86,9 +86,9 @@ export async function listParties(db, eventId) {
 
 async function changeLink({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
-  const { revoked, linkGeneration } = await readBody(request);
+  const { action, linkGeneration } = await readBody(request);
   if (
-    typeof revoked !== 'boolean' ||
+    (action !== 'revoke' && action !== 'regenerate') ||
     (linkGeneration !== null && (typeof linkGeneration !== 'string' || !ID_PATTERN.test(linkGeneration)))
   )
     throw new Refusal(400, 'body');
@@ -99,7 +99,7 @@ async function changeLink({ db, request, ids: [eventId, id] }) {
     } = await tx.query('select link_generation from parties where id = $1 and event_id = $2 for update', [id, eventId]);
     if (!party) throw new Refusal(404, 'personalLink');
     if (party.link_generation !== linkGeneration) throw new Refusal(409, 'partyLinkChanged');
-    if (revoked) {
+    if (action === 'revoke') {
       await tx.query('update parties set revoked = true where id = $1', [id]);
     } else {
       const generation = newId();

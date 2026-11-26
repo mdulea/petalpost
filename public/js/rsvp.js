@@ -206,8 +206,8 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // Adds one party using an id that the tracker can reuse after a lost confirmation.
     addParty: (cred, id, party) => call('PUT', partyPath(cred.id, id), cred.secret, { ...party, lang: code }),
     // Revokes or regenerates a party's links using the management secret.
-    changePartyLink: (cred, id, revoked, linkGeneration = null) =>
-      call('PATCH', `${partyPath(cred.id, id)}/link`, cred.secret, { revoked, linkGeneration }),
+    changePartyLink: (cred, id, action, linkGeneration = null) =>
+      call('PATCH', `${partyPath(cred.id, id)}/link`, cred.secret, { action, linkGeneration }),
     loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
     savePartyReply: (eventId, cred, reply) =>
       call('PATCH', partyPath(eventId, cred.id), cred.secret, { ...reply, version: cred.version, lang: code }),

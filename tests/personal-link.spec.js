@@ -80,8 +80,8 @@ for (const lang of ['en', 'ro']) {
     await expect(row).toContainText('Fără nuci');
 
     const oldLink = await newBrowser(browser);
-    const expectUnavailable = async () => {
-      await oldLink.page.goto(link);
+    const expectUnavailable = async (url = link) => {
+      await oldLink.page.goto(url);
       await expect(oldLink.page.getByText(copy.unavailable)).toBeVisible();
       await expect(oldLink.page.getByText('Daria', { exact: true })).toBeHidden();
       await expect(oldLink.page.getByRole('heading', { name: copy.greeting })).toBeHidden();
@@ -126,6 +126,7 @@ for (const lang of ['en', 'ro']) {
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
     await guest.page.goto(await host.page.evaluate(() => navigator.clipboard.readText()));
     await expect(form.getByRole('status')).toHaveText(copy.noReply);
+    await expectUnavailable(newLink);
     expect([...host.problems, ...guest.problems, ...oldLink.problems]).toEqual([]);
   });
 }
