@@ -10,31 +10,67 @@ export const API_BODY_LIMIT = 8 * 1024;
 export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-// The fields of a reply, in the order the reply form shows them.
-export const REPLY_FIELDS = ['name', 'attending', 'partySize', 'note'];
+// The fields of a reply, in the order the reply form shows them. A reply to an invitation with sub-events has
+// answers in place of attending and partySize.
+export const REPLY_FIELDS = ['name', 'attending', 'partySize', 'answers', 'note'];
 
-// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize, note} becomes
-// {reply, invalid}. reply is the valid reply, or null when invalid lists the invalid fields in REPLY_FIELDS order.
-// The name is trimmed and holds 1 to 80 code points without control characters. An attending guest brings
-// a party of 1 to 10 people; a declined reply has a party size of exactly 0. Without a valid answer, the party size
-// only has to be a whole number. The note is optional and defaults to empty. It is trimmed, its line breaks become
-// \n, and it holds at most 300 code points without control characters other than \n.
-export function makeReply(source, partySizeLimit = REPLY_LIMITS.partySize) {
-  const { name, attending, partySize, note = '' } = source && typeof source === 'object' ? source : {};
+// An attending party has 1 to limit people, and a declined answer has a party size of exactly 0. Without a valid
+// attending, the party size only has to be a whole number.
+const invalidPartySize = (attending, partySize, limit) =>
+  !Number.isInteger(partySize) ||
+  (attending === true && (partySize < 1 || partySize > limit)) ||
+  (attending === false && partySize !== 0);
+
+const validAnswer = (answer, limit) =>
+  Boolean(answer) &&
+  typeof answer === 'object' &&
+  Object.keys(answer).length === 2 &&
+  typeof answer.attending === 'boolean' &&
+  !invalidPartySize(answer.attending, answer.partySize, limit);
+
+// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize, answers, note}
+// becomes {reply, invalid}. reply is the valid {name, attending, partySize, answers?, note}, or null when invalid lists
+// the invalid fields in REPLY_FIELDS order. The name is trimmed and holds 1 to 80 code points without control
+// characters. The note is optional and defaults to empty. It is trimmed, its line breaks become \n, and it holds at
+// most 300 code points without control characters other than \n.
+// Without subEventIds, the reply gives one answer: attending, with a party size from 1 to partySizeLimit when
+// attending or 0 when not. The reply then has no answers key, whatever the source holds.
+// With subEventIds, the ids of the invitation's sub-events, source.answers maps each id, and no other key, to
+// {attending, partySize} under the same rules. The source's own attending and partySize are ignored. The reply
+// attends when any answer is yes, and its party size is the largest party size among its answers, which is the
+// number of people the reply covers.
+export function makeReply(source, { partySizeLimit = REPLY_LIMITS.partySize, subEventIds = [] } = {}) {
+  const { name, attending, partySize, answers, note = '' } = source && typeof source === 'object' ? source : {};
   const trimmed = typeof name === 'string' ? name.trim() : '';
   const length = [...trimmed].length;
   const noteText = typeof note === 'string' ? note.replace(/\r\n?/g, '\n').trim() : '';
+  const bySubEvent = subEventIds.length > 0;
   const isInvalid = {
     name: length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed),
-    attending: typeof attending !== 'boolean',
-    partySize:
-      !Number.isInteger(partySize) ||
-      (attending === true && (partySize < 1 || partySize > partySizeLimit)) ||
-      (attending === false && partySize !== 0),
+    attending: !bySubEvent && typeof attending !== 'boolean',
+    partySize: !bySubEvent && invalidPartySize(attending, partySize, partySizeLimit),
+    answers:
+      bySubEvent &&
+      !(
+        answers &&
+        typeof answers === 'object' &&
+        !Array.isArray(answers) &&
+        Object.keys(answers).length === subEventIds.length &&
+        subEventIds.every((id) => Object.hasOwn(answers, id) && validAnswer(answers[id], partySizeLimit))
+      ),
     note: typeof note !== 'string' || [...noteText].length > REPLY_LIMITS.note || /(?!\n)\p{Cc}/u.test(noteText),
   };
   const invalid = REPLY_FIELDS.filter((field) => isInvalid[field]);
-  return { reply: invalid.length ? null : { name: trimmed, attending, partySize, note: noteText }, invalid };
+  if (invalid.length) return { reply: null, invalid };
+  if (!bySubEvent) return { reply: { name: trimmed, attending, partySize, note: noteText }, invalid };
+  const kept = Object.fromEntries(
+    subEventIds.map((id) => [id, { attending: answers[id].attending, partySize: answers[id].partySize }]),
+  );
+  const largest = Math.max(...subEventIds.map((id) => kept[id].partySize));
+  return {
+    reply: { name: trimmed, attending: largest > 0, partySize: largest, answers: kept, note: noteText },
+    invalid,
+  };
 }
 
 // Totals for the host: responses counts every reply, yes and no count the answers,
@@ -48,6 +84,29 @@ export function tally(responses) {
     attending: yes.reduce((sum, r) => sum + r.partySize, 0),
   };
 }
+
+// The answers key of a reply read from its stored answers, the database's {} for a reply without sub-events. A reply
+// without answers has no key, so it keeps the shape of a reply from before sub-events.
+export const answersOf = (stored) => (stored && Object.keys(stored).length ? { answers: stored } : {});
+
+// The answer of reply to the sub-event id as {attending, partySize}, or null when the reply has none. A reply saved
+// before the host added the sub-event has none, and a reply saved before the invitation had sub-events has no answers.
+export const answerTo = (reply, id) => (reply.answers && Object.hasOwn(reply.answers, id) ? reply.answers[id] : null);
+
+// The totals of each sub-event id, in order, over replies: yes and no count the answers, attending sums the party
+// sizes of the yes answers, and unanswered counts the replies without an answer to the sub-event.
+export const subEventTally = (ids, replies) =>
+  ids.map((id) => {
+    const answers = replies.map((reply) => answerTo(reply, id));
+    const yes = answers.filter((a) => a?.attending);
+    return {
+      id,
+      yes: yes.length,
+      no: answers.filter((a) => a && !a.attending).length,
+      attending: yes.reduce((sum, a) => sum + a.partySize, 0),
+      unanswered: answers.filter((a) => !a).length,
+    };
+  });
 
 // The editor page URL on the site origin. Share, invitation and response edit links start from it.
 export const editorPage = (origin, lang = 'en') =>
@@ -203,10 +262,10 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // Attaches an earlier unattached reply to a party without a reply; data is null.
     attachReply: (cred, responseId, partyId) =>
       call('POST', `${replyPath(cred.id, responseId)}/attach`, cred.secret, { partyId }),
-    // Creates the guest's reply {name, attending, partySize, note}, or updates it when cred.version is set.
+    // Creates the guest's reply {name, attending, partySize, answers?, note}, or updates it when cred.version is set.
     // The page language goes with it for the server's count. data is {version, created}.
     saveReply: (eventId, cred, reply) => save(replyPath(eventId, cred.id), cred, { ...reply, lang: code }),
-    // data is {name, attending, partySize, note, version}.
+    // data is {name, attending, partySize, answers?, note, version}.
     loadReply: (eventId, cred) => call('GET', replyPath(eventId, cred.id), cred.secret),
     // Removes the guest's reply at cred.version; a reply that is already gone counts as withdrawn. data is null.
     withdrawReply: (eventId, cred) =>

@@ -2,7 +2,7 @@
 
 import { eventFields } from './countdown.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
-import { ID_PATTERN, SECRET_PATTERN, partyLinkSecret, personalLink, viewLink, viewLinkSecret } from './rsvp.js';
+import { ID_PATTERN, SECRET_PATTERN, newId, partyLinkSecret, personalLink, viewLink, viewLinkSecret } from './rsvp.js';
 import { ACCENTS, formatWhen, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
@@ -43,16 +43,33 @@ const fits = (v, limit, format) => typeof v === 'string' && (!limit || v.length 
 export const SUB_EVENT_LIMITS = { name: 40, date: null, time: null, venue: 60 };
 export const SUB_EVENT_FIELDS = Object.keys(SUB_EVENT_LIMITS);
 export const MAX_SUB_EVENTS = 8;
+// A sub-event id keys the reply answers to that sub-event, so it stays with the sub-event through edits and moves.
+// The editor gives a new sub-event a random id from newId. A sub-event stored before sub-events had ids has none,
+// and its id is its position in the list, counted from 1. A random id is 22 characters, so it never equals a position.
+export const SUB_EVENT_ID = /^[A-Za-z0-9_-]{1,22}$/;
+const idOf = (subEvent, index) => subEvent.id ?? String(index + 1);
+// The ids of the sub-events of d, a published d as readPublished returns it or as the database stores it, in order.
+export const subEventIds = (d) => (d?.subEvents ?? []).map(idOf);
+// The {id, name} of each sub-event of d for the reply answers, where a sub-event without a name is part n.
+export const subEventLabels = (d, lang = 'en') =>
+  (d?.subEvents ?? []).map((e, i) => ({
+    id: idOf(e, i),
+    name: e.name || UI[normalizeLang(lang)].subEventReplies.untitled(i + 1),
+  }));
 
-// Untrusted source becomes a sub-event: each valid field cut to its limit, and an empty string for any other.
-function makeSubEvent(source) {
+// Untrusted source at index becomes a sub-event: a valid id kept or else its position, each valid field cut to its
+// limit, and an empty string for any other field.
+function makeSubEvent(source, index) {
   const s = source && typeof source === 'object' ? source : {};
-  return Object.fromEntries(
-    SUB_EVENT_FIELDS.map((f) => [
-      f,
-      fits(s[f], null, FIELD_FORMATS[f]) ? s[f].slice(0, SUB_EVENT_LIMITS[f] ?? undefined) : '',
-    ]),
-  );
+  return {
+    id: typeof s.id === 'string' && SUB_EVENT_ID.test(s.id) ? s.id : String(index + 1),
+    ...Object.fromEntries(
+      SUB_EVENT_FIELDS.map((f) => [
+        f,
+        fits(s[f], null, FIELD_FORMATS[f]) ? s[f].slice(0, SUB_EVENT_LIMITS[f] ?? undefined) : '',
+      ]),
+    ),
+  };
 }
 
 // The only constructor for invite data: template sample text, then valid fields from source, cut to their limits.
@@ -68,6 +85,12 @@ export function makeInviteData(template, source, lang = 'en') {
   d.accent = ACCENTS.some((a) => a.hex === s.accent) ? s.accent : null;
   d.mode = modeOf(s);
   const subEvents = Array.isArray(s.subEvents) ? s.subEvents.slice(0, MAX_SUB_EVENTS).map(makeSubEvent) : [];
+  // A repeated id gets a new one, so each id names one sub-event.
+  const seen = new Set();
+  for (const e of subEvents) {
+    if (seen.has(e.id)) e.id = newId();
+    seen.add(e.id);
+  }
   if (subEvents.length) d.subEvents = subEvents;
   return d;
 }
@@ -89,7 +112,7 @@ function setSubEvents(state, subEvents, lang) {
 export function addSubEvent(state, lang = 'en') {
   const list = subEventsOf(state);
   if (list.length >= MAX_SUB_EVENTS) return false;
-  setSubEvents(state, [...list, {}], lang);
+  setSubEvents(state, [...list, { id: newId() }], lang);
   return true;
 }
 
@@ -149,9 +172,10 @@ function restoreInvite(value, lang = 'en') {
 // t names a template, d has exactly the text fields, the accent and an optional mode, each text within its limit and
 // format, the accent is null or one of ACCENTS, and the mode is one of MODES. A d without a mode, which a page loaded
 // before invitations had modes sends, gets the open mode. d may also hold subEvents: up to MAX_SUB_EVENTS objects
-// with exactly the sub-event fields, each within its limit and format. An empty list leaves the key out of the
-// result, and a page loaded before sub-events existed sends none. The photo position stays with the owner's draft, so
-// d has no photoY.
+// with exactly the sub-event fields, each within its limit and format, and an optional SUB_EVENT_ID id. A sub-event
+// without an id, which a page loaded before sub-events had ids sends, gets its position as its id, and two sub-events
+// with one id are refused. An empty list leaves the key out of the result, and a page loaded before sub-events
+// existed sends none. The photo position stays with the owner's draft, so d has no photoY.
 export function readPublished(value) {
   if (!value || typeof value !== 'object' || !TEMPLATES.some((t) => t.id === value.t)) return null;
   const s = value.d;
@@ -165,15 +189,23 @@ export function readPublished(value) {
   const validSubEvent = (e) =>
     e &&
     typeof e === 'object' &&
-    Object.keys(e).length === SUB_EVENT_FIELDS.length &&
+    Object.keys(e).length === SUB_EVENT_FIELDS.length + (Object.hasOwn(e, 'id') ? 1 : 0) &&
+    (!Object.hasOwn(e, 'id') || (typeof e.id === 'string' && SUB_EVENT_ID.test(e.id))) &&
     SUB_EVENT_FIELDS.every((f) => fits(e[f], SUB_EVENT_LIMITS[f], FIELD_FORMATS[f]));
   if (!Array.isArray(subEvents) || subEvents.length > MAX_SUB_EVENTS || !subEvents.every(validSubEvent)) return null;
+  const ids = subEvents.map(idOf);
+  if (new Set(ids).size !== ids.length) return null;
   const d = {};
   [...FIELDS, 'accent'].forEach((f) => {
     d[f] = s[f];
   });
   d.mode = modeOf(s);
-  if (subEvents.length) d.subEvents = subEvents.map((e) => Object.fromEntries(SUB_EVENT_FIELDS.map((f) => [f, e[f]])));
+  if (subEvents.length) {
+    d.subEvents = subEvents.map((e, i) => ({
+      id: ids[i],
+      ...Object.fromEntries(SUB_EVENT_FIELDS.map((f) => [f, e[f]])),
+    }));
+  }
   return { t: value.t, d };
 }
 
