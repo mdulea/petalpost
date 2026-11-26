@@ -11,8 +11,8 @@ export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 // The fields of a reply, in the order the reply form shows them. A reply to an invitation with sub-events has
-// answers in place of attending and partySize.
-export const REPLY_FIELDS = ['name', 'attending', 'partySize', 'answers', 'note'];
+// answers in place of attending and partySize, and an attending reply to an invitation with menu options has meals.
+export const REPLY_FIELDS = ['name', 'attending', 'partySize', 'answers', 'meals', 'note'];
 
 // An attending party has 1 to limit people, and a declined answer has a party size of exactly 0. Without a valid
 // attending, the party size only has to be a whole number.
@@ -36,8 +36,18 @@ const validAnswers = (answers, ids, limit) =>
   Object.keys(answers).length === ids.length &&
   ids.every((id) => Object.hasOwn(answers, id) && validAnswer(answers[id], limit));
 
-// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize, answers, note}
-// becomes {reply, invalid}. reply is the valid {name, attending, partySize, answers?, note}, or null when invalid lists
+// Exactly one whole count of 0 or more for each id, no other key, and a sum of people.
+const validMeals = (meals, ids, people) =>
+  Boolean(meals) &&
+  typeof meals === 'object' &&
+  !Array.isArray(meals) &&
+  Object.keys(meals).length === ids.length &&
+  ids.every((id) => Object.hasOwn(meals, id) && Number.isInteger(meals[id]) && meals[id] >= 0) &&
+  ids.reduce((sum, id) => sum + meals[id], 0) === people;
+
+// The only constructor for a reply, which also validates it: untrusted {name, attending, partySize, answers, meals,
+// note} becomes {reply, invalid}. reply is the valid {name, attending, partySize, answers?, meals?, note}, or null when
+// invalid lists
 // the invalid fields in REPLY_FIELDS order. The name is trimmed and holds 1 to 80 code points without control
 // characters. The note is optional and defaults to empty. It is trimmed, its line breaks become \n, and it holds at
 // most 300 code points without control characters other than \n.
@@ -47,8 +57,12 @@ const validAnswers = (answers, ids, limit) =>
 // {attending, partySize} under the same rules. The source's own attending and partySize are ignored. The reply
 // attends when any answer is yes, and its party size is the largest party size among its answers, which is the
 // number of people the reply covers.
-export function makeReply(source, { partySizeLimit = REPLY_LIMITS.partySize, subEventIds = [] } = {}) {
-  const { name, attending, partySize, answers, note = '' } = source && typeof source === 'object' ? source : {};
+// With menuIds, the ids of the invitation's menu options, an attending reply's source.meals maps each id, and no other
+// key, to a whole count of 0 or more, and the counts add up to the reply's party size. A declining reply has no meals
+// key, whatever the source holds. meals is checked only once the answer and party size are valid. Without menuIds the
+// reply has no meals key.
+export function makeReply(source, { partySizeLimit = REPLY_LIMITS.partySize, subEventIds = [], menuIds = [] } = {}) {
+  const { name, attending, partySize, answers, meals, note = '' } = source && typeof source === 'object' ? source : {};
   const trimmed = typeof name === 'string' ? name.trim() : '';
   const length = [...trimmed].length;
   const noteText = typeof note === 'string' ? note.replace(/\r\n?/g, '\n').trim() : '';
@@ -58,21 +72,27 @@ export function makeReply(source, { partySizeLimit = REPLY_LIMITS.partySize, sub
     attending: !bySubEvent && typeof attending !== 'boolean',
     partySize: !bySubEvent && invalidPartySize(attending, partySize, partySizeLimit),
     answers: bySubEvent && !validAnswers(answers, subEventIds, partySizeLimit),
+    meals: false,
     note: typeof note !== 'string' || [...noteText].length > REPLY_LIMITS.note || /(?!\n)\p{Cc}/u.test(noteText),
   };
+  const answersById =
+    bySubEvent && !isInvalid.answers
+      ? Object.fromEntries(
+          subEventIds.map((id) => [id, { attending: answers[id].attending, partySize: answers[id].partySize }]),
+        )
+      : null;
+  const peopleCovered = answersById ? Math.max(...subEventIds.map((id) => answersById[id].partySize)) : partySize;
+  const hasMeals = menuIds.length > 0 && !isInvalid.attending && !isInvalid.partySize && peopleCovered > 0;
+  isInvalid.meals = hasMeals && !isInvalid.answers && !validMeals(meals, menuIds, peopleCovered);
   const invalid = REPLY_FIELDS.filter((field) => isInvalid[field]);
   if (invalid.length) return { reply: null, invalid };
-  if (!bySubEvent) return { reply: { name: trimmed, attending, partySize, note: noteText }, invalid };
-  const answersById = Object.fromEntries(
-    subEventIds.map((id) => [id, { attending: answers[id].attending, partySize: answers[id].partySize }]),
-  );
-  const peopleCovered = Math.max(...subEventIds.map((id) => answersById[id].partySize));
   return {
     reply: {
       name: trimmed,
       attending: peopleCovered > 0,
       partySize: peopleCovered,
-      answers: answersById,
+      ...(answersById ? { answers: answersById } : {}),
+      ...(hasMeals ? { meals: Object.fromEntries(menuIds.map((id) => [id, meals[id]])) } : {}),
       note: noteText,
     },
     invalid,
@@ -96,6 +116,22 @@ export function tally(responses) {
 export const answersOf = (stored) => (stored && Object.keys(stored).length ? { answers: stored } : {});
 // The answers column value of a reply from makeReply: its answers as JSON, or {} for a reply without sub-events.
 export const storedAnswers = (reply) => JSON.stringify(reply.answers ?? {});
+
+// The meals key of a reply read from its stored meal counts, the database's {} for a reply without them.
+export const mealsOf = (stored) => (stored && Object.keys(stored).length ? { meals: stored } : {});
+// The meals column value of a reply from makeReply: its meal counts as JSON, or {} for a reply without them.
+export const storedMeals = (reply) => JSON.stringify(reply.meals ?? {});
+
+// The meal totals of each menu option id, in order, over replies: count sums the counts of the option. missing counts
+// the attending replies without meal counts, such as one saved before the host added the menu. A reply saved before
+// the host added an option has no count for it and adds 0 to that option.
+export function mealTally(ids, replies) {
+  const attending = replies.filter((reply) => reply.attending);
+  return {
+    options: ids.map((id) => ({ id, count: attending.reduce((sum, reply) => sum + (reply.meals?.[id] ?? 0), 0) })),
+    missing: attending.filter((reply) => !reply.meals).length,
+  };
+}
 
 // The answer of reply to the sub-event id as {attending, partySize}, or null when the reply has none. A reply saved
 // before the host added the sub-event has none, and a reply saved before the invitation had sub-events has no answers.

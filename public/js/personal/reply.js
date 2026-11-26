@@ -1,7 +1,9 @@
 // A personal-link reply stays on the same page for save, edit and withdrawal. Only the server's confirmed version
 // goes in a subsequent mutation. Conflict responses replace the form values with the current reply. An invitation
-// with sub-events asks for an answer to each in place of the single answer and seats.
-import { subEventLabels } from '../invite.js';
+// with sub-events asks for an answer to each in place of the single answer and seats. An invitation with menu options
+// asks for the meal counts before the note, and they are disabled while the reply declines.
+import { menuLabels, subEventLabels } from '../invite.js';
+import { mealFields } from '../meal-choices.js';
 import { PARTY_LIMITS } from '../rsvp.js';
 import { answerFields } from '../sub-event-answers.js';
 
@@ -56,6 +58,17 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     form.querySelector('[role="radiogroup"]').replaceWith(answers.element);
     seats.closest('.field').remove();
   }
+  const menu = menuLabels(party.d, lang);
+  const meals = menu.length ? mealFields(menu, { prefix: 'personalMeals', limit: PARTY_LIMITS.seats, lang }) : null;
+  if (meals) note.closest('.field').before(meals.element);
+  const sync = () => {
+    seats.disabled = !yes.checked;
+    if (meals) {
+      meals.element.disabled = answers
+        ? !Object.values(answers.read()).some((answer) => answer.attending)
+        : !yes.checked;
+    }
+  };
   let closed = Boolean(party.deadlineClosed);
 
   function lockClosed(message) {
@@ -75,8 +88,9 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     yes.checked = reply?.attending ?? true;
     no.checked = !yes.checked;
     seats.value = String(reply?.attending ? reply.partySize : party.defaultSeats);
-    seats.disabled = !yes.checked;
     answers?.fill(reply, party.defaultSeats);
+    meals?.fill(reply);
+    sync();
     note.value = reply?.note ?? '';
     withdraw.hidden = closed || !reply;
   }
@@ -95,9 +109,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     status.textContent = result.ok ? success : result.message;
   }
 
-  form.addEventListener('change', () => {
-    seats.disabled = !yes.checked;
-  });
+  form.addEventListener('change', sync);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (fields.disabled) return;
@@ -108,6 +120,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
       attending: yes.checked,
       partySize: yes.checked ? seats.valueAsNumber : 0,
       answers: answers?.read(),
+      meals: meals?.read(),
       note: note.value.replaceAll('\t', ' '),
     });
     if (result.ok) {

@@ -57,6 +57,20 @@ export const subEventLabels = (d, lang = 'en') =>
     name: e.name || UI[normalizeLang(lang)].subEventReplies.untitled(i + 1),
   }));
 
+// A menu option is one meal the host offers, such as standard, vegetarian or child. A reply gives a count for each
+// option, keyed by its id. The editor gives a new option a random id from newId, and the id stays with the option
+// through edits. A record without menu options has no menu key, so it keeps the shape of a record from before menus.
+export const MENU_OPTION_LIMIT = 40;
+export const MAX_MENU_OPTIONS = 6;
+// The ids of the menu options of d, a published d as readPublished returns it or as the database stores it, in order.
+export const menuOptionIds = (d) => (d?.menu ?? []).map((option) => option.id);
+// The {id, name} of each menu option of d for the meal counts, where an option without a name is option n.
+export const menuLabels = (d, lang = 'en') =>
+  (d?.menu ?? []).map((option, i) => ({
+    id: option.id,
+    name: option.name || UI[normalizeLang(lang)].menu.untitled(i + 1),
+  }));
+
 // Untrusted source at index becomes a sub-event: a valid id kept or else its position, each valid field cut to its
 // limit, and an empty string for any other field.
 function makeSubEvent(source, index) {
@@ -92,6 +106,16 @@ export function makeInviteData(template, source, lang = 'en') {
     seen.add(e.id);
   }
   if (subEvents.length) d.subEvents = subEvents;
+  // A menu option keeps a valid id that no earlier option has, and else gets a new one. Its name is cut to its limit.
+  const menu = Array.isArray(s.menu) ? s.menu.slice(0, MAX_MENU_OPTIONS) : [];
+  const optionIds = new Set();
+  d.menu = menu.map((source) => {
+    const o = source && typeof source === 'object' ? source : {};
+    const id = typeof o.id === 'string' && SUB_EVENT_ID.test(o.id) && !optionIds.has(o.id) ? o.id : newId();
+    optionIds.add(id);
+    return { id, name: typeof o.name === 'string' ? o.name.slice(0, MENU_OPTION_LIMIT) : '' };
+  });
+  if (!d.menu.length) delete d.menu;
   return d;
 }
 
@@ -143,8 +167,40 @@ export function removeSubEvent(state, index, lang = 'en') {
   return true;
 }
 
+// The editor actions on the menu options, each through makeInviteData. index counts from 0. Each returns false and
+// changes nothing for an index outside the list or an add at MAX_MENU_OPTIONS.
+const menuOf = (state) => state.d.menu ?? [];
+function setMenu(state, menu, lang) {
+  state.d = makeInviteData(getTemplate(state.t, lang), { ...state.d, menu }, lang);
+}
+
+export function addMenuOption(state, lang = 'en') {
+  const list = menuOf(state);
+  if (list.length >= MAX_MENU_OPTIONS) return false;
+  setMenu(state, [...list, { id: newId(), name: '' }], lang);
+  return true;
+}
+
+export function renameMenuOption(state, index, name, lang = 'en') {
+  const list = menuOf(state);
+  if (!list[index]) return false;
+  setMenu(state, list.with(index, { ...list[index], name }), lang);
+  return true;
+}
+
+export function removeMenuOption(state, index, lang = 'en') {
+  const list = menuOf(state);
+  if (!list[index]) return false;
+  setMenu(
+    state,
+    list.filter((_, i) => i !== index),
+    lang,
+  );
+  return true;
+}
+
 // Text goes back to the template sample, the accent to the template default; the photo position and mode stay.
-// Sub-events are text, so a reset removes them.
+// Sub-events and menu options are text, so a reset removes them.
 export function resetInvite(state, lang = 'en') {
   state.d = makeInviteData(getTemplate(state.t, lang), { photoY: state.d.photoY, mode: state.d.mode }, lang);
 }
@@ -175,13 +231,21 @@ function restoreInvite(value, lang = 'en') {
 // with exactly the sub-event fields, each within its limit and format, and an optional SUB_EVENT_ID id. A sub-event
 // without an id, which a page loaded before sub-events had ids sends, gets its position as its id, and two sub-events
 // with one id are refused. An empty list leaves the key out of the result, and a page loaded before sub-events
-// existed sends none. The photo position stays with the owner's draft, so d has no photoY.
+// existed sends none. d may also hold menu: up to MAX_MENU_OPTIONS objects of exactly a SUB_EVENT_ID id, which no
+// other option has, and a name of at most MENU_OPTION_LIMIT characters. An empty menu leaves the key out of the
+// result, and a page loaded before menus existed sends none. The photo position stays with the owner's draft, so d
+// has no photoY.
 export function readPublished(value) {
   if (!value || typeof value !== 'object' || !TEMPLATES.some((t) => t.id === value.t)) return null;
   const s = value.d;
   if (!s || typeof s !== 'object') return null;
   const hasMode = Object.hasOwn(s, 'mode');
-  const keys = FIELDS.length + 1 + (hasMode ? 1 : 0) + (Object.hasOwn(s, 'subEvents') ? 1 : 0);
+  const keys =
+    FIELDS.length +
+    1 +
+    (hasMode ? 1 : 0) +
+    (Object.hasOwn(s, 'subEvents') ? 1 : 0) +
+    (Object.hasOwn(s, 'menu') ? 1 : 0);
   if (Object.keys(s).length !== keys || (hasMode && !MODES.includes(s.mode))) return null;
   const valid = FIELDS.every((f) => fits(s[f], FIELD_LIMITS[f], FIELD_FORMATS[f]));
   if (!valid || !(s.accent === null || ACCENTS.some((a) => a.hex === s.accent))) return null;
@@ -195,6 +259,16 @@ export function readPublished(value) {
   if (!Array.isArray(subEvents) || subEvents.length > MAX_SUB_EVENTS || !subEvents.every(validSubEvent)) return null;
   const ids = subEvents.map(idOf);
   if (new Set(ids).size !== ids.length) return null;
+  const menu = s.menu ?? [];
+  const validOption = (o) =>
+    o &&
+    typeof o === 'object' &&
+    Object.keys(o).length === 2 &&
+    typeof o.id === 'string' &&
+    SUB_EVENT_ID.test(o.id) &&
+    fits(o.name, MENU_OPTION_LIMIT);
+  if (!Array.isArray(menu) || menu.length > MAX_MENU_OPTIONS || !menu.every(validOption)) return null;
+  if (new Set(menu.map((o) => o.id)).size !== menu.length) return null;
   const d = {};
   [...FIELDS, 'accent'].forEach((f) => {
     d[f] = s[f];
@@ -206,6 +280,7 @@ export function readPublished(value) {
       ...Object.fromEntries(SUB_EVENT_FIELDS.map((f) => [f, e[f]])),
     }));
   }
+  if (menu.length) d.menu = menu.map(({ id, name }) => ({ id, name }));
   return { t: value.t, d };
 }
 
