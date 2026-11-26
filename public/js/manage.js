@@ -1,12 +1,13 @@
 // Entry module of manage.html and ro/manage.html, the host's page for one published event. The management link
 // manage.html#<id>.<secret> is the only credential; the page shows the invitation, the reply totals and list,
-// and the invitation link, downloads the replies as a CSV file, and deletes the event on request.
+// and the invitation link, downloads the replies as a CSV file, and deletes the event on request. Each load lists
+// the event under "My invitations" in this browser, and the page shares its own link with the host or a co-host.
 import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
-import { eventLink, makeInviteData, whatsappLink } from './invite.js';
-import { createClient, readCredential } from './rsvp.js';
+import { endInvitation, eventLink, makeInviteData, rememberInvitation, whatsappLink } from './invite.js';
+import { createClient, manageLink, readCredential } from './rsvp.js';
 import { repliesCsv, repliesCsvName } from './csv.js';
 
 const lang = normalizeLang(document.documentElement.lang);
@@ -21,6 +22,16 @@ const eventLinkInput = /** @type {HTMLInputElement} */ (document.getElementById(
 const whatsappEventLink = /** @type {HTMLAnchorElement} */ (document.getElementById('whatsappEventLink'));
 // The replies of the last load, which the CSV download writes.
 let loadedReplies = [];
+// The heading of the last load, which the shared management link carries as its title.
+let loadedHeading = '';
+
+// Reading localStorage throws when the browser blocks storage; null storage then keeps nothing.
+let storage = null;
+try {
+  storage = localStorage;
+} catch {
+  storage = null;
+}
 
 // A heading and message for a page that cannot show the event, such as after a failed load or a deletion.
 function showOnly(heading, message) {
@@ -48,6 +59,8 @@ function showEvent({ t, d, responses, totals }) {
   const heading = data.title || copy.defaultHeading;
   document.getElementById('manageHeading').textContent = heading;
   document.title = `${heading} | Petalpost`;
+  loadedHeading = heading;
+  rememberInvitation(storage, { id: cred.id, secret: cred.secret, lang, title: d.title, date: d.date });
   content.hidden = false;
   mountInvites(document.getElementById('managePreview'), renderInvite(template, data, { locale }));
   const total = (n, one, many) => item('total', ['strong', String(n)], ['span', n === 1 ? one : many]);
@@ -91,6 +104,7 @@ async function load() {
     showEvent(result.data);
     statusEl.textContent = '';
   } else if (result.status === 404) {
+    endInvitation(storage, cred.id);
     showOnly(copy.missingHeading, result.message);
   } else if (content.hidden) {
     showOnly(copy.loadFailedHeading, result.message);
@@ -119,14 +133,38 @@ document.getElementById('copyEventLink').addEventListener('click', async () => {
   }
 });
 
+// Opens the share sheet with this page's link, or copies it where the browser cannot share or the share fails.
+// A cancelled share does nothing. Neither path sends a count.
+async function shareManageLink(text) {
+  const url = manageLink(location.origin, cred.id, cred.secret, lang);
+  try {
+    await navigator.share({ title: loadedHeading, text, url });
+    statusEl.textContent = copy.manageLinkShared;
+    return;
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    statusEl.textContent = copy.manageLinkCopied;
+  } catch {
+    window.prompt(copy.copyPrompt, url);
+  }
+}
+
+document.getElementById('sendManageLink').addEventListener('click', () => shareManageLink(copy.selfShareText));
+document.getElementById('shareManageLink').addEventListener('click', () => shareManageLink(copy.cohostShareText));
+
 document.getElementById('deleteEvent').addEventListener('click', async (e) => {
   if (!window.confirm(copy.deleteConfirm)) return;
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
   button.disabled = true;
   const result = await client.deleteEvent(cred);
   button.disabled = false;
-  if (result.ok) showOnly(copy.deletedHeading, copy.deletedMessage);
-  else statusEl.textContent = result.message;
+  if (result.ok) {
+    endInvitation(storage, cred.id);
+    showOnly(copy.deletedHeading, copy.deletedMessage);
+  } else statusEl.textContent = result.message;
 });
 
 if (cred) load();

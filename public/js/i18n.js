@@ -151,6 +151,10 @@ export const UI = {
     landing: {
       all: 'All',
       useTemplate: (name) => `Use the ${name} template`,
+      untitled: 'Your invitation',
+      ended: 'Ended',
+      remove: 'Remove',
+      removeLabel: (title) => `Remove ${title} from My invitations`,
     },
     editor: {
       defaultSwatch: 'Template default',
@@ -230,6 +234,11 @@ export const UI = {
       deletedMessage: 'The invitation and all its replies are deleted from Petalpost.',
       incompleteHeading: 'This management link is incomplete',
       incompleteMessage: 'This management link is incomplete. Open the whole link from where you saved it.',
+      manageLinkCopied: 'Management link copied. Keep it somewhere private.',
+      manageLinkShared: 'Management link shared.',
+      selfShareText: 'My Petalpost management link. It shows the replies and can delete the invitation.',
+      cohostShareText:
+        'The Petalpost management link for our invitation. It shows the replies and can delete the invitation.',
     },
     // Excel in English uses a comma between values.
     csv: {
@@ -264,6 +273,10 @@ export const UI = {
     landing: {
       all: 'Toate',
       useTemplate: (name) => `Folosește modelul ${name}`,
+      untitled: 'Invitația ta',
+      ended: 'Încheiată',
+      remove: 'Elimină',
+      removeLabel: (title) => `Elimină ${title} din Invitațiile mele`,
     },
     editor: {
       defaultSwatch: 'Culoarea modelului',
@@ -343,6 +356,11 @@ export const UI = {
       deletedMessage: 'Invitația și toate răspunsurile au fost șterse de pe Petalpost.',
       incompleteHeading: 'Acest link de administrare este incomplet',
       incompleteMessage: 'Acest link de administrare este incomplet. Deschide linkul întreg de unde l-ai salvat.',
+      manageLinkCopied: 'Linkul de administrare a fost copiat. Păstrează-l într-un loc privat.',
+      manageLinkShared: 'Linkul de administrare a fost distribuit.',
+      selfShareText: 'Linkul meu de administrare Petalpost. Arată răspunsurile și poate șterge invitația.',
+      cohostShareText:
+        'Linkul de administrare Petalpost pentru invitația noastră. Arată răspunsurile și poate șterge invitația.',
     },
     // Excel in Romanian uses the comma as the decimal mark and a semicolon between values.
     csv: {

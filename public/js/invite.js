@@ -315,6 +315,55 @@ export function savePublishedEvent(state, storage, lang = 'en') {
   return writeStorage(storage, storageKey('event', lang), state.publishedEvent && JSON.stringify(state.publishedEvent));
 }
 
+// My invitations: the management links this browser opened, newest first, at most INVITATIONS_LIMIT of them. One
+// key holds both languages, so the English and Romanian home pages show the same list. Each entry is
+// {id, secret, lang, title, date, ended}; lang is the management page language and date is YYYY-MM-DD or empty.
+// Every change reads the list again before it writes, because another tab may have changed it. A change returns
+// false when storage refused it.
+const INVITATIONS_KEY = 'petalpost:invitations';
+export const INVITATIONS_LIMIT = 50;
+
+const isInvitation = (e) =>
+  Boolean(e) &&
+  ID_PATTERN.test(e.id) &&
+  SECRET_PATTERN.test(e.secret) &&
+  (e.lang === 'en' || e.lang === 'ro') &&
+  typeof e.title === 'string' &&
+  typeof e.date === 'string' &&
+  FIELD_FORMATS.date(e.date) &&
+  typeof e.ended === 'boolean';
+
+export function storedInvitations(storage) {
+  try {
+    const list = JSON.parse(readStorage(storage, INVITATIONS_KEY) ?? '[]');
+    return Array.isArray(list) ? list.filter(isInvitation) : [];
+  } catch {
+    return [];
+  }
+}
+
+const saveInvitations = (storage, list) => writeStorage(storage, INVITATIONS_KEY, JSON.stringify(list));
+
+// Lists the invitation {id, secret, lang, title, date} first, as not ended, in place of its earlier entry.
+export function rememberInvitation(storage, { id, secret, lang, title, date }) {
+  const entry = { id, secret, lang, title, date, ended: false };
+  const rest = storedInvitations(storage).filter((e) => e.id !== id);
+  return saveInvitations(storage, [entry, ...rest].slice(0, INVITATIONS_LIMIT));
+}
+
+// Marks a deleted or expired invitation as ended. An id that is not listed changes nothing.
+export const endInvitation = (storage, id) =>
+  saveInvitations(
+    storage,
+    storedInvitations(storage).map((e) => (e.id === id ? { ...e, ended: true } : e)),
+  );
+
+export const forgetInvitation = (storage, id) =>
+  saveInvitations(
+    storage,
+    storedInvitations(storage).filter((e) => e.id !== id),
+  );
+
 const photoChanges = new WeakMap();
 
 // The only writer of the photo: a JPEG or PNG data URL, a promise for one, or null to remove it.

@@ -670,6 +670,33 @@ p {
   margin-top: 10px;
 }
 
+/* My invitations on the home pages: one row per invitation with its title, date, ended status and Remove button. */
+.hosted-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 760px;
+}
+.hosted {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.hosted > a,
+.hosted > strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.hosted > span {
+  color: var(--muted);
+}
+.hosted .btn {
+  margin-left: auto;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

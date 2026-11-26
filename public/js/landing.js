@@ -4,13 +4,15 @@ import { UI, categoryLabel, localeOf, normalizeLang } from './i18n.js';
 import {
   BANNER_TEMPLATE,
   categoriesFor,
+  formatDate,
   getTemplate,
   heroTemplatesFor,
   renderInvite,
   templatesFor,
 } from './templates.js';
 import { mountInvites } from './mount.js';
-import { editorUrl, makeInviteData } from './invite.js';
+import { editorUrl, endInvitation, forgetInvitation, makeInviteData, storedInvitations } from './invite.js';
+import { createClient, manageLink } from './rsvp.js';
 import { animate, stopMotion } from './motion.js';
 
 const lang = normalizeLang(document.documentElement.lang);
@@ -49,6 +51,64 @@ mountInvites(
   document.getElementById('bannerArt'),
   renderInvite(banner, makeInviteData(banner, undefined, lang), { locale }),
 );
+
+// My invitations lists the management pages this browser opened, and stays hidden while it is empty or storage is
+// blocked. Each listed invitation that has not ended is loaded once; a missing one is marked as ended. The load
+// sends only the public event id, as the invitation link does.
+let storage = null;
+try {
+  storage = localStorage;
+} catch {
+  storage = null;
+}
+const invitationsSection = document.getElementById('invitations');
+const invitationList = document.getElementById('invitationList');
+
+// Titles come from published invitations, so every value enters the page as textContent.
+function invitationItem({ id, secret, lang: pageLang, title, date, ended }) {
+  const name = title || copy.untitled;
+  const li = document.createElement('li');
+  li.className = 'hosted';
+  const heading = document.createElement(ended ? 'strong' : 'a');
+  heading.textContent = name;
+  if (!ended) /** @type {HTMLAnchorElement} */ (heading).href = manageLink('', id, secret, pageLang);
+  const details = document.createElement('span');
+  details.textContent = date ? formatDate(date, localeOf(lang)) : '';
+  li.append(heading, details);
+  if (ended) {
+    const status = document.createElement('span');
+    status.className = 'hosted-ended';
+    status.textContent = copy.ended;
+    li.append(status);
+  }
+  const remove = document.createElement('button');
+  remove.className = 'btn btn-ghost btn-small';
+  remove.type = 'button';
+  remove.textContent = copy.remove;
+  remove.setAttribute('aria-label', copy.removeLabel(name));
+  remove.addEventListener('click', () => {
+    forgetInvitation(storage, id);
+    showInvitations();
+  });
+  li.append(remove);
+  return li;
+}
+
+function showInvitations() {
+  const list = storedInvitations(storage);
+  invitationsSection.hidden = list.length === 0;
+  invitationList.replaceChildren(...list.map(invitationItem));
+  return list;
+}
+
+const client = createClient(fetch, { lang });
+for (const { id } of showInvitations().filter((e) => !e.ended)) {
+  client.loadEvent(id).then((result) => {
+    if (result.status !== 404) return;
+    endInvitation(storage, id);
+    showInvitations();
+  });
+}
 
 // The gallery cards and occasion links are static HTML from scripts/pages.js, so crawlers read them without this
 // script. It adds the occasion filters, which only work with JavaScript.

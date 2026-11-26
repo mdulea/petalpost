@@ -60,6 +60,7 @@ With `pnpm dev` running:
 Publishing stores the text, the template and the color on the server. The photo stays in the browser, so only the PNG carries it.
 "Guest view" opens a share link that carries the same fields after the `#`, without the photo. Share links sent before the editor dropped "Copy share link" still open.
 The editor keeps the draft, the photo and the published invitation's management secret in the browser's local storage, so a reload restores them.
+Each browser that opens a management link lists the invitation under "My invitations" on the home page.
 A lost management link cannot be recovered.
 
 ## Product facts
@@ -82,7 +83,9 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
-- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies.
+- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
+- open the management page again from "My invitations" on the home page of a browser that opened the management link, see there which invitations ended, and remove an invitation from that list, which stays in that browser;
+- send the management link to themselves or a co-host through the share sheet, or copy it where the browser cannot share.
 
 A host cannot:
 
@@ -111,7 +114,7 @@ A guest cannot see other guests' replies or the totals.
   - `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, the Romanian occasion pages, the hand-written guides `ro/text-invitatii.html`, `ro/cand-sa-trimiti-invitatiile.html` and `ro/invitatii-digitale-sau-tiparite.html`, which is the only guide without an English pair, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
   - `js/` holds the page scripts:
     - `templates.js` is the template catalog and the `renderInvite` renderer.
-    - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
+    - `invite.js` handles invite records, share links, the storage policy, the "My invitations" list and the calendar file. It has no DOM access, so the Node checks import it.
     - `rsvp.js` validates replies, builds and reads private links, is the API client and sends the action counts. It has no DOM access, so the server and the Node checks import it.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
