@@ -1,6 +1,6 @@
 // Under /api/events/{eventId}/parties, POST with the management secret adds a batch from
 // {entries: [{id, name}], defaultSeats, lang}. PUT /{id} adds one from {name, defaultSeats, lang}.
-// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply}.
+// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply, deadlineClosed}.
 // GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
@@ -10,6 +10,9 @@
 // PATCH on /{id}/seats accepts a host credential and {partySize, version?}. It sets 0 to PARTY_LIMITS.seats
 // reply seats and returns {version}. A stale write gets 409 and the current reply.
 // On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both accept a host credential.
+// PATCH on /{id}/reply uses the management secret to record or edit the reply even after the deadline.
+// Personal-link PATCH and DELETE return 403 after the RSVP deadline in Europe/Bucharest.
+import { isDeadlinePassed } from '../../public/js/countdown.js';
 import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
@@ -34,6 +37,7 @@ export const routes = [
     methods: { PATCH: renameParty, DELETE: deleteParty },
   },
   { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/seats$/, methods: { PATCH: setPartySeats } },
+  { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/reply$/, methods: { PATCH: saveHostReply } },
 ];
 
 async function addParty({ db, request, ids: [eventId, id] }) {
@@ -227,7 +231,7 @@ async function deleteParty({ db, request, ids: [eventId, id] }) {
   });
 }
 
-async function getParty({ db, request, ids: [eventId, id] }) {
+async function getParty({ db, request, ids: [eventId, id], now }) {
   const secret = bearer(request);
   const {
     rows: [party],
@@ -254,6 +258,7 @@ async function getParty({ db, request, ids: [eventId, id] }) {
     name: party.name,
     defaultSeats: party.default_seats,
     reply: replyOf(party),
+    deadlineClosed: isDeadlinePassed(party.d?.deadline, now()),
   });
 }
 
@@ -265,9 +270,11 @@ const currentPartyReply = async (tx, id) => {
 };
 
 // Serializes reply changes through the party row. A fresh read after locking sees the latest reply.
-async function ownedPartyReply(tx, eventId, id, secret) {
+async function ownedPartyReply(tx, eventId, id, secret, now) {
   // The event is the parent of both rows. Lock it first to keep the order of a concurrent invitation deletion.
-  await tx.query('select id from events where id = $1 for key share', [eventId]);
+  const {
+    rows: [event],
+  } = await tx.query('select d from events where id = $1 for key share', [eventId]);
   const {
     rows: [party],
   } = await tx.query(
@@ -275,6 +282,7 @@ async function ownedPartyReply(tx, eventId, id, secret) {
     [id, eventId],
   );
   checkPartyLink(party, secret);
+  if (isDeadlinePassed(event?.d?.deadline, now())) throw new Refusal(403, 'deadlinePassed');
   return { ...party, reply: await currentPartyReply(tx, id) };
 }
 
@@ -293,11 +301,11 @@ async function writePartyReply(tx, eventId, id, party, reply, expectedVersion) {
   return version;
 }
 
-async function saveReply({ db, request, ids: [eventId, id] }) {
+async function saveReply({ db, request, ids: [eventId, id], now }) {
   const secret = bearer(request);
   const body = await readBody(request);
   return db.transaction(async (tx) => {
-    const party = await ownedPartyReply(tx, eventId, id, secret);
+    const party = await ownedPartyReply(tx, eventId, id, secret, now);
     const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
     if (!reply) throw new Refusal(400, 'partyReply');
     const version = await writePartyReply(tx, eventId, id, party, reply, body.version);
@@ -306,12 +314,33 @@ async function saveReply({ db, request, ids: [eventId, id] }) {
   });
 }
 
-async function withdrawReply({ db, request, ids: [eventId, id] }) {
+async function saveHostReply({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const body = await readBody(request);
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, eventId, secret, { token: false });
+    if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
+    const {
+      rows: [party],
+    } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [
+      id,
+      eventId,
+    ]);
+    if (!party) throw new Refusal(404, 'personalLink');
+    const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
+    if (!reply) throw new Refusal(400, 'partyReply');
+    const current = await currentPartyReply(tx, id);
+    const version = await writePartyReply(tx, eventId, id, { ...party, reply: current }, reply, body.version);
+    return json(current ? 200 : 201, { version });
+  });
+}
+
+async function withdrawReply({ db, request, ids: [eventId, id], now }) {
   const secret = bearer(request);
   const { version } = await readBody(request);
   if (version === undefined) throw new Refusal(400, 'version');
   return db.transaction(async (tx) => {
-    const { reply } = await ownedPartyReply(tx, eventId, id, secret);
+    const { reply } = await ownedPartyReply(tx, eventId, id, secret, now);
     if (reply) {
       if (version !== reply.version) throw new Refusal(409, 'replyChanged', { reply });
       await tx.query('delete from responses where party_id = $1', [id]);

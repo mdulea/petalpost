@@ -40,10 +40,20 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
   const no = /** @type {HTMLInputElement} */ (form.querySelector('[value="no"]'));
   const seats = /** @type {HTMLInputElement} */ (form.querySelector('#personalSeats'));
   const note = form.querySelector('textarea');
+  const submit = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="submit"]'));
   const withdraw = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="button"]'));
   const status = form.querySelector('[role="status"]');
   seats.max = String(PARTY_LIMITS.seats);
   const cred = { ...credential, version: undefined };
+  let closed = Boolean(party.deadlineClosed);
+
+  function lockClosed(message) {
+    closed = true;
+    fields.disabled = true;
+    submit.hidden = true;
+    withdraw.hidden = true;
+    if (message) status.textContent = message;
+  }
 
   function fill(reply) {
     cred.version = reply?.version;
@@ -52,13 +62,17 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     seats.value = String(reply?.attending ? reply.partySize : party.defaultSeats);
     seats.disabled = !yes.checked;
     note.value = reply?.note ?? '';
-    withdraw.hidden = !reply;
+    withdraw.hidden = closed || !reply;
   }
 
   function finish(result, success) {
     if (result.status === 409) fill(result.data.reply);
     if (result.status === 404) {
       unavailable(result.message);
+      return;
+    }
+    if (result.status === 403) {
+      lockClosed(result.message);
       return;
     }
     fields.disabled = false;
@@ -94,6 +108,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     finish(result, copy.withdrawn);
   });
   fill(party.reply);
+  if (closed) lockClosed();
   if (!party.reply) status.textContent = copy.noReply;
   return form;
 }

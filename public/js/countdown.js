@@ -1,11 +1,36 @@
-// The time left before an event. No DOM access, so tests/check-countdown.js runs it in Node.
-// Event dates and times are floating local time. They read the same wall-clock time in every time zone, so the
-// countdown and the calendar file use the time zone of the browser that shows them.
+// The time left before an event, and RSVP deadline checks in Europe/Bucharest time. No DOM access, so
+// tests/check-countdown.js runs it in Node. Event dates and times are floating local time. They read the same
+// wall-clock time in every time zone, so the countdown and the calendar file use the time zone of the browser that
+// shows them. RSVP deadlines are calendar dates checked in Europe/Bucharest time.
 
 // The start time of an event without a time.
 const DEFAULT_TIME = '12:00';
+export const RSVP_TIMEZONE = 'Europe/Bucharest';
 
 const HOUR = 60 * 60 * 1000;
+const BUCHAREST_DATE = new Intl.DateTimeFormat('en-US', {
+  timeZone: RSVP_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+// True when value is a real calendar date in YYYY-MM-DD format.
+export const isValidDate = (value) =>
+  typeof value === 'string' &&
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  Boolean(new Date(`${value}T00:00Z`).toJSON()?.startsWith(value));
+
+// The calendar date (YYYY-MM-DD) of now in Europe/Bucharest time.
+export function bucharestDate(now = new Date()) {
+  const parts = Object.fromEntries(BUCHAREST_DATE.formatToParts(now).map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+// True when an optional YYYY-MM-DD RSVP deadline has passed in Europe/Bucharest time. The deadline day itself stays
+// open until 23:59:59 Europe/Bucharest time, and without a deadline replies stay open.
+export const isDeadlinePassed = (deadline, now = new Date()) =>
+  Boolean(isValidDate(deadline) && bucharestDate(now) > deadline);
 
 // data: a record from makeInviteData. Returns the start as [year, month index, day, hour, minute] in the argument
 // order of Date and Date.UTC, or null without a date.

@@ -3,15 +3,17 @@
 // PUT /api/events/{id}                     management secret; {t, d, version?, lang?} creates, replays or updates
 // GET /api/events/{id}                     public; {t, d}
 // DELETE /api/events/{id}                  management secret; removes the event and its responses; 204
+// PATCH /api/events/{id}/deadline          management secret; {deadline} sets, changes or clears (null) the RSVP deadline
 //
 // A PUT without version creates the event: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
 // or 409 with the error and the current {version, t, d} when the version is stale. The mode in d is set when the
-// event is created, and an update keeps the stored mode whatever the body sends, so a page loaded before invitations
-// had modes cannot open a guest-list invitation to replies.
+// event is created, and an update keeps the stored mode and deadline whatever the body sends, so a page loaded
+// before invitations had modes cannot open a guest-list invitation to replies or clear its deadline.
 // A new event counts invitation_publish under the body's lang normalized to en or ro; updates, replays and refusals
 // count nothing. Each client IP may create dailyEvents events per UTC day, DAILY_EVENTS unless createApi sets
 // another number; the 429 stores nothing.
+import { isValidDate } from '../../public/js/countdown.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf, readPublished } from '../../public/js/invite.js';
 import { addCount, bearer, hash, json, ownedEvent, readBody, Refusal, today } from './shared.js';
@@ -20,6 +22,7 @@ export const DAILY_EVENTS = 20;
 
 export const routes = [
   { pattern: /^\/api\/events\/([^/]+)$/, methods: { GET: getEvent, PUT: putEvent, DELETE: deleteEvent } },
+  { pattern: /^\/api\/events\/([^/]+)\/deadline$/, methods: { PATCH: setDeadline } },
 ];
 
 async function getEvent({ db, ids: [id] }) {
@@ -43,9 +46,14 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
       if (body.version !== event.version) {
         throw new Refusal(409, 'eventChanged', { version: event.version, t: event.t, d: event.d });
       }
+      const next = {
+        ...record.d,
+        mode: modeOf(event.d),
+        ...(isValidDate(event.d?.deadline) ? { deadline: event.d.deadline } : {}),
+      };
       await tx.query(
         'update events set t = $2, d = $3::text::jsonb, version = version + 1, updated_at = now() where id = $1',
-        [id, record.t, JSON.stringify({ ...record.d, mode: modeOf(event.d) })],
+        [id, record.t, JSON.stringify(next)],
       );
       return json(200, { version: event.version + 1, created: false });
     }
@@ -79,5 +87,24 @@ async function deleteEvent({ db, request, ids: [id] }) {
     await ownedEvent(tx, id, secret);
     await tx.query('delete from events where id = $1', [id]);
     return json(204, null);
+  });
+}
+
+async function setDeadline({ db, request, ids: [id] }) {
+  const secret = bearer(request);
+  const { deadline } = await readBody(request);
+  const normalized = deadline === null || deadline === '' ? null : deadline;
+  if (normalized !== null && !isValidDate(normalized)) throw new Refusal(400, 'deadline');
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, id, secret, { token: false });
+    if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'deadlineMode');
+    const next = { ...event.d };
+    if (normalized) next.deadline = normalized;
+    else delete next.deadline;
+    await tx.query('update events set d = $2::text::jsonb, updated_at = now() where id = $1', [
+      id,
+      JSON.stringify(next),
+    ]);
+    return json(200, { deadline: normalized });
   });
 }

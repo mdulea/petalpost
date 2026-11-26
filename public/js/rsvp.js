@@ -238,6 +238,10 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
       }
       return { ok: true, added };
     },
+    // Sets, changes or clears (null) the RSVP deadline of a guest-list invitation.
+    setDeadline: (cred, deadline) => call('PATCH', `${eventPath(cred.id)}/deadline`, cred.secret, { deadline }),
+    // Lets the host record or edit a party's reply in the tracker, even after the RSVP deadline.
+    saveHostPartyReply: (cred, id, reply) => call('PATCH', `${partyPath(cred.id, id)}/reply`, cred.secret, reply),
     loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
     renameParty: (cred, id, name) => call('PATCH', managePartyPath(cred.id, id), cred.secret, { name }),
     deleteParty: (cred, id) => call('DELETE', managePartyPath(cred.id, id), cred.secret),

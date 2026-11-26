@@ -143,6 +143,66 @@ function seatEditor(party, { client, cred, load }, words) {
   return form;
 }
 
+function buildHostReplyForm(party, { client, cred, load }, words) {
+  const form = document.createElement('form');
+  form.hidden = true;
+  form.autocomplete = 'off';
+  const yesId = `hostYes-${party.id}`;
+  const noId = `hostNo-${party.id}`;
+  const seatsId = `hostSeats-${party.id}`;
+  const noteId = `hostNote-${party.id}`;
+  form.innerHTML = `
+    <div class="field" role="radiogroup">
+      <span class="field-label">${words.attending}</span>
+      <div class="choices">
+        <label class="choice" for="${yesId}"><input type="radio" id="${yesId}" name="attending" value="yes" />${words.yes}</label>
+        <label class="choice" for="${noId}"><input type="radio" id="${noId}" name="attending" value="no" />${words.no}</label>
+      </div>
+    </div>
+    <div class="field">
+      <label for="${seatsId}">${words.seats}</label>
+      <input class="input" type="number" id="${seatsId}" name="partySize" min="1" max="${PARTY_LIMITS.seats}" required />
+    </div>
+    <div class="field">
+      <label for="${noteId}">${words.note}</label>
+      <textarea class="input" id="${noteId}" name="note"></textarea>
+    </div>
+    <div class="reply-actions">
+      <button class="btn btn-primary btn-small" type="submit">${words.saveReply}</button>
+      <button class="btn btn-ghost btn-small" type="button">${words.cancel}</button>
+    </div>`;
+  const yes = /** @type {HTMLInputElement} */ (form.querySelector('[value="yes"]'));
+  const no = /** @type {HTMLInputElement} */ (form.querySelector('[value="no"]'));
+  const seats = /** @type {HTMLInputElement} */ (form.querySelector('[name="partySize"]'));
+  const note = form.querySelector('textarea');
+  const cancel = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="button"]'));
+  yes.checked = party.reply?.attending ?? true;
+  no.checked = !yes.checked;
+  seats.value = String(party.reply?.attending ? party.reply.partySize : party.defaultSeats);
+  seats.disabled = !yes.checked;
+  note.value = party.reply?.note ?? '';
+
+  form.addEventListener('change', () => {
+    seats.disabled = !yes.checked;
+  });
+  cancel.addEventListener('click', () => {
+    form.hidden = true;
+  });
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    return writeAndReload(load, form.elements, async () => {
+      const result = await client.saveHostPartyReply(cred, party.id, {
+        attending: yes.checked,
+        partySize: yes.checked ? seats.valueAsNumber : 0,
+        note: note.value.replaceAll('\t', ' '),
+        version: party.reply?.version,
+      });
+      return result.ok ? { ...result, message: words.replySaved } : result;
+    });
+  });
+  return form;
+}
+
 async function renderParty(party, { client, cred, load, signedIn, formatTime }, invite, words) {
   const row = document.createElement('li');
   row.className = 'reply';
@@ -199,6 +259,11 @@ async function renderParty(party, { client, cred, load, signedIn, formatTime }, 
       linkAction('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
     }
     linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
+    const editForm = buildHostReplyForm(party, { client, cred, load }, words);
+    actions.append(button(words.editReply, () => {
+      editForm.hidden = !editForm.hidden;
+    }));
+    row.append(editForm);
   }
   actions.append(
     button(words.rename, (element) => {

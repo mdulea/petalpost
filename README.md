@@ -85,6 +85,7 @@ A host can:
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
 - add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by party status, see totals for the whole guest list and download it as a CSV;
 - use the management link to add a party with a name, default seats and language, share its personal link message by copying it or opening WhatsApp, and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, its reply, note and any seats over its default after opening the management link or after a passkey sign-in. The host can edit each party's reply seats;
+- set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
@@ -108,7 +109,7 @@ A guest can:
 - see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw an open-mode reply through its reply edit link;
-- open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link;
+- open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes. After it passes, the personal link shows the reply read-only;
 - share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private.
 
 A guest cannot see other guests' replies or the totals.
@@ -225,7 +226,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
-The `guestList` group has the tracker guest list strings, and `personal` has the party greeting, reply form and view link sharing strings.
+The `guestList` group has the tracker guest list strings, `deadline` has the RSVP deadline strings, and `personal` has the party greeting, reply form and view link sharing strings.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.

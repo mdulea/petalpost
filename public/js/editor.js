@@ -799,7 +799,7 @@ async function openEvent() {
   document.getElementById('replyCta').hidden = false;
   document.getElementById('reportRow').hidden = false;
   if (credential) {
-    const page = { client, eventId: state.event, credential, copy, guestCopy, unavailable };
+    const page = { client, eventId: state.event, credential, copy, guestCopy, lang, locale, unavailable };
     if (!viewOnly) {
       const url = viewLink(
         eventLink(location.origin, state.event, lang),

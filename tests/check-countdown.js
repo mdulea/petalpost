@@ -1,7 +1,8 @@
-// Fails when the event countdown breaks. Checks: the start of an event with and without a time in local time; days
-// counted in calendar days, including across a daylight saving change; hours, rounded up, on the event's day and in
-// the last 24 hours, including a 23-hour and a 25-hour day; nothing without a date or once the event starts; the
-// English and Romanian countdown text with Romanian plural forms.
+// Fails when the event countdown or RSVP deadline checks break. Checks: the start of an event with and without a time
+// in local time; days counted in calendar days, including across a daylight saving change; hours, rounded up, on the
+// event's day and in the last 24 hours, including a 23-hour and a 25-hour day; nothing without a date or once the event
+// starts; the English and Romanian countdown text with Romanian plural forms; RSVP deadline date validation and
+// Europe/Bucharest midnight checks across winter and summer time.
 // The checks run in the Europe/Bucharest time zone, which changes to summer time on 29 March 2026 at 03:00 and back
 // on 25 October 2026 at 04:00.
 // Run: pnpm exec node tests/check-countdown.js
@@ -9,7 +10,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 process.env.TZ = 'Europe/Bucharest';
-const { countdown, eventStart } = await import('../public/js/countdown.js');
+const { bucharestDate, countdown, eventStart, isDeadlinePassed, isValidDate } =
+  await import('../public/js/countdown.js');
 const { UI } = await import('../public/js/i18n.js');
 
 const left = (date, time, now) => countdown(eventStart({ date, time }), new Date(now));
@@ -81,4 +83,27 @@ test('the countdown text is Romanian, with "de" before 20 and later counts in th
   assert.equal(text({ unit: 'hours', count: 1 }), 'Începe peste o oră');
   assert.equal(text({ unit: 'hours', count: 5 }), 'Începe peste 5 ore');
   assert.equal(text({ unit: 'hours', count: 24 }), 'Începe peste 24 de ore');
+});
+
+test('isValidDate accepts real YYYY-MM-DD dates and rejects impossible or malformed dates', () => {
+  assert.equal(isValidDate('2026-06-15'), true);
+  assert.equal(isValidDate('2024-02-29'), true);
+  for (const bad of ['', null, undefined, '2026-02-29', '2026-13-01', '2026-06-15T23:59', '15-06-2026']) {
+    assert.equal(isValidDate(bad), false);
+  }
+});
+
+test('the RSVP deadline closes after 23:59 Europe/Bucharest time in winter and summer', () => {
+  assert.equal(isDeadlinePassed(null, new Date('2026-06-16T00:00:00Z')), false);
+  assert.equal(isDeadlinePassed('', new Date('2026-06-16T00:00:00Z')), false);
+  // Summer (EEST, UTC+3): 20:59:59Z is 23:59:59 on 15 June; 21:00:00Z is 00:00:00 on 16 June.
+  assert.equal(bucharestDate(new Date('2026-06-15T20:59:59Z')), '2026-06-15');
+  assert.equal(bucharestDate(new Date('2026-06-15T21:00:00Z')), '2026-06-16');
+  assert.equal(isDeadlinePassed('2026-06-15', new Date('2026-06-15T20:59:59Z')), false);
+  assert.equal(isDeadlinePassed('2026-06-15', new Date('2026-06-15T21:00:00Z')), true);
+  // Winter (EET, UTC+2): 21:59:59Z is 23:59:59 on 15 January; 22:00:00Z is 00:00:00 on 16 January.
+  assert.equal(bucharestDate(new Date('2026-01-15T21:59:59Z')), '2026-01-15');
+  assert.equal(bucharestDate(new Date('2026-01-15T22:00:00Z')), '2026-01-16');
+  assert.equal(isDeadlinePassed('2026-01-15', new Date('2026-01-15T21:59:59Z')), false);
+  assert.equal(isDeadlinePassed('2026-01-15', new Date('2026-01-15T22:00:00Z')), true);
 });
