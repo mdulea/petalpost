@@ -288,6 +288,12 @@ Never commit a connection string or an `.env` file.
 Migration `004_action_counts.sql` adds the `action_counts` table, which counts a fixed set of actions per UTC day and page language.
 The server counts `invitation_publish` when it stores a new invitation and `reply_submit` when it stores a new reply.
 The editor and the guest view send `png_download`, `png_share`, `invitation_link_copy`, `invitation_link_share` and `calendar_add` to `/api/stats` after the action succeeds.
+
+Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features, and no code reads them yet.
+It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `access_tokens` tables, which an invitation's deletion deletes with it.
+A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
+The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
+`tests/check-migrations.js` applies the migrations to an empty database and to one with the earlier schema and data.
 That route has no per-client cap, so the browser counts are approximate.
 A row holds only the day, the action, the language and the count, and the retention job keeps every row.
 Read the totals in the Neon console SQL editor:

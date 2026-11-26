@@ -6,14 +6,15 @@ import { connect } from './postgres.js';
 
 const DIR = new URL('./migrations/', import.meta.url);
 
-// db has the Database shape of server/postgres.js. Each file applies in its own transaction.
+// db has the Database shape of server/postgres.js. Each file applies in its own transaction. dir is a file URL of a
+// directory that ends in a slash; the checks pass one with a prefix of the files to build an earlier schema.
 // Returns the names of the files applied by this call, in order.
-export async function migrate(db) {
+export async function migrate(db, dir = DIR) {
   await db.query('create table if not exists schema_migrations (name text primary key)', []);
   const done = new Set((await db.query('select name from schema_migrations', [])).rows.map((r) => r.name));
-  const names = (await readdir(DIR)).filter((n) => n.endsWith('.sql') && !done.has(n)).sort();
+  const names = (await readdir(dir)).filter((n) => n.endsWith('.sql') && !done.has(n)).sort();
   for (const name of names) {
-    const statements = (await readFile(new URL(name, DIR), 'utf8')).split(/;\s*$/m).filter((s) => s.trim());
+    const statements = (await readFile(new URL(name, dir), 'utf8')).split(/;\s*$/m).filter((s) => s.trim());
     await db.transaction(async (tx) => {
       for (const sql of statements) await tx.query(sql, []);
       await tx.query('insert into schema_migrations (name) values ($1)', [name]);
