@@ -81,19 +81,20 @@ A host can:
 
 - choose a template, add a photo, names, a date, a time, a venue, an address and a note, and pick one of six accent colors;
 - add up to 8 sub-events, such as the civil ceremony, the church and the party, each with a name, a date, a time and a venue, and change, reorder and remove them;
+- add up to 6 menu options, such as standard, vegetarian and child, each with a name of up to 40 characters, and rename and remove them;
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
 - switch a published open invitation to the guest-list mode from its tracker. The invitation keeps its link and earlier replies. The public link stops taking replies. The tracker shows earlier replies under "Replies without a personal link" and counts them in the totals. The host can attach an earlier reply to a party without a reply;
 - add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by party status, see totals for the whole guest list and download it as a CSV;
-- use the management link to add a party with a name, default seats and language, share its personal link message by copying it or opening WhatsApp, and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, its reply, note and any seats over its default after opening the management link or after a passkey sign-in. The host can edit each party's reply seats, or with sub-events the answer and seats of each sub-event through the reply form;
+- use the management link to add a party with a name, default seats and language, share its personal link message by copying it or opening WhatsApp, and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, its reply, note and any seats over its default after opening the management link or after a passkey sign-in. The host can edit each party's reply seats, or with sub-events the answer and seats of each sub-event through the reply form. With menu options, the host edits the meal counts in the same place as the seats;
 - use the tracker to see how many parties have yet to reply and open a WhatsApp reminder for each party with an active personal link. Each reminder uses the party's language and includes its personal link. The tracker marks which reminders the host opened in the current tab session;
 - set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
 - see in the tracker of a guest-list invitation the time left before the RSVP deadline and before the guest list is deleted. In the last 7 days before the deadline, the tracker adds how many parties have not replied. In the last 3 days before the deletion, it asks the host to download the guest-list CSV;
 - create, rename, resize and remove tables in the guest-list tracker. The host can move a party to a table with a picker or, on a desktop, by dragging the party onto the table, and see filled and free seats from accepting replies. The host can print the seating plan with each table and its parties. Removing a table clears its parties' assignments. The host can publish and unpublish the seating plan;
 - write, change or remove one update of up to 500 characters for a guest-list invitation, such as "The party starts at 19:00". Every personal link and view link shows it at the top. With the management link, the tracker lists one WhatsApp message per party with the update and the party's personal link, in the party's language;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
-- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies. With sub-events, the management page, the tracker and both CSV files show each reply's answer to each sub-event, each CSV file ends with a totals row of the yes answers and the people attending for each sub-event, and the page totals add the yes and no answers, the people attending and the replies without an answer for each sub-event. A reply saved before the host added a sub-event shows "No answer" for it and counts in neither its yes nor its no total until the guest or the host answers it;
+- see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies. With sub-events, the management page, the tracker and both CSV files show each reply's answer to each sub-event, each CSV file ends with a totals row of the yes answers and the people attending for each sub-event, and the page totals add the yes and no answers, the people attending and the replies without an answer for each sub-event. A reply saved before the host added a sub-event shows "No answer" for it and counts in neither its yes nor its no total until the guest or the host answers it. With menu options, the management page, the tracker and both CSV files show each attending reply's meal counts, the page totals add the meals of each option, and each CSV file has a column for each option and a totals row. An attending reply saved before the host added the menu shows "Menu: not given", and the page totals count such replies;
 - open the management page again from "My invitations" on the home page of a browser that opened the management link, see there which invitations ended, and remove an invitation from that list, which stays in that browser;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour;
 - share the full management link with a co-host, who can save their own passkey with it;
@@ -106,7 +107,7 @@ A host cannot:
 - put the photo on the published invitation, which shows the template art instead;
 - recover a lost management link, although a saved passkey still opens the management page;
 - switch back to the open mode once the guest list has a party;
-- delete a single reply or edit an open-mode reply;
+- delete a single reply or edit an open-mode reply, its seats or its meal counts;
 - publish changes from another browser, because only the publishing browser keeps the management secret;
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
 - publish more than 20 invitations from one IP address in a day;
@@ -117,7 +118,7 @@ A guest can:
 
 - open the invitation link in any browser, see each sub-event's name, date, time and venue, add the event to a calendar with one entry for each sub-event and reminders one day and two hours before each entry, and open the address on a map;
 - see the days left before the event, then the hours on its day;
-- reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host. With sub-events, the guest answers yes or no with a party size for each sub-event in place of the single answer, and the reply's party size is the largest of them;
+- reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host. With sub-events, the guest answers yes or no with a party size for each sub-event in place of the single answer, and the reply's party size is the largest of them. With menu options, a guest who attends gives the number of people for each menu option, and the numbers add up to the reply's party size. A guest who declines gives none;
 - view, change or withdraw an open-mode reply through its reply edit link;
 - open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes, and sees the time left before it. After it passes, the personal link shows the reply read-only. While the host's seating plan is published, the personal link also shows the party's table;
 - share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private;
@@ -139,6 +140,7 @@ A guest cannot see other guests' replies or the totals.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `passkey.js` saves a passkey on the management page and signs in with one on the home page. It has no DOM access, so the Node checks import it.
     - `sub-event-answers.js` builds the answer fields of each sub-event in the three reply forms and the answer lines and totals of the tracker. It runs only in the browser.
+    - `meal-choices.js` builds the meal count fields of the reply forms and the tracker's seat editor, and the meal lines and totals of the tracker. It runs only in the browser.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
     - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page.
@@ -167,7 +169,7 @@ A guest cannot see other guests' replies or the totals.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `api-setup.js` starts the API against an in-memory PGlite database and publishes an invitation for the Node checks, `passkey-authenticator.js` is the software authenticator of the passkey checks, and `browser-setup.js` holds the page watcher, the separate browser and the publish step of the browser tests.
-  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js`, `passkey.spec.js`, `sub-events.spec.js`, `sub-event-replies.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
+  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js`, `passkey.spec.js`, `sub-events.spec.js`, `sub-event-replies.spec.js`, `meal-choices.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
 - `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
@@ -239,7 +241,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
 The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, `countdowns` has the tracker's deadline and deletion countdowns with their nudges and the personal link's deadline countdown, `partyUpdate` has the tracker strings of the update for every party, and `personal` has the party greeting, update heading, reply form and view link sharing strings.
-The `subEvents` group has the editor fields and buttons of each sub-event, and `subEventReplies` has the answers to each sub-event in the reply forms, the tracker and the CSV files.
+The `subEvents` group has the editor fields and buttons of each sub-event, and `subEventReplies` has the answers to each sub-event in the reply forms, the tracker and the CSV files. The `menu` group has the editor fields of each menu option and the meal counts in the reply forms, the tracker and the CSV files.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.
@@ -349,6 +351,7 @@ It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `a
 The passkey routes read and write `passkeys`, `passkey_challenges` and `access_tokens`.
 The personal link and view link API use `parties`. The tracker reads it alongside the party replies.
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
+`responses.meals` maps each menu option id of `d.menu` to its count for an attending reply, and it is `{}` for a declined reply or an invitation without menu options.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
 `d.mode` is `open` or `guestList`, and a `d` without a mode, stored before invitations had modes, is open.
 `d.deadline` holds the optional RSVP deadline, and `d.seatingPublished` is `true` while the seating plan is published.

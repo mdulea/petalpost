@@ -1568,7 +1568,9 @@ textarea.input {
   gap: 12px;
 }
 .sub-event-answer,
-#personalReply .sub-event-answer {
+#personalReply .sub-event-answer,
+.meal-counts,
+#personalReply .meal-counts {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -1576,12 +1578,26 @@ textarea.input {
   border-radius: var(--radius-sm);
   padding: 14px;
 }
-.sub-event-answer legend {
+.sub-event-answer legend,
+.meal-counts legend {
   padding: 0 6px;
 }
 .sub-event-replies {
   margin: 0;
   padding-left: 18px;
+}
+/* The meal counts of a reply: a number input for each menu option, after the option's name. */
+.meal-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.meal-count label {
+  flex: 1 1 120px;
+}
+.meal-count .input {
+  flex: 0 1 96px;
 }
 .totals .total-line {
   grid-column: 1 / -1;

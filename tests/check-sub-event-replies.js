@@ -121,8 +121,8 @@ test('the totals of each sub-event count yes, no, the people attending and repli
 });
 
 const messages = {
-  en: 'Enter a name of up to 80 characters, an answer, and a party size from 1 to 10 when attending. A note can have up to 300 characters. An invitation with parts needs an answer for each part.',
-  ro: 'Introdu un nume de cel mult 80 de caractere, un răspuns și un număr de persoane între 1 și 10 dacă participi. Nota poate avea cel mult 300 de caractere. O invitație cu momente are nevoie de un răspuns pentru fiecare moment.',
+  en: 'Enter a name of up to 80 characters, an answer, and a party size from 1 to 10 when attending. A note can have up to 300 characters. An invitation with parts needs an answer for each part. An invitation with a menu needs the number of people for each menu option, adding up to the party size.',
+  ro: 'Introdu un nume de cel mult 80 de caractere, un răspuns și un număr de persoane între 1 și 10 dacă participi. Nota poate avea cel mult 300 de caractere. O invitație cu momente are nevoie de un răspuns pentru fiecare moment. O invitație cu meniu are nevoie de numărul de persoane pentru fiecare fel de meniu, cu un total egal cu numărul de persoane.',
 };
 
 for (const lang of ['en', 'ro']) {

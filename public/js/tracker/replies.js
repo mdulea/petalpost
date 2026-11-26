@@ -1,7 +1,9 @@
 // The tracker section of an open invitation's replies: the totals, the reply list, a refresh and the CSV download.
-// With sub-events, the totals add a line for each sub-event, and each reply and the CSV add the answer to each.
+// With sub-events, the totals add a line for each sub-event, and each reply and the CSV add the answer to each. With
+// menu options, the totals add the meals of each option, and each reply and the CSV add its meal counts.
 import { repliesCsv, repliesCsvName } from '../csv.js';
-import { subEventLabels } from '../invite.js';
+import { menuLabels, subEventLabels } from '../invite.js';
+import { mealLine, mealTotals } from '../meal-choices.js';
 import { answerTo } from '../rsvp.js';
 import { answerLine, answerTotals } from '../sub-event-answers.js';
 import { downloadCsv } from './download.js';
@@ -10,6 +12,7 @@ import { renderTotals } from './totals.js';
 // The replies of the last load, which the CSV download writes.
 let loadedReplies = [];
 let loadedLabels = [];
+let loadedMenu = [];
 
 // Guest names and notes are untrusted text, so every value enters the page as textContent.
 function item(className, ...parts) {
@@ -26,12 +29,13 @@ function item(className, ...parts) {
 function init({ lang, load }) {
   document.getElementById('refresh').addEventListener('click', load);
   document.getElementById('downloadCsv').addEventListener('click', () => {
-    downloadCsv(repliesCsv(loadedReplies, lang, loadedLabels), repliesCsvName(lang, new Date()));
+    downloadCsv(repliesCsv(loadedReplies, lang, loadedLabels, loadedMenu), repliesCsvName(lang, new Date()));
   });
 }
 
 function show({ responses, totals, invite }, { copy, formatTime, lang }) {
   const labels = subEventLabels(invite, lang);
+  const menu = menuLabels(invite, lang);
   const { responses: count, yes, no, attending } = totals;
   renderTotals(document.getElementById('totals'), [
     [count, count === 1 ? copy.replyOne : copy.replyMany],
@@ -39,7 +43,9 @@ function show({ responses, totals, invite }, { copy, formatTime, lang }) {
     [no, no === 1 ? copy.noOne : copy.noMany],
     [attending, attending === 1 ? copy.attendingOne : copy.attendingMany],
   ]);
-  document.getElementById('totals').append(...answerTotals(labels, responses, lang));
+  document
+    .getElementById('totals')
+    .append(...answerTotals(labels, responses, lang), ...mealTotals(menu, responses, lang));
   document
     .getElementById('responseList')
     .replaceChildren(
@@ -49,6 +55,7 @@ function show({ responses, totals, invite }, { copy, formatTime, lang }) {
           ['strong', r.name],
           ['span', r.attending ? copy.yesCount(r.partySize) : copy.no],
           ...labels.map(({ id, name }) => ['span', answerLine(name, answerTo(r, id), lang)]),
+          ...(mealLine(menu, r, lang) ? [['span', mealLine(menu, r, lang)]] : []),
           ...(r.note ? [['p', r.note]] : []),
           ['span', `${r.updatedAt === r.createdAt ? copy.replied : copy.changed} ${formatTime(r.updatedAt)}`],
         ),
@@ -57,6 +64,7 @@ function show({ responses, totals, invite }, { copy, formatTime, lang }) {
   document.getElementById('noReplies').hidden = responses.length > 0;
   loadedReplies = responses;
   loadedLabels = labels;
+  loadedMenu = menu;
 }
 
 export const section = { id: 'replies', modes: ['open'], init, show };

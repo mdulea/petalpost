@@ -10,8 +10,11 @@ import {
   EDITABLE,
   FIELDS,
   FIELD_LIMITS,
+  MAX_MENU_OPTIONS,
   MAX_SUB_EVENTS,
+  MENU_OPTION_LIMIT,
   SUB_EVENT_LIMITS,
+  addMenuOption,
   addSubEvent,
   buildIcs,
   charsLeft,
@@ -20,9 +23,13 @@ import {
   eventPreviewMeta,
   makeInviteData,
   mapLink,
+  menuLabels,
+  menuOptionIds,
   moveSubEvent,
   openInvite,
+  removeMenuOption,
   removeSubEvent,
+  renameMenuOption,
   reportLink,
   resetInvite,
   saveDraft,
@@ -53,6 +60,7 @@ import {
   viewLink,
   viewLinkSecret,
 } from './rsvp.js';
+import { mealFields } from './meal-choices.js';
 import { answerFields } from './sub-event-answers.js';
 
 const lang = normalizeLang(document.documentElement.lang);
@@ -209,6 +217,7 @@ function fillForm() {
     form.elements[f].value = state.d[f] ?? '';
   });
   fillSubEvents();
+  fillMenu();
   showCounts();
 }
 
@@ -280,6 +289,54 @@ subEventList.addEventListener('click', (e) => {
   /** @type {HTMLElement} */ (same.disabled ? moved.querySelector('[data-action]:not(:disabled)') : same).focus();
 });
 
+// The menu option fields, one name input and remove button for each option in order. Each input carries the option's
+// index in data-menu-index, and has no name, so updateInvite ignores it. A redraw follows only an add, a removal or a
+// fill, so typing keeps the focused input.
+const menuList = document.getElementById('menuOptions');
+const addMenuOptionButton = /** @type {HTMLButtonElement} */ (document.getElementById('addMenuOption'));
+
+function fillMenu() {
+  const list = state.d.menu ?? [];
+  menuList.innerHTML = list
+    .map((_, i) => {
+      const text = UI[lang].menu.option(i + 1);
+      return `<li class="field">
+        <label for="menu${i}">${text.name}</label>
+        <div class="copy-row">
+          <input class="input" id="menu${i}" data-menu-index="${i}" maxlength="${MENU_OPTION_LIMIT}" />
+          <button class="btn btn-ghost btn-small" type="button" data-menu-index="${i}"
+            aria-label="${text.removeLabel}">${text.remove}</button>
+        </div>
+      </li>`;
+    })
+    .join('');
+  menuList.querySelectorAll('input').forEach((/** @type {HTMLInputElement} */ el) => {
+    el.value = list[Number(el.dataset.menuIndex)].name;
+  });
+  addMenuOptionButton.disabled = list.length >= MAX_MENU_OPTIONS;
+}
+
+addMenuOptionButton.addEventListener('click', () => {
+  if (!addMenuOption(state, lang)) return;
+  fillMenu();
+  commit();
+  /** @type {HTMLElement} */ (menuList.querySelector('li:last-child input')).focus();
+});
+
+// After a removal, focus goes to the next option's name, the previous one's at the end, or the add button.
+menuList.addEventListener('click', (e) => {
+  const button = /** @type {HTMLButtonElement} */ (
+    /** @type {Element} */ (e.target).closest('button[data-menu-index]')
+  );
+  if (!button) return;
+  const index = Number(button.dataset.menuIndex);
+  if (!removeMenuOption(state, index, lang)) return;
+  fillMenu();
+  commit();
+  const next = menuList.children[index] ?? menuList.children[index - 1];
+  /** @type {HTMLElement} */ (next?.querySelector('input') ?? addMenuOptionButton).focus();
+});
+
 FIELDS.forEach((f) => {
   if (FIELD_LIMITS[f]) addCounter(form.elements[f], FIELD_LIMITS[f]);
 });
@@ -332,6 +389,10 @@ form.addEventListener('input', (e) => {
   const { name, value, dataset } = /** @type {HTMLInputElement} */ (e.target);
   if (dataset.field) {
     if (updateSubEvent(state, Number(dataset.index), dataset.field, value, lang)) commit();
+    return;
+  }
+  if (dataset.menuIndex) {
+    if (renameMenuOption(state, Number(dataset.menuIndex), value, lang)) commit();
     return;
   }
   if (name === 'template') {
@@ -705,17 +766,35 @@ noteInput.closest('.field').before(answersField);
 /** @type {ReturnType<typeof answerFields> | null} */
 let answers = null;
 let answerIds = [];
+// An invitation with menu options asks for the meal counts in a field of their own before the note.
+const mealsField = document.createElement('div');
+mealsField.className = 'field';
+mealsField.hidden = true;
+noteInput.closest('.field').before(mealsField);
+/** @type {ReturnType<typeof mealFields> | null} */
+let meals = null;
+let menuIds = [];
 
 function prepareAnswers() {
   const labels = subEventLabels(state.d, lang);
-  if (!labels.length) return;
-  answerIds = labels.map(({ id }) => id);
-  answers = answerFields(labels, { prefix: 'answer', limit: REPLY_LIMITS.partySize, lang });
-  answers.fill(null, 1);
-  answersField.prepend(answers.element);
-  answersField.hidden = false;
-  attendingField.hidden = true;
-  /** @type {HTMLElement} */ (partySizeInput.closest('.field')).hidden = true;
+  if (labels.length) {
+    answerIds = labels.map(({ id }) => id);
+    answers = answerFields(labels, { prefix: 'answer', limit: REPLY_LIMITS.partySize, lang });
+    answers.fill(null, 1);
+    answersField.prepend(answers.element);
+    answersField.hidden = false;
+    attendingField.hidden = true;
+    /** @type {HTMLElement} */ (partySizeInput.closest('.field')).hidden = true;
+  }
+  const menu = menuLabels(state.d, lang);
+  if (menu.length) {
+    menuIds = menuOptionIds(state.d);
+    meals = mealFields(menu, { prefix: 'meals', limit: REPLY_LIMITS.partySize, lang });
+    meals.fill(null);
+    mealsField.prepend(meals.element);
+    mealsField.hidden = false;
+  }
+  syncPartySize();
 }
 
 // Each reply field shows its own error in a message below it, which joins the field's description after any hint and
@@ -723,6 +802,7 @@ function prepareAnswers() {
 const replyErrors = {
   ...guestCopy.replyErrors(REPLY_LIMITS),
   answers: UI[lang].subEventReplies.error(REPLY_LIMITS.partySize),
+  meals: UI[lang].menu.error,
 };
 /** @type {Record<string, {field: Element, focusTarget: () => HTMLElement}>} */
 const replyControls = {
@@ -733,6 +813,7 @@ const replyControls = {
   },
   partySize: { field: partySizeInput, focusTarget: () => partySizeInput },
   answers: { field: answersField, focusTarget: () => answers?.focusTarget },
+  meals: { field: mealsField, focusTarget: () => meals?.focusTarget },
   note: { field: noteInput, focusTarget: () => noteInput },
 };
 const replyFields = REPLY_FIELDS.map((name) => {
@@ -763,14 +844,20 @@ function showReplyErrors(invalid) {
     .focus();
 }
 
-// A declined reply has no party; the size input keeps its number for a change of mind.
+// A declined reply has no party; the size input and the meal counts keep their numbers for a change of mind.
 function syncPartySize() {
   partySizeInput.disabled = !attendingChecked();
+  if (meals) {
+    meals.element.disabled = answers
+      ? !Object.values(answers.read()).some((answer) => answer.attending)
+      : !attendingChecked();
+  }
 }
 
 function fillReply(reply) {
   nameInput.value = reply.name;
   answers?.fill(reply, 1);
+  meals?.fill(reply);
   const answer = /** @type {HTMLInputElement} */ (
     rsvpForm.querySelector(`input[name="attending"][value="${reply.attending ? 'yes' : 'no'}"]`)
   );
@@ -799,10 +886,11 @@ rsvpForm.addEventListener('submit', async (e) => {
       attending,
       partySize: attending ? Number(partySizeInput.value) : 0,
       answers: answers?.read(),
+      meals: meals?.read(),
       // Text pasted from a spreadsheet can hold tabs, which makeReply refuses, so they become spaces.
       note: noteInput.value.replaceAll('\t', ' '),
     },
-    { subEventIds: answerIds },
+    { subEventIds: answerIds, menuIds },
   );
   showReplyErrors(invalid);
   setOutcome(replySavedPanel, null);
@@ -848,6 +936,7 @@ withdrawButton.addEventListener('click', async () => {
     history.replaceState(null, '', eventLink(location.origin, state.event, lang));
     rsvpForm.reset();
     answers?.fill(null, 1);
+    meals?.fill(null);
     syncPartySize();
     showCounts();
     replySavedPanel.hidden = true;
