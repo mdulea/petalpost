@@ -86,6 +86,7 @@ A host can:
 - add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by party status, see totals for the whole guest list and download it as a CSV;
 - use the management link to add a party with a name, default seats and language, share its personal link message by copying it or opening WhatsApp, and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, its reply, note and any seats over its default after opening the management link or after a passkey sign-in. The host can edit each party's reply seats;
 - set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
+- create, rename, resize and remove tables in the guest-list tracker. The host can move a party to a table and see filled and free seats from accepting replies. Removing a table clears its parties' assignments;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
@@ -227,7 +228,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
-The `guestList` group has the tracker guest list strings, `deadline` has the RSVP deadline strings, and `personal` has the party greeting, reply form and view link sharing strings.
+The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, and `personal` has the party greeting, reply form and view link sharing strings.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.

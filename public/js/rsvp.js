@@ -182,6 +182,7 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
   const replyPath = (eventId, id) => `${eventPath(eventId)}/responses/${encodeURIComponent(id)}`;
   const partyPath = (eventId, id) => `${eventPath(eventId)}/parties/${encodeURIComponent(id)}`;
   const managePartyPath = (eventId, id) => `${partyPath(eventId, id)}/manage`;
+  const tablePath = (eventId, id) => `${eventPath(eventId)}/tables/${encodeURIComponent(id)}`;
 
   return {
     // Creates the event, or updates it when cred.version is set. record is the editor's {t, d}; the photo
@@ -194,7 +195,7 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     loadEvent: (id) => call('GET', eventPath(id)),
     // Removes the event and every reply to it; data is null.
     deleteEvent: (cred) => call('DELETE', eventPath(cred.id), cred.secret),
-    // data is {t, d, version, responses: [{name, attending, partySize, note, createdAt, updatedAt}], totals}.
+    // data is {t, d, version, responses, totals}, with parties and tables in guest-list mode.
     loadResponses: (cred) => call('GET', `${eventPath(cred.id)}/responses`, cred.secret),
     // Creates the guest's reply {name, attending, partySize, note}, or updates it when cred.version is set.
     // The page language goes with it for the server's count. data is {version, created}.
@@ -242,6 +243,10 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     setDeadline: (cred, deadline) => call('PATCH', `${eventPath(cred.id)}/deadline`, cred.secret, { deadline }),
     // Lets the host record or edit a party's reply in the tracker, even after the RSVP deadline.
     saveHostPartyReply: (cred, id, reply) => call('PATCH', `${partyPath(cred.id, id)}/reply`, cred.secret, reply),
+    // Creates a table with a reusable id or updates the current version.
+    saveTable: (cred, id, table) => call('PUT', tablePath(cred.id, id), cred.secret, table),
+    removeTable: (cred, id, version) => call('DELETE', tablePath(cred.id, id), cred.secret, { version }),
+    assignParty: (cred, id, tableId) => call('PATCH', `${partyPath(cred.id, id)}/table`, cred.secret, { tableId }),
     loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
     renameParty: (cred, id, name) => call('PATCH', managePartyPath(cred.id, id), cred.secret, { name }),
     deleteParty: (cred, id) => call('DELETE', managePartyPath(cred.id, id), cred.secret),

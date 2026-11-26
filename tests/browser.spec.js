@@ -553,8 +553,9 @@ test('a limited editor field counts the characters left above 80% of its limit',
   await expectCounter(page, '#title', 47, '1 left');
   await expect(page.locator('#date + .counter')).toHaveCount(0);
   await expect(page.locator('#time + .counter')).toHaveCount(0);
-  await page.fill('#title', 'x'.repeat(45));
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('petalpost:draft'))).toContain('x'.repeat(45));
+  const savedTitle = 'y'.repeat(45);
+  await page.fill('#title', savedTitle);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('petalpost:draft'))).toContain(savedTitle);
   await page.goto('editor.html');
   await expect(page.locator('#title + .counter')).toHaveText('3 left');
   expect(problems).toEqual([]);
