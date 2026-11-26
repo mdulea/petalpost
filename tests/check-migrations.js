@@ -1,11 +1,10 @@
 // Fails when the schema migrations break a database. Checks: all migrations apply to an empty database, and a second
 // run applies nothing; the guest-list migration applies to a database that holds the earlier schema with an
 // invitation and a reply, which keep their data, and the management and reply edit link reads after it show them;
-// deleting an
-// invitation through the API deletes its parties, their replies, its open replies, its tables, its passkeys, its
-// passkey challenges and its access tokens, and leaves another invitation's rows; deleting a table unassigns its
-// parties; an open reply allows up to 10 people and a party reply up to 20; a reply has an edit secret hash exactly
-// when it has no party.
+// deleting an invitation through the API deletes its parties, their replies, its open replies, its tables, its
+// passkeys, its passkey challenges and its access tokens, and leaves another invitation's rows; deleting a table
+// unassigns its parties; an open reply allows up to 10 people and a party reply up to 20; a reply has an edit secret
+// hash exactly when it has no party.
 // Each test runs in its own in-memory PGlite database.
 // Run: pnpm exec node tests/check-migrations.js
 import assert from 'node:assert/strict';
