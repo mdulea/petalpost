@@ -134,13 +134,17 @@ export function mealTally(ids, replies) {
 }
 
 // reply as a party invited to the sub-events ids has it: only its answers to ids, from which it attends when any
-// answer is yes and takes the largest party size, as makeReply derives them. A reply without an answer to ids has no
-// answers key and keeps its stored answer and party size. null stays null.
+// answer is yes and takes the largest party size, as makeReply derives them. A reply whose answers include none to
+// ids, such as one to the sub-events the host later took from the party, has no answers key and covers no people, so
+// it holds no seats and has no meal counts, as a declining reply. A reply without answers and null stay unchanged.
 export function partyReply(reply, ids) {
   if (!reply?.answers) return reply;
   const { answers, ...rest } = reply;
   const kept = ids.filter((id) => Object.hasOwn(answers, id)).map((id) => [id, answers[id]]);
-  if (!kept.length) return rest;
+  if (!kept.length) {
+    const { meals, ...declined } = rest;
+    return { ...declined, attending: false, partySize: 0 };
+  }
   const partySize = Math.max(...kept.map(([, answer]) => answer.partySize));
   return { ...rest, attending: partySize > 0, partySize, answers: Object.fromEntries(kept) };
 }

@@ -5,13 +5,16 @@
 // through the API, where a choice of every sub-event is stored as the default and a later sub-event joins it; the
 // refusals of an empty, unknown or repeated choice, an unknown party, an open invitation and an invitation without
 // sub-events; the personal link and the view link in English and Romanian, which show only the party's sub-events and
-// refuse an answer to another sub-event; the host's reply form; and the tracker's party list and totals, which count
-// only the invited parties.
+// refuse an answer to another sub-event; the host's reply form; the tracker's party list and totals, which count
+// only the invited parties; a reply without an answer to the party's sub-events, which holds no seats and no meal
+// counts; and the
+// guest-list CSV, which marks the sub-events a party is not invited to in English and Romanian.
 // Each API test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
 // tests/api-setup.js.
 // Run: pnpm exec node tests/check-party-sub-events.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { guestListCsv } from '../public/js/csv.js';
 import { partySubEventTally } from '../public/js/guest-list.js';
 import { makeInviteData, partyInvite, partySubEventIds, subEventIds } from '../public/js/invite.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, partyReply, viewLinkSecret } from '../public/js/rsvp.js';
@@ -55,7 +58,14 @@ test('a reply keeps only its answers to the party sub-events and derives its ans
     note: '',
   });
   assert.deepEqual(partyReply(reply, ['civil']), { attending: false, partySize: 0, answers: { civil: no }, note: '' });
-  assert.deepEqual(partyReply(reply, ['added']), { attending: true, partySize: 4, note: '' });
+  assert.deepEqual(partyReply(reply, ['added']), { attending: false, partySize: 0, note: '' });
+  assert.deepEqual(partyReply({ ...reply, meals: { standard: 4 } }, ['added']), {
+    attending: false,
+    partySize: 0,
+    note: '',
+  });
+  const withMeals = { ...reply, meals: { standard: 4 } };
+  assert.deepEqual(partyReply(withMeals, ['dinner']).meals, { standard: 4 });
   assert.equal(partyReply(null, ['civil']), null);
   const single = { attending: true, partySize: 2, note: '' };
   assert.equal(partyReply(single, ['civil']), single);
@@ -191,4 +201,46 @@ test('the tracker narrows replies to the party sub-events and counts only the in
     { id: 'civil', yes: 1, no: 1, attending: 2, unanswered: 0, pending: 0 },
     { id: 'dinner', yes: 1, no: 0, attending: 1, unanswered: 0, pending: 1 },
   ]);
+});
+
+test('a reply without an answer to the party sub-events holds no seats and counts as without an answer', async () => {
+  const { client, tracker, cred, parties } = await guestList([civil, dinner], ['Ana']);
+  const [ana] = parties;
+  await client(newId()).savePartyReply(cred.id, ana.personal, { answers: { civil: yes(2), dinner: yes(4) } });
+  cred.version = 1;
+  await tracker.publish(cred, wedding([civil, church, dinner]));
+  await tracker.setPartySubEvents(cred, [ana.id], ['church']);
+  const listed = (await tracker.loadResponses(cred)).data;
+  const [anaListed] = listed.parties;
+  assert.deepEqual(
+    [anaListed.reply.attending, anaListed.reply.partySize, anaListed.reply.answers],
+    [false, 0, undefined],
+  );
+  assert.deepEqual(partySubEventTally(['church'], listed.parties), [
+    { id: 'church', yes: 0, no: 0, attending: 0, unanswered: 1, pending: 0 },
+  ]);
+  assert.deepEqual((await client(newId()).loadParty(cred.id, ana.personal)).data.reply.answers, undefined);
+});
+
+test('the guest-list CSV marks the sub-events a party is not invited to', () => {
+  const labels = [
+    { id: 'civil', name: 'Civil' },
+    { id: 'dinner', name: 'Dinner' },
+  ];
+  const parties = [
+    {
+      name: 'Ana',
+      defaultSeats: 2,
+      subEvents: ['dinner'],
+      reply: { attending: true, partySize: 2, answers: { dinner: yes(2) }, note: '' },
+    },
+    { name: 'Ion', defaultSeats: 1, subEvents: ['civil'], reply: null },
+  ];
+  const expectedRows = {
+    en: ['Ana,Replied,2,Yes,Not invited,,Yes,2,', 'Ion,No reply yet,1,,,,Not invited,,', 'Total,,,,0,0,1,2,'],
+    ro: ['Ana;A răspuns;2;Da;Neinvitat;;Da;2;', 'Ion;Fără răspuns;1;;;;Neinvitat;;', 'Total;;;;0;0;1;2;'],
+  };
+  for (const [lang, expected] of Object.entries(expectedRows)) {
+    assert.deepEqual(guestListCsv(parties, lang, labels).slice(1).split('\r\n').slice(1, 4), expected, lang);
+  }
 });

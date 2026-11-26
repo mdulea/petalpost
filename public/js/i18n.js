@@ -365,7 +365,8 @@ export const UI = {
     },
     // The answers of a reply to each sub-event in the reply forms, the tracker and the CSV files. A sub-event appears
     // under its name, or as part n, counted from 1, when it has none. An answer argument is {attending, partySize},
-    // and a totals argument is a result of subEventTally in rsvp.js, with pending from partySubEventTally in guest-list.js.
+    // and a totals argument is a result of subEventTally in rsvp.js. The tracker's totals add pending from
+    // partySubEventTally in guest-list.js.
     subEventReplies: {
       untitled: (n) => `Part ${n}`,
       yes: 'Yes',
@@ -456,6 +457,7 @@ export const UI = {
       columns: ['Name', 'Attending', 'Party size', 'Note', 'Replied', 'Changed'],
       yes: 'Yes',
       no: 'No',
+      notInvited: 'Not invited',
       file: 'petalpost-replies',
     },
     rsvp: {
@@ -689,7 +691,8 @@ export const UI = {
     },
     // The answers of a reply to each sub-event in the reply forms, the tracker and the CSV files. A sub-event appears
     // under its name, or as part n, counted from 1, when it has none. An answer argument is {attending, partySize},
-    // and a totals argument is a result of subEventTally in rsvp.js, with pending from partySubEventTally in guest-list.js.
+    // and a totals argument is a result of subEventTally in rsvp.js. The tracker's totals add pending from
+    // partySubEventTally in guest-list.js.
     subEventReplies: {
       untitled: (n) => `Momentul ${n}`,
       yes: 'Da',
@@ -784,6 +787,7 @@ export const UI = {
       columns: ['Nume', 'Participă', 'Persoane', 'Notă', 'A răspuns', 'Modificat'],
       yes: 'Da',
       no: 'Nu',
+      notInvited: 'Neinvitat',
       file: 'petalpost-raspunsuri',
     },
     rsvp: {

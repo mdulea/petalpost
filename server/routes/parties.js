@@ -429,6 +429,7 @@ async function setPartySeats({ db, request, ids: [eventId, id] }) {
       rows: [party],
     } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
     if (!party) throw new Refusal(404, 'partyMissing');
+    // The invitation has no sub-events here, so the reply has no answers to keep.
     const current = await currentPartyReply(tx, id, []);
     const { reply } = makeReply(
       { name: party.name, attending: partySize > 0, partySize, meals, note: current?.note ?? '' },
