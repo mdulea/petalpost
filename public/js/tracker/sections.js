@@ -5,7 +5,8 @@
 // invitation data as invite and its mode as mode. page is {lang, locale, copy, client, cred, signedIn, storage,
 // setStatus, showOnly, load}, where signedIn is true when cred holds a passkey access token instead of the management
 // secret, storage is localStorage or null where the browser blocks it, setStatus(text) writes the page status,
-// showOnly(heading, message) replaces the page with a message, and load() reloads the view. A new feature adds its module, one entry here and its element in both pages.
+// showOnly(heading, message) replaces the page with a message, and load() reloads the view. A new feature adds its
+// module, one entry here and its element in both pages.
 // tests/check-site.js fails when an entry and the elements disagree.
 import { section as countdowns } from './countdowns.js';
 import { section as rsvpDeadline } from './deadline.js';
