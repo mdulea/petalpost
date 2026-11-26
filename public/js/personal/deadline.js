@@ -12,7 +12,7 @@ export function renderDeadline(party, { lang, locale }) {
   panel.id = 'personalDeadline';
   const text = document.createElement('p');
   text.className = 'status';
-  text.textContent = party.deadlineClosed ? words.guestClosed(formatted) : words.guestOpen(formatted);
+  text.textContent = party.deadlineClosed ? words.closed(formatted) : words.guestOpen(formatted);
   panel.append(text);
   return panel;
 }

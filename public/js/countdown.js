@@ -5,7 +5,7 @@
 
 // The start time of an event without a time.
 const DEFAULT_TIME = '12:00';
-export const RSVP_TIMEZONE = 'Europe/Bucharest';
+const RSVP_TIMEZONE = 'Europe/Bucharest';
 
 const HOUR = 60 * 60 * 1000;
 const BUCHAREST_DATE = new Intl.DateTimeFormat('en-US', {

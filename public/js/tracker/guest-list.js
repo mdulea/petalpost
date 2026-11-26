@@ -188,17 +188,21 @@ function buildHostReplyForm(party, { client, cred, load }, words) {
   cancel.addEventListener('click', () => {
     form.hidden = true;
   });
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    return writeAndReload(load, form.elements, async () => {
-      const result = await client.saveHostPartyReply(cred, party.id, {
-        attending: yes.checked,
-        partySize: yes.checked ? seats.valueAsNumber : 0,
-        note: note.value.replaceAll('\t', ' '),
-        version: party.reply?.version,
+    try {
+      await writeAndReload(load, form.elements, async () => {
+        const result = await client.saveHostPartyReply(cred, party.id, {
+          attending: yes.checked,
+          partySize: yes.checked ? seats.valueAsNumber : 0,
+          note: note.value.replaceAll('\t', ' '),
+          version: party.reply?.version,
+        });
+        return result.ok ? { ...result, message: words.replySaved } : result;
       });
-      return result.ok ? { ...result, message: words.replySaved } : result;
-    });
+    } finally {
+      seats.disabled = !yes.checked;
+    }
   });
   return form;
 }
@@ -240,6 +244,7 @@ async function renderParty(party, { client, cred, load, signedIn, formatTime }, 
   }
   row.append(seatEditor(party, { client, cred, load }, words));
   const actions = document.createElement('div');
+  row.append(actions);
   actions.className = 'reply-actions';
   if (!signedIn) {
     const linkControls = [];
@@ -255,7 +260,7 @@ async function renderParty(party, { client, cred, load, signedIn, formatTime }, 
       actions.append(element);
     };
     if (!party.revoked) {
-      row.append(await personalLinkControls(party, cred, invite, words, linkControls));
+      actions.before(await personalLinkControls(party, cred, invite, words, linkControls));
       linkAction('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
     }
     linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
@@ -282,7 +287,6 @@ async function renderParty(party, { client, cred, load, signedIn, formatTime }, 
       }
     }),
   );
-  row.append(actions);
   return { party, row };
 }
 

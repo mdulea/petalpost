@@ -52,7 +52,11 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     fields.disabled = true;
     submit.hidden = true;
     withdraw.hidden = true;
-    if (message) status.textContent = message;
+    if (message) {
+      status.textContent = message;
+      const deadlineBanner = document.querySelector('#personalDeadline p');
+      if (deadlineBanner) deadlineBanner.textContent = message;
+    }
   }
 
   function fill(reply) {
