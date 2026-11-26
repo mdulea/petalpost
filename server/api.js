@@ -5,11 +5,6 @@
 // message the page can show. Secrets arrive as Authorization: Bearer <secret>; the database keeps only their
 // sha256 hex hashes, and no response or log line contains a secret, hash or SQL. Accept-Language picks only the
 // error message language.
-//
-// A PUT without version creates the record: 201 {version: 1, created: true}, or 200 {version, created: false}
-// unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
-// or 409 with the error and the current record when the version is stale. Updates, replays, withdrawals and
-// refusals count no action.
 import { apiMessages, normalizeLang } from '../public/js/i18n.js';
 import { ID_PATTERN, REPLY_LIMITS } from '../public/js/rsvp.js';
 import { DAILY_EVENTS } from './routes/events.js';

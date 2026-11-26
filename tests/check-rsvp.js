@@ -14,8 +14,9 @@
 // changes, withdrawals, the daily quota, the reply limit and other refused requests add nothing; /api/stats, which
 // counts the five browser actions in en and ro and refuses other actions, languages, bodies and methods; the browser
 // counter, which posts the page language and ignores a failed send.
-// Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of tests/api-setup.js, except the quota key
-// and action count checks, which read the stored rows in a database of their own.
+// Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
+// tests/api-setup.js, except the quota key and action count checks, which read the stored rows in a database of
+// their own.
 // Run: pnpm exec node tests/check-rsvp.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';

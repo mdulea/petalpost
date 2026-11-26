@@ -240,6 +240,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 4. Add a Node check file `tests/check-<module>.js` that imports `setup`, `publishedEvent` and the credentials it needs from `tests/api-setup.js`. A browser test of the route goes in a spec file of its own that imports from `tests/browser-setup.js`.
 
 `server/api.js` refuses an id that does not match `ID_PATTERN` before it calls the action.
+A limit that an error message names also goes into `LIMITS` in `server/api.js`, which passes it to `apiMessages` in `public/js/i18n.js`.
 
 ### Tooling notes
 

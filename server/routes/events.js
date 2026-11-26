@@ -4,8 +4,12 @@
 // GET /api/events/{id}                     public; {t, d}
 // DELETE /api/events/{id}                  management secret; removes the event and its responses; 204
 //
-// A new event counts invitation_publish under the body's lang normalized to en or ro. Each client IP may create
-// dailyEvents events per UTC day, DAILY_EVENTS unless createApi sets another number; the 429 stores nothing.
+// A PUT without version creates the event: 201 {version: 1, created: true}, or 200 {version, created: false}
+// unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
+// or 409 with the error and the current {version, t, d} when the version is stale.
+// A new event counts invitation_publish under the body's lang normalized to en or ro; updates, replays and refusals
+// count nothing. Each client IP may create dailyEvents events per UTC day, DAILY_EVENTS unless createApi sets
+// another number; the 429 stores nothing.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { readPublished } from '../../public/js/invite.js';
 import { addCount, bearer, hash, json, ownedEvent, readBody, Refusal, today } from './shared.js';

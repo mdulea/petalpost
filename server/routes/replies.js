@@ -5,9 +5,13 @@
 // GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note, version}
 // DELETE /api/events/{id}/responses/{rid}  edit secret; {version} withdraws the reply; 204, also when it is gone
 //
+// A PUT without version creates the reply: 201 {version: 1, created: true}, or 200 {version, created: false}
+// unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
+// or 409 with the error and the current reply with its version when the version is stale.
 // A reply created without note has an empty note, and a reply updated without note keeps its stored note. A new
 // reply counts reply_submit under the body's lang normalized to en or ro. An event takes at most EVENT_RESPONSES
-// replies; the 429 stores nothing, and existing replies stay editable.
+// replies; the 429 stores nothing, and existing replies stay editable. Updates, replays, withdrawals and refusals
+// count nothing.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { makeReply, tally } from '../../public/js/rsvp.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
