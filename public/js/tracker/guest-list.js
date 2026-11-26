@@ -68,30 +68,28 @@ async function show({ parties }, { client, cred, lang, copy, signedIn, load }) {
       if (signedIn) return row;
       const actions = document.createElement('div');
       actions.className = 'reply-actions';
-      const buttons = [];
+      const linkControls = [];
       const change = (revoked) => {
         const button = linkButton(revoked ? words.revoke : words.regenerate);
-        buttons.push(button);
+        linkControls.push(button);
         actions.append(button);
         button.addEventListener('click', async () => {
           if (!window.confirm(revoked ? words.revokeConfirm : words.regenerateConfirm)) return;
-          for (const control of buttons) control.disabled = true;
+          for (const control of linkControls) control.disabled = true;
           status.textContent = '';
-          const result = await client.changePartyLink(cred, party.id, revoked);
+          const result = await client.changePartyLink(cred, party.id, revoked, party.linkGeneration);
           if (result.ok) {
             status.textContent = revoked ? words.revoked : words.regenerated;
-            await load();
           } else {
             status.textContent = result.message;
-            for (const control of buttons) control.disabled = false;
           }
+          await load();
         });
       };
       if (!party.revoked) {
         const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
         const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
         const button = linkButton(words.copy);
-        buttons.push(button);
         button.addEventListener('click', async () => {
           try {
             await navigator.clipboard.writeText(link);
@@ -104,6 +102,7 @@ async function show({ parties }, { client, cred, lang, copy, signedIn, load }) {
         input.className = 'input';
         input.readOnly = true;
         input.value = link;
+        linkControls.push(input, button);
         input.setAttribute('aria-label', `${words.link} · ${party.name}`);
         const controls = document.createElement('div');
         controls.className = 'copy-row';

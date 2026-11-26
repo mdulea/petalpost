@@ -218,6 +218,7 @@ export const UI = {
     personal: {
       greeting: (name) => `Hello, ${name}!`,
       unavailable: 'This link no longer works. Ask the host for a new one.',
+      noReply: 'No reply yet',
       heading: 'Reply to the host',
       attending: 'Will you come?',
       yes: 'Yes, I will come',
@@ -374,6 +375,7 @@ export const UI = {
     personal: {
       greeting: (name) => `Bună, ${name}!`,
       unavailable: 'Acest link nu mai funcționează. Cere-i gazdei un link nou.',
+      noReply: 'Fără răspuns',
       heading: 'Confirmă participarea',
       attending: 'Vei participa?',
       yes: 'Da, voi veni',
@@ -521,6 +523,7 @@ export function apiMessages(
       partyLimit: `Lista de invitați poate avea cel mult ${eventParties} de grupuri.`,
       partyId: 'Grupul nu a putut fi adăugat. Încearcă din nou.',
       personalLink: UI.ro.personal.unavailable,
+      partyLinkChanged: 'Linkul personal s-a schimbat. Verifică linkul actual.',
       partyReply: 'Verifică numărul de locuri și nota, apoi trimite din nou răspunsul.',
     };
   }
@@ -554,6 +557,7 @@ export function apiMessages(
     partyLimit: `The guest list can have up to ${eventParties} parties.`,
     partyId: 'The party could not be added. Try again.',
     personalLink: UI.en.personal.unavailable,
+    partyLinkChanged: 'The personal link changed. Check the current link.',
     partyReply: 'Check the number of seats and the note, then send your reply again.',
   };
 }

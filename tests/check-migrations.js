@@ -86,7 +86,7 @@ test('the guest-list migration keeps an earlier invitation and reply and their r
     reply: (await client(db).loadReply(cred.id, edit)).data,
   });
   const before = await reads();
-  assert.deepEqual(await migrate(db), [GUEST_LISTS]);
+  assert.deepEqual(await migrate(db), [GUEST_LISTS, '006_party_link_generation.sql']);
   assert.deepEqual(await reads(), before);
   assert.deepEqual(before.reply, { ...reply, version: 1 });
 });

@@ -2,11 +2,12 @@
 // {name, defaultSeats, lang}. GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
-// PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {revoked}. True revokes;
-// false replaces both secrets and enables the new links. Either action preserves the reply and returns 204.
+// PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {revoked, linkGeneration}.
+// True revokes. False replaces both secrets and enables the new links. Both preserve the reply and return 204.
+// A request for an older link generation returns 409.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
-import { makeReply, newId, PARTY_LIMITS, partyLinkSecret } from '../../public/js/rsvp.js';
+import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret } from '../../public/js/rsvp.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
 export const routes = [
@@ -85,27 +86,30 @@ export async function listParties(db, eventId) {
 
 async function changeLink({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
-  const { revoked } = await readBody(request);
-  if (typeof revoked !== 'boolean') throw new Refusal(400, 'body');
+  const { revoked, linkGeneration } = await readBody(request);
+  if (
+    typeof revoked !== 'boolean' ||
+    (linkGeneration !== null && (typeof linkGeneration !== 'string' || !ID_PATTERN.test(linkGeneration)))
+  )
+    throw new Refusal(400, 'body');
   return db.transaction(async (tx) => {
     await ownedEvent(tx, eventId, secret, { token: false });
-    let result;
+    const {
+      rows: [party],
+    } = await tx.query('select link_generation from parties where id = $1 and event_id = $2 for update', [id, eventId]);
+    if (!party) throw new Refusal(404, 'personalLink');
+    if (party.link_generation !== linkGeneration) throw new Refusal(409, 'partyLinkChanged');
     if (revoked) {
-      result = await tx.query('update parties set revoked = true where id = $1 and event_id = $2 returning id', [
-        id,
-        eventId,
-      ]);
+      await tx.query('update parties set revoked = true where id = $1', [id]);
     } else {
       const generation = newId();
       const personal = await partyLinkSecret(secret, id, 'personal', generation);
       const view = await partyLinkSecret(secret, id, 'view', generation);
-      result = await tx.query(
-        `update parties set revoked = false, link_generation = $3, secret_hash = $4, view_hash = $5
-         where id = $1 and event_id = $2 returning id`,
-        [id, eventId, generation, hash(personal), hash(view)],
+      await tx.query(
+        'update parties set revoked = false, link_generation = $2, secret_hash = $3, view_hash = $4 where id = $1',
+        [id, generation, hash(personal), hash(view)],
       );
     }
-    if (!result.rows.length) throw new Refusal(404, 'personalLink');
     return json(204, null);
   });
 }

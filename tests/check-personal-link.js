@@ -94,6 +94,8 @@ for (const lang of ['en', 'ro']) {
       assert.equal(entry.revoked, false);
       assert.deepEqual(after.totals, before.totals);
       assert.deepEqual(entry.reply, before.parties.find((entry) => entry.id === id).reply);
+      assert.equal((await tracker.changePartyLink(cred, id, false)).status, 409);
+      assert.equal((await tracker.changePartyLink(cred, id, true)).status, 409);
       const secret = await partyLinkSecret(cred.secret, id, 'personal', entry.linkGeneration);
       assert.notEqual(secret, old.secret);
       const newLink = { id, secret };

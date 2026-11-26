@@ -118,6 +118,14 @@ for (const lang of ['en', 'ro']) {
     await expect(guest.page).toHaveURL(newLink);
     await host.page.reload();
     await expect(row).toContainText(copy.noReply);
+
+    host.page.once('dialog', (dialog) => dialog.accept());
+    await row.getByRole('button', { name: copy.regenerate }).click();
+    await expect(host.page.locator('#partyStatus')).toHaveText(copy.regenerated);
+    await row.getByRole('button', { name: copy.copy }).click();
+    await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
+    await guest.page.goto(await host.page.evaluate(() => navigator.clipboard.readText()));
+    await expect(form.getByRole('status')).toHaveText(copy.noReply);
     expect([...host.problems, ...guest.problems, ...oldLink.problems]).toEqual([]);
   });
 }
