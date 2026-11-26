@@ -16,7 +16,7 @@
 import { isValidDate } from '../../public/js/countdown.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf, readPublished } from '../../public/js/invite.js';
-import { addCount, bearer, hash, json, ownedEvent, readBody, Refusal, today } from './shared.js';
+import { addCount, bearer, hash, isEnded, json, ownedEvent, readBody, Refusal, today } from './shared.js';
 
 export const DAILY_EVENTS = 20;
 
@@ -27,7 +27,10 @@ export const routes = [
 
 async function getEvent({ db, ids: [id] }) {
   const event = (await db.query('select t, d from events where id = $1', [id])).rows[0];
-  if (!event) throw new Refusal(404, 'eventMissing');
+  if (!event) {
+    if (await isEnded(db, id)) throw new Refusal(410, 'eventEnded');
+    throw new Refusal(404, 'eventMissing');
+  }
   return json(200, { t: event.t, d: event.d });
 }
 
@@ -39,16 +42,17 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
   const ip = request.headers.get('x-real-ip') || 'unknown';
   return db.transaction(async (tx) => {
     const exists = (await tx.query('select 1 from events where id = $1', [id])).rows.length > 0;
-    if (!exists && body.version !== undefined) throw new Refusal(404, 'eventMissing');
     if (exists) {
       const event = await ownedEvent(tx, id, secret);
       if (body.version === undefined) return json(200, { version: event.version, created: false });
       if (body.version !== event.version) {
         throw new Refusal(409, 'eventChanged', { version: event.version, t: event.t, d: event.d });
       }
+      const mode = modeOf(event.d);
+      if (mode === 'guestList' && !record.d.date) throw new Refusal(400, 'guestListDate');
       const next = {
         ...record.d,
-        mode: modeOf(event.d),
+        mode,
         ...(isValidDate(event.d?.deadline) ? { deadline: event.d.deadline } : {}),
       };
       await tx.query(
@@ -57,6 +61,9 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
       );
       return json(200, { version: event.version + 1, created: false });
     }
+    if (await isEnded(tx, id)) throw new Refusal(410, 'eventEnded');
+    if (body.version !== undefined) throw new Refusal(404, 'eventMissing');
+    if (record.d.mode === 'guestList' && !record.d.date) throw new Refusal(400, 'guestListDate');
     // The counter keys on a hash of today's random salt and the IP; deleting earlier salts makes old keys unusable.
     await tx.query(`delete from creation_quota where day < ${today}`, []);
     await tx.query(`delete from quota_salts where day < ${today}`, []);

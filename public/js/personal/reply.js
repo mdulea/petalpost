@@ -71,8 +71,8 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
 
   function finish(result, success) {
     if (result.status === 409) fill(result.data.reply);
-    if (result.status === 404) {
-      unavailable(result.message);
+    if (result.status === 404 || result.status === 410) {
+      unavailable(result.message, result.status === 410 ? guestCopy.endedHeading : guestCopy.loadFailedHeading);
       return;
     }
     if (result.status === 403) {

@@ -68,6 +68,8 @@ async function load() {
   if (result.ok) {
     await showEvent(result.data);
     if (request === latestLoad) statusEl.textContent = '';
+  } else if (result.status === 410) {
+    showOnly(copy.endedHeading, result.message);
   } else if (result.status === 404) {
     showOnly(copy.missingHeading, result.message);
   } else if (content.hidden) {

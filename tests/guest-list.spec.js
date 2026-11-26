@@ -3,7 +3,9 @@
 // invitation link of a guest-list invitation shows the invitation with a notice and no reply form, and its tracker
 // shows the invitation, an empty guest list and a note that the link takes no replies, with no replies section; the
 // invitation link of an open invitation keeps the reply form, and its tracker keeps the replies section without a
-// guest list; no page breaks the Content-Security-Policy or throws.
+// guest list; the editor refuses to publish a guest-list invitation without a date, and after retention deletes a
+// past guest-list invitation the tracker, personal link and public invitation link show "This invitation has ended"
+// without event details; no page breaks the Content-Security-Policy or throws.
 // The tracker also pastes, searches, filters, exports, renames and deletes parties in both languages.
 // A maximum-length paste fills the list, and the page refuses an extra party.
 // A retry after a lost batch response keeps the same names, seats and language and creates no duplicates.
@@ -31,6 +33,11 @@ const COPY = {
       'Daria,Replied,0,No,',
       'Victor,No reply yet,3,,',
     ],
+    dateRequired: 'Add an event date before publishing a guest-list invitation.',
+    addParty: 'Add party',
+    copyPersonal: 'Copy personal link',
+    endedHeading: 'This invitation has ended',
+    endedMessage: 'This invitation has ended.',
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
@@ -50,6 +57,11 @@ const COPY = {
       'Daria;A răspuns;0;Nu;',
       'Victor;Fără răspuns;3;;',
     ],
+    dateRequired: 'Adaugă data evenimentului înainte de a publica o invitație cu listă de invitați.',
+    addParty: 'Adaugă un grup',
+    copyPersonal: 'Copiază linkul personal',
+    endedHeading: 'Această invitație s-a încheiat',
+    endedMessage: 'Această invitație s-a încheiat.',
   },
 };
 
@@ -167,6 +179,58 @@ for (const lang of ['en', 'ro']) {
     await rows.filter({ hasText: 'Daria' }).getByRole('button', { name: copy.remove }).click();
     await expect(rows).toHaveCount(2);
     expect(host.problems).toEqual([]);
+  });
+
+  test(`in ${lang}, a guest-list invitation needs a date and shows ended on every link after retention`, async ({
+    browser,
+  }) => {
+    const host = await newBrowser(browser, { permissions: ['clipboard-read', 'clipboard-write'] });
+    await host.page.goto(copy.editor);
+    await host.page.check('input[name="mode"][value="guestList"]');
+    await host.page.fill('#title', copy.title);
+    await host.page.fill('#date', '');
+    await host.page.click('#publish');
+    await expect(host.page.locator('#publishStatus')).toHaveText(copy.dateRequired);
+    await expect(host.page.locator('#date')).toBeFocused();
+    await expect(host.page.locator('#published')).toBeHidden();
+
+    await host.page.fill('#date', '2020-01-01');
+    await host.page.click('#publish');
+    await expect(host.page.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
+    const invitation = await host.page.locator('#eventLink').inputValue();
+    const manage = await host.page.locator('#manageLink').inputValue();
+
+    await host.page.goto(manage);
+    await host.page.locator('#partyName').fill('Familia Radu');
+    await host.page.locator('#defaultSeats').fill('2');
+    await host.page.getByRole('button', { name: copy.addParty }).click();
+    const row = host.page.locator('#partyList li').filter({ hasText: 'Familia Radu' });
+    await row.getByRole('button', { name: copy.copyPersonal }).click();
+    const personal = await host.page.evaluate(() => navigator.clipboard.readText());
+
+    const response = await host.page.request.get('/api/retention');
+    expect(response.status()).toBe(200);
+
+    await host.page.reload();
+    await expect(host.page.locator('#manageHeading')).toHaveText(copy.endedHeading);
+    await expect(host.page.locator('#manageStatus')).toHaveText(copy.endedMessage);
+    await expect(host.page.locator('#manageContent')).toBeHidden();
+
+    const guest = await newBrowser(browser);
+    await guest.page.goto(invitation);
+    await expect(guest.page.locator('.editor-head h1')).toHaveText(copy.endedHeading);
+    await expect(guest.page.locator('#status')).toHaveText(copy.endedMessage);
+    await expect(guest.page.locator('#previewCard')).toBeHidden();
+    await expect(guest.page.getByText(copy.title)).toBeHidden();
+
+    const invited = await newBrowser(browser);
+    await invited.page.goto(personal);
+    await expect(invited.page.locator('.editor-head h1')).toHaveText(copy.endedHeading);
+    await expect(invited.page.locator('#status')).toHaveText(copy.endedMessage);
+    await expect(invited.page.locator('#previewCard')).toBeHidden();
+    await expect(invited.page.locator('#personalSections')).toBeHidden();
+    await expect(invited.page.getByText('Familia Radu')).toBeHidden();
+    expect([...host.problems, ...guest.problems, ...invited.problems]).toEqual([]);
   });
 }
 

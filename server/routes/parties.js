@@ -17,7 +17,7 @@ import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
-import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
+import { addCount, bearer, hash, isEnded, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
 const viewRoute = { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/view$/, methods: { GET: getView } };
 
@@ -202,6 +202,7 @@ async function getView({ db, request, ids: [eventId, id] }) {
      from parties p join events e on e.id = p.event_id where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
+  if (!party && (await isEnded(db, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret, 'view_hash');
   return json(200, { t: party.t, d: party.d, name: party.name });
 }
@@ -241,6 +242,7 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
      where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
+  if (!party && (await isEnded(db, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret);
   const view = await viewLinkSecret(secret, id);
   // Use the current credential so a concurrent revoke or regeneration cannot record a stale open.
@@ -281,6 +283,7 @@ async function ownedPartyReply(tx, eventId, id, secret, now) {
     'select name, secret_hash, revoked, version from parties where id = $1 and event_id = $2 for update',
     [id, eventId],
   );
+  if (!party && (await isEnded(tx, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret);
   if (isDeadlinePassed(event?.d?.deadline, now())) throw new Refusal(403, 'deadlinePassed');
   return { ...party, reply: await currentPartyReply(tx, id) };

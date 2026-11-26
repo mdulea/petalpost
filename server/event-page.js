@@ -6,6 +6,7 @@ import { localeOf, normalizeLang } from '../public/js/i18n.js';
 import { eventPreviewMeta, makeInviteData } from '../public/js/invite.js';
 import { ID_PATTERN } from '../public/js/rsvp.js';
 import { escapeHtml, getTemplate, linkPreviewPath } from '../public/js/templates.js';
+import { isEnded } from './routes/shared.js';
 
 const DEFAULT_TEMPLATES = {
   en: readFileSync(new URL('../public/editor.html', import.meta.url), 'utf8'),
@@ -18,6 +19,10 @@ const FALLBACK_META = {
       pageTitle: 'This invitation does not exist | Petalpost',
       description: 'This invitation does not exist or may have been deleted.',
     },
+    ended: {
+      pageTitle: 'This invitation has ended | Petalpost',
+      description: 'This invitation has ended.',
+    },
     unavailable: {
       pageTitle: 'The invitation could not be loaded | Petalpost',
       description: 'Storage is unavailable right now. Try again in a minute.',
@@ -27,6 +32,10 @@ const FALLBACK_META = {
     missing: {
       pageTitle: 'Această invitație nu există | Petalpost',
       description: 'Această invitație nu există sau a fost ștearsă.',
+    },
+    ended: {
+      pageTitle: 'Această invitație s-a încheiat | Petalpost',
+      description: 'Această invitație s-a încheiat.',
     },
     unavailable: {
       pageTitle: 'Invitația nu a putut fi încărcată | Petalpost',
@@ -54,7 +63,12 @@ export function renderEventPage(templateHtml, { id = null, event = null, status 
     const previewPath = linkPreviewPath(event.t);
     if (previewPath) image = { url: `${origin}/${previewPath}`, alt: `${meta.title} ${INVITATION_WORD[code]}` };
   } else {
-    meta = status === 503 ? FALLBACK_META[code].unavailable : FALLBACK_META[code].missing;
+    meta =
+      status === 503
+        ? FALLBACK_META[code].unavailable
+        : status === 410
+          ? FALLBACK_META[code].ended
+          : FALLBACK_META[code].missing;
   }
   const prefix = code === 'ro' ? '/ro' : '';
   const url = id ? `${origin}${prefix}/e/${id}` : `${origin}${prefix}/editor.html`;
@@ -123,7 +137,8 @@ export function createEventPage(db, templates = DEFAULT_TEMPLATES) {
     }
     try {
       const event = (await db.query('select t, d from events where id = $1', [id])).rows[0] ?? null;
-      const status = event ? 200 : 404;
+      const ended = !event && (await isEnded(db, id));
+      const status = event ? 200 : ended ? 410 : 404;
       return htmlResponse(status, renderEventPage(templateHtml, { id, event, status, lang }), request.method);
     } catch (error) {
       console.error('event page storage error', error?.code ?? 'unknown');

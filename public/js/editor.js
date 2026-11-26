@@ -523,6 +523,11 @@ function rememberEvent(cred) {
 }
 
 publishButton.addEventListener('click', async () => {
+  if (state.d.mode === 'guestList' && !state.d.date) {
+    publishStatus.textContent = editorCopy.guestListDate;
+    document.getElementById('date').focus();
+    return;
+  }
   state.publishedEvent ??= storedPublishedEvent(storage, lang);
   if (!state.publishedEvent) rememberEvent({ id: newId(), secret: newSecret(), version: null });
   const cred = state.publishedEvent;
@@ -541,9 +546,9 @@ publishButton.addEventListener('click', async () => {
         publishedPanel,
         cred.version === null ? editorCopy.publishedHeading : editorCopy.changesPublishedHeading,
       );
-  } else if (result.status === 404 && cred.version !== null) {
+  } else if (result.status === 410 || (result.status === 404 && cred.version !== null)) {
     rememberEvent(null);
-    publishStatus.textContent = editorCopy.deletedOnServer;
+    publishStatus.textContent = result.status === 410 ? result.message : editorCopy.deletedOnServer;
   } else {
     publishStatus.textContent = result.message;
   }
@@ -760,8 +765,8 @@ async function openEvent() {
   const credential = partyPrefix && readCredential(location.hash, partyPrefix);
   const viewOnly = partyPrefix === 'v=';
   const copy = UI[lang].personal;
-  const unavailable = (message) => {
-    setHeading(guestCopy.loadFailedHeading);
+  const unavailable = (message, heading = guestCopy.loadFailedHeading) => {
+    setHeading(heading);
     setStatus(message, { keep: true });
     document.body.classList.add('invite-hidden');
     for (const id of ['personalSections', 'countdown', 'replyCta', 'reportRow']) {
@@ -777,10 +782,16 @@ async function openEvent() {
   const result = credential ? await loadParty(state.event, credential) : await client.loadEvent(state.event);
   if (!result.ok) {
     if (credential) {
-      unavailable(result.message);
+      unavailable(result.message, result.status === 410 ? guestCopy.endedHeading : guestCopy.loadFailedHeading);
       return;
     }
-    setHeading(result.status === 404 ? guestCopy.missingHeading : guestCopy.loadFailedHeading);
+    setHeading(
+      result.status === 410
+        ? guestCopy.endedHeading
+        : result.status === 404
+          ? guestCopy.missingHeading
+          : guestCopy.loadFailedHeading,
+    );
     setStatus(result.message, { keep: true });
     return;
   }

@@ -73,7 +73,7 @@ The promises:
 - Hosts and guests need no account and no email address.
 - The site sets no cookies and loads nothing from another origin except Vercel Web Analytics, which sets no cookie.
 - The photo never leaves the host's browser.
-- The server stores the party names the host enters on a guest list, and when each personal link was first and last opened. Deleting the invitation deletes those names and times.
+- The server stores the party names the host enters on a guest list, and when each personal link was first and last opened. Deleting the invitation deletes those names and times. Petalpost deletes the guest list, its opened times and its replies at the first daily retention run after 23:59 Bucharest time on the day after the event.
 - Petalpost counts a fixed set of actions per day and page language, and stores no cookie, identifier, IP address or invitation content with the counts.
 - The site is in English and Romanian. Botez, Cununie and Moț exist only in Romanian.
 
@@ -101,7 +101,8 @@ A host cannot:
 - publish changes from another browser, because only the publishing browser keeps the management secret;
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
 - publish more than 20 invitations from one IP address in a day;
-- keep an invitation longer than 90 days after its event date, or 90 days after its last change when it has no date.
+- publish a guest-list invitation without an event date;
+- keep an open invitation longer than 90 days after its event date, or 90 days after its last change when it has no date.
 
 A guest can:
 
@@ -298,7 +299,7 @@ The Development, Preview and Production environments all connect to the same Neo
 Until a separate Neon branch for development is verified, treat every Neon connection string as production data.
 Local development and every test use PGlite, so they never need a Neon connection string.
 
-Vercel Cron calls `/api/retention` daily at 03:17 UTC, as `vercel.json` schedules. That route deletes each invitation and its replies 90 days after the later of the event date and the last change, and a Vercel Hobby project allows one such run per day. Cron runs only on production deployments. The route needs no secret, because it deletes only what the next scheduled run deletes. `RETENTION_DAYS` in `server/routes/retention.js` sets the period, and `privacy.html` states it.
+Vercel Cron calls `/api/retention` daily at 03:17 UTC, as `vercel.json` schedules. That route deletes each guest-list invitation with its parties and replies after 23:59 Europe/Bucharest time on the day after the event, and deletes each open invitation and its replies 90 days after the later of the event date and the last change. A Vercel Hobby project allows one such run per day. Cron runs only on production deployments. The route needs no secret, because it deletes only what the next scheduled run deletes. `RETENTION_DAYS` in `server/routes/retention.js` sets the open-mode period, and `privacy.html` states both rules.
 
 Apply schema changes with `pnpm migrate`, which applies the unapplied files in `server/migrations/` in name order and needs the direct connection string in `DATABASE_URL_UNPOOLED`:
 

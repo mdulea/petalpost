@@ -141,9 +141,12 @@
       <h2>Deletion and retention</h2>
       <p>
         The host can delete the invitation from the tracker. That removes the invitation, the party names, the personal
-        link opened times and all replies. Petalpost also deletes them automatically 90 days after the later of the
-        event date and the last change to the invitation. For an invitation without an event date, the 90 days start at
-        the last change. A guest can withdraw a reply through its edit link or personal link. Deleting an invitation
+        link opened times and all replies. Petalpost deletes a guest-list invitation and its guest list, opened times and
+        replies at the first daily run after 23:59 Bucharest time on the day after the event. Petalpost keeps only the
+        public invitation ID so the links can show that the invitation has ended. For an open invitation, Petalpost
+        deletes the invitation and all replies automatically 90 days after the later of the event date and the last
+        change, or 90 days after the last change when it has no date. A guest can withdraw a reply through its edit link
+        or personal link. Deleting an invitation
         also deletes its passkeys and access tokens. A passkey of a deleted invitation stays on the host's device until
         the host removes it there. It can no longer open the invitation.
       </p>
