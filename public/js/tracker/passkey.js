@@ -1,14 +1,15 @@
-// Lists, saves and removes the invitation's passkeys for a host with the full management link.
+// Lists the invitation's passkeys. Saving and removing them require the full management link.
 import { UI, localeOf } from '../i18n.js';
 import { MODES } from '../invite.js';
 import { passkeysSupported, savePasskey } from '../passkey.js';
 
-// The heading of the last load, which names a saved passkey.
+// The heading of the last load names a saved passkey. Only the latest list request may update the rows.
 let heading = '';
 let latestList = 0;
 
 const status = () => document.getElementById('passkeyStatus');
 
+// A dated passkey row with a removal control when the host opened the full management link.
 function passkeyRow(page, { id, createdAt }, index, format) {
   const copy = UI[page.lang].passkey;
   const row = document.createElement('li');
@@ -16,6 +17,8 @@ function passkeyRow(page, { id, createdAt }, index, format) {
   const time = document.createElement('time');
   time.dateTime = createdAt;
   time.textContent = copy.savedOn(format.format(new Date(createdAt)));
+  row.append(time);
+  if (page.signedIn) return row;
   const actions = document.createElement('div');
   const button = document.createElement('button');
   button.type = 'button';
@@ -36,10 +39,11 @@ function passkeyRow(page, { id, createdAt }, index, format) {
     }
   });
   actions.append(button);
-  row.append(time, actions);
+  row.append(actions);
   return row;
 }
 
+// Reloads the rows after a page refresh, save or removal.
 async function refreshList(page) {
   const request = ++latestList;
   const result = await page.client.listPasskeys(page.cred);
@@ -56,21 +60,20 @@ async function refreshList(page) {
 
 function init(page) {
   const { lang, client, cred } = page;
+  if (!cred || page.signedIn) return;
   document.getElementById('savePasskey').addEventListener('click', async (e) => {
     const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
     button.disabled = true;
     const result = await savePasskey(client, navigator.credentials, cred, heading, lang);
+    status().textContent = result.message;
     if (result.ok) await refreshList(page);
     button.disabled = false;
-    status().textContent = result.message;
   });
 }
 
 function show({ invite }, page) {
   heading = invite.title || page.copy.defaultHeading;
-  document.getElementById('passkeyPanel').hidden = page.signedIn;
-  if (page.signedIn) return;
-  const canSave = passkeysSupported(globalThis);
+  const canSave = !page.signedIn && passkeysSupported(globalThis);
   document.getElementById('passkeyHelp').hidden = !canSave;
   document.getElementById('savePasskey').hidden = !canSave;
   refreshList(page);

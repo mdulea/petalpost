@@ -198,7 +198,7 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     passkeyChallenge: (cred) => call('POST', `${eventPath(cred.id)}/passkeys/challenge`, cred.secret, {}),
     // Saves the passkey from the base64url registration {clientDataJSON, attestationObject}; data is {}.
     savePasskey: (cred, registration) => call('POST', `${eventPath(cred.id)}/passkeys`, cred.secret, registration),
-    // Lists the invitation's passkeys as {passkeys: [{id, createdAt}]} using the management secret.
+    // Lists the invitation's passkeys as {passkeys: [{id, createdAt}]} using either management credential.
     listPasskeys: (cred) => call('GET', `${eventPath(cred.id)}/passkeys`, cred.secret),
     // Removes one passkey using the management secret; a passkey that is already gone counts as removed.
     removePasskey: (cred, id) => call('DELETE', `${eventPath(cred.id)}/passkeys`, cred.secret, { id }),

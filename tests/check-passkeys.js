@@ -2,7 +2,7 @@
 // saved with the management secret sign in and get a token for their own invitation; the token loads the replies,
 // publishes changes and deletes the invitation, and the sign-in link round trip; a token reaches no other invitation,
 // cannot ask for a registration challenge or save a passkey, and gets a 401 after it expires; the management link
-// lists two saved passkeys and their dates and removes only the selected one; a token cannot list or remove them;
+// lists two saved passkeys and their dates and removes only the selected one; a token can list them but cannot remove them;
 // a challenge works once,
 // belongs to its own invitation or to sign-in, and expires; refusals of a wrong origin, relying party, type, missing
 // user verification, signature, sign counter that stops rising, malformed fields and an unknown passkey; the
@@ -77,14 +77,17 @@ test('the management link lists both passkeys and removes only the selected pass
   const owner = client();
   const listed = await owner.listPasskeys(cred);
   assert.equal(listed.status, 200);
-  assert.equal(listed.data.passkeys.length, 2);
-  for (const { id, createdAt } of listed.data.passkeys) {
+  assert.deepEqual(listed.data.passkeys.map(({ id }) => id).sort(), [key.id, cohost.id].sort());
+  for (const passkey of listed.data.passkeys) {
+    assert.deepEqual(Object.keys(passkey).sort(), ['createdAt', 'id']);
+    const { createdAt } = passkey;
     assert.match(createdAt, /^\d{4}-\d{2}-\d{2}T/);
     assert.ok(Math.abs(Date.now() - Date.parse(createdAt)) < 60_000);
-    assert.ok(id === key.id || id === cohost.id);
   }
   const tokenCred = { id: cred.id, secret: first.data.token };
-  assert.equal((await guests.listPasskeys(tokenCred)).status, 403);
+  const signedInList = await guests.listPasskeys(tokenCred);
+  assert.equal(signedInList.status, 200);
+  assert.deepEqual(signedInList.data, listed.data);
   assert.equal((await guests.removePasskey(tokenCred, cohost.id)).status, 403);
 
   const other = await publishedEvent();

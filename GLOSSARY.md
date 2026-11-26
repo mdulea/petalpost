@@ -104,7 +104,7 @@ The private link that opens the tracker of a published invitation. It gives its 
 
 **Passkey**
 
-A credential that a host or co-host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. It gives the host temporary access to the tracker. Passkey management and management-link sharing require the full management link.
+A credential that a host or co-host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. It grants temporary tracker access and leaves passkey changes and management-link sharing to hosts with the full link.
 _Avoid_ `account`, `login` and `password` for this concept.
 
 **Tracker**
