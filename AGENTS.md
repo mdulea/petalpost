@@ -12,6 +12,7 @@ README.md sections, by need:
 - project, setup, commands, layout, generated pages -> Overview, Installation, Run, Development, Project structure
 - claims in site copy: free, no account, no watermark, host + guest abilities -> Product facts
 - page language pairs, hreflang alternate links -> Page languages
+- UI string groups in `public/js/i18n.js`, new feature strings -> UI strings
 - new occasion -> Add an occasion; new template -> Add a template; new API route -> Add an API route
 - worktrees, branches, checks, pull requests, merges, commit + pull request messages -> Workflow
 - env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED`; database, migrations -> Deployment, Database

@@ -45,6 +45,7 @@ import {
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
 const copy = UI[lang].editor;
+const guestCopy = UI[lang].guest;
 const catalog = templatesFor(lang);
 const categories = categoriesFor(lang);
 
@@ -570,7 +571,7 @@ function attendingChecked() {
 
 // Each reply field shows its own error in a message below it, which joins the field's description after any hint and
 // counter. The answer's field is its radio group, and focus goes to the group's first choice.
-const replyErrors = copy.replyErrors(REPLY_LIMITS);
+const replyErrors = guestCopy.replyErrors(REPLY_LIMITS);
 /** @type {Record<string, {field: Element, focusTarget: HTMLElement}>} */
 const replyControls = {
   name: { field: nameInput, focusTarget: nameInput },
@@ -649,13 +650,13 @@ rsvpForm.addEventListener('submit', async (e) => {
     return;
   }
   if (state.sample) {
-    rsvpStatus.textContent = copy.sampleReply;
+    rsvpStatus.textContent = guestCopy.sampleReply;
     return;
   }
   // The edit link replaces the address before the request, so a reload or bookmark opens the reply if it was saved.
   history.replaceState(null, '', replyLink());
   sendReply.disabled = true;
-  rsvpStatus.textContent = copy.sendingReply;
+  rsvpStatus.textContent = guestCopy.sendingReply;
   const created = replyCred.version === null;
   const result = await client.saveReply(state.event, replyCred, reply);
   sendReply.disabled = false;
@@ -663,7 +664,7 @@ rsvpForm.addEventListener('submit', async (e) => {
     replyCred.version = result.data.version;
     showReplyLink();
     rsvpStatus.textContent = '';
-    showOutcome(replySavedPanel, created ? copy.replySent : copy.replyUpdated);
+    showOutcome(replySavedPanel, created ? guestCopy.replySent : guestCopy.replyUpdated);
     return;
   }
   if (result.status === 409) {
@@ -675,10 +676,10 @@ rsvpForm.addEventListener('submit', async (e) => {
 
 // The withdraw button sits in the saved-reply panel, so it shows only once the server has confirmed a version.
 withdrawButton.addEventListener('click', async () => {
-  if (!window.confirm(copy.withdrawConfirm)) return;
+  if (!window.confirm(guestCopy.withdrawConfirm)) return;
   withdrawButton.disabled = true;
   setOutcome(replySavedPanel, null);
-  rsvpStatus.textContent = copy.withdrawingReply;
+  rsvpStatus.textContent = guestCopy.withdrawingReply;
   const result = await client.withdrawReply(state.event, replyCred);
   withdrawButton.disabled = false;
   if (result.ok) {
@@ -708,7 +709,7 @@ document.getElementById('replyAgain').addEventListener('click', () => {
 
 document.getElementById('copyReplyLink').addEventListener('click', () =>
   copyLink(replyLinkInput.value, () => {
-    rsvpStatus.textContent = copy.replyLinkCopied;
+    rsvpStatus.textContent = guestCopy.replyLinkCopied;
   }),
 );
 
@@ -722,14 +723,14 @@ function setHeading(heading) {
 async function openEvent() {
   const result = await client.loadEvent(state.event);
   if (!result.ok) {
-    setHeading(result.status === 404 ? copy.missingHeading : copy.loadFailedHeading);
+    setHeading(result.status === 404 ? guestCopy.missingHeading : guestCopy.loadFailedHeading);
     setStatus(result.message, { keep: true });
     return;
   }
   const template = getTemplate(result.data.t, lang);
   state.t = template.id;
   state.d = makeInviteData(template, result.data.d, lang);
-  setHeading(state.d.title || copy.defaultGuestHeading);
+  setHeading(state.d.title || guestCopy.defaultGuestHeading);
   document.body.classList.remove('invite-hidden');
   render();
   revealInvite();
@@ -744,7 +745,7 @@ async function openEvent() {
   const saved = await client.loadReply(state.event, replyCred);
   // The event exists, so the reply was never saved or was withdrawn. The empty form sends it as a new reply.
   if (saved.status === 404) {
-    rsvpStatus.textContent = copy.noSavedReply;
+    rsvpStatus.textContent = guestCopy.noSavedReply;
     return;
   }
   if (!saved.ok) {
@@ -754,7 +755,7 @@ async function openEvent() {
   replyCred.version = saved.data.version;
   fillReply(saved.data);
   showReplyLink();
-  rsvpStatus.textContent = copy.savedReplyShown;
+  rsvpStatus.textContent = guestCopy.savedReplyShown;
 }
 
 // A broken link shows only the message and the link to make an invite; an invite without a title gets a generic one.
@@ -762,20 +763,20 @@ if (state.guest) {
   document.body.classList.add('view-mode');
   document.body.classList.toggle('invite-hidden', state.broken || Boolean(state.event));
   if (state.broken) {
-    setHeading(copy.brokenHeading);
-    setStatus(copy.brokenMessage, { keep: true });
+    setHeading(guestCopy.brokenHeading);
+    setStatus(guestCopy.brokenMessage, { keep: true });
   } else if (state.event) {
-    setHeading(copy.openingHeading);
+    setHeading(guestCopy.openingHeading);
     openEvent();
   } else if (state.sample) {
-    setHeading(state.d.title || copy.defaultGuestHeading);
+    setHeading(state.d.title || guestCopy.defaultGuestHeading);
     const sampleNotice = document.getElementById('sampleNotice');
-    sampleNotice.textContent = copy.sampleNotice;
+    sampleNotice.textContent = guestCopy.sampleNotice;
     sampleNotice.hidden = false;
     rsvpForm.hidden = false;
     revealInvite();
   } else {
-    setHeading(state.d.title || copy.defaultGuestHeading);
+    setHeading(state.d.title || guestCopy.defaultGuestHeading);
     revealInvite();
   }
 }

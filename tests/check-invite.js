@@ -1,15 +1,16 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
-// Romanian with empty lines left out, invite records, the characters left in a limited field, storage writes, the stored published
-// event identity, template switching, template ids, Romanian localization coverage, the Romanian occasion order,
-// Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the calendar file, the report link
-// or the choice of when the Romanian language banner shows and where it links break.
+// Romanian with empty lines left out, invite records, the characters left in a limited field, storage writes, the stored
+// published event identity, template switching, template ids, Romanian localization coverage, the same UI string and
+// API message keys in English and Romanian, the Romanian occasion order, Romanian-only occasions kept out of the
+// English catalog, 24-hour time formatting, the calendar file, the report link or the choice of when the Romanian
+// language banner shows and where it links break.
 // Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as templates from '../public/js/templates.js';
 import * as invite from '../public/js/invite.js';
-import { romanianBannerHref } from '../public/js/i18n.js';
+import { UI, apiMessages, romanianBannerHref } from '../public/js/i18n.js';
 
 const ctx = { ...templates, ...invite };
 
@@ -794,13 +795,40 @@ test('the report link mails the contact address with the invitation link and the
   );
 });
 
-// Romanian localization: copy coverage, sample limits, 24-hour time formatting, locale-scoped storage, diacritic slugs and Romanian DSA notice.
+// Romanian localization: copy coverage, string key parity, sample limits, 24-hour time formatting, locale-scoped storage, diacritic slugs and Romanian DSA notice.
 check(
   'every bilingual template has Romanian localization copy',
   ctx.TEMPLATES.filter((t) => (!t.locales || (t.locales.includes('en') && t.locales.includes('ro'))) && !t.ro).map(
     (t) => t.id,
   ),
   [],
+);
+// The key paths of a string group. A function counts by the keys of what it returns for an empty argument, and a
+// list counts by its length.
+const keyPaths = (value, path = '') => {
+  if (typeof value === 'function') return keyPaths(value({}), `${path}()`);
+  if (Array.isArray(value)) return [`${path}[${value.length}]`];
+  if (value && typeof value === 'object') return Object.entries(value).flatMap(([k, v]) => keyPaths(v, `${path}.${k}`));
+  return [path];
+};
+const apiLimits = { replyNameLimit: 1, partySizeLimit: 1, replyNoteLimit: 1, dailyEvents: 1, eventResponses: 1 };
+const parityGaps = (groups) => {
+  const [en, ro] = [keyPaths(groups.en), keyPaths(groups.ro)];
+  return [
+    ...en.filter((p) => !ro.includes(p)).map((p) => `ro lacks ${p}`),
+    ...ro.filter((p) => !en.includes(p)).map((p) => `en lacks ${p}`),
+  ];
+};
+check('every UI string group has the same keys in English and Romanian', parityGaps(UI), []);
+check(
+  'the API error messages have the same keys in English and Romanian',
+  parityGaps({ en: apiMessages('en', apiLimits), ro: apiMessages('ro', apiLimits) }),
+  [],
+);
+check(
+  'the key parity check names a key that one language lacks',
+  parityGaps({ en: { guest: { a: 'A', b: () => ({ c: 'C' }) } }, ro: { guest: { b: () => ({}) }, extra: 'E' } }),
+  ['ro lacks .guest.a', 'ro lacks .guest.b().c', 'en lacks .extra'],
 );
 const roCategories = ctx.categoriesFor('ro');
 check(

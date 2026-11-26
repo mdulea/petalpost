@@ -884,7 +884,7 @@ for (const { lang, editor } of [
   test(`in ${lang}, each delivery action and the calendar file send their count with the page language, and a cancelled share or another link copy sends nothing`, async ({
     browser,
   }) => {
-    const { editor: editorCopy, manage: manageCopy } = UI[lang];
+    const { editor: editorCopy, guest: guestCopy, manage: manageCopy } = UI[lang];
     const host = await stubbedBrowser(browser);
     const { page } = host;
     const { invitation, manage } = await publishFrom(page, editor);
@@ -922,9 +922,9 @@ for (const { lang, editor } of [
     const calendar = guest.page.waitForEvent('download');
     await guest.page.click('#addCalendar');
     await calendar;
-    await reply(guest.page, { name: 'Sam', heading: editorCopy.replySent });
+    await reply(guest.page, { name: 'Sam', heading: guestCopy.replySent });
     await guest.page.click('#copyReplyLink');
-    await expect(guest.page.locator('#rsvpStatus')).toHaveText(editorCopy.replyLinkCopied);
+    await expect(guest.page.locator('#rsvpStatus')).toHaveText(guestCopy.replyLinkCopied);
 
     const counted = (actions) => actions.map((action) => ({ action, lang }));
     await expect

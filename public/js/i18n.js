@@ -145,9 +145,9 @@ export const ACCENT_LABELS = {
  */
 export const accentLabel = (hex, lang = 'en') => ACCENT_LABELS[normalizeLang(lang)][hex] ?? hex;
 
+// Strings that scripts write into pages, one group per feature in each language. Both languages have the same keys.
 export const UI = {
   en: {
-    photoAlt: 'Event photo',
     landing: {
       all: 'All',
       useTemplate: (name) => `Use the ${name} template`,
@@ -180,6 +180,9 @@ export const UI = {
       eventLinkCopied: 'Invitation link copied. Paste it into a message to your guests.',
       eventLinkShared: 'Invitation link shared.',
       manageLinkCopied: 'Management link copied. Keep it somewhere private.',
+    },
+    // The guest view of a published invitation and its reply form.
+    guest: {
       replyErrors: (limits) => ({
         name: 'Enter your name.',
         attending: 'Choose whether you will attend.',
@@ -203,6 +206,9 @@ export const UI = {
       brokenMessage: 'This invite link is incomplete. Ask the host to send the whole link again.',
       openingHeading: 'Opening the invitation',
       sampleNotice: 'Sample invitation. Replies submitted here are not saved.',
+    },
+    invite: {
+      photoAlt: 'Event photo',
     },
     manage: {
       defaultHeading: 'Your invitation',
@@ -260,7 +266,6 @@ export const UI = {
     },
   },
   ro: {
-    photoAlt: 'Fotografia evenimentului',
     landing: {
       all: 'Toate',
       useTemplate: (name) => `Folosește modelul ${name}`,
@@ -293,6 +298,9 @@ export const UI = {
       eventLinkCopied: 'Linkul invitației a fost copiat. Trimite-l într-un mesaj invitaților.',
       eventLinkShared: 'Linkul invitației a fost distribuit.',
       manageLinkCopied: 'Linkul de administrare a fost copiat. Păstrează-l într-un loc privat.',
+    },
+    // The guest view of a published invitation and its reply form.
+    guest: {
       replyErrors: (limits) => ({
         name: 'Scrie-ți numele.',
         attending: 'Alege dacă participi.',
@@ -316,6 +324,9 @@ export const UI = {
       brokenMessage: 'Acest link de invitație este incomplet. Roagă gazda să trimită din nou linkul întreg.',
       openingHeading: 'Se deschide invitația',
       sampleNotice: 'Invitație demonstrativă. Răspunsurile trimise aici nu se salvează.',
+    },
+    invite: {
+      photoAlt: 'Fotografia evenimentului',
     },
     manage: {
       defaultHeading: 'Invitația ta',
