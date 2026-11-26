@@ -423,6 +423,7 @@ export function apiMessages(lang, { replyNameLimit, partySizeLimit, replyNoteLim
       replyChanged: 'Acest răspuns a fost modificat în alt browser. Este afișat cel mai recent răspuns.',
       dailyEvents: `Această conexiune a publicat deja ${dailyEvents} invitații azi. Încearcă din nou mâine.`,
       eventFull: `Această invitație are deja ${eventResponses} răspunsuri, limita maximă acceptată.`,
+      guestListReply: 'Această invitație primește confirmări doar prin linkurile personale trimise de gazdă.',
     };
   }
   return {
@@ -445,5 +446,6 @@ export function apiMessages(lang, { replyNameLimit, partySizeLimit, replyNoteLim
     replyChanged: 'This reply changed in another browser. The latest answer is shown.',
     dailyEvents: `This connection has published ${dailyEvents} invitations today. Try again tomorrow.`,
     eventFull: `This invitation already has ${eventResponses} replies, the most it can take.`,
+    guestListReply: 'This invitation takes replies only through the personal links the host sends.',
   };
 }

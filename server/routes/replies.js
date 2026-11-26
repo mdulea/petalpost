@@ -11,8 +11,10 @@
 // A reply created without note has an empty note, and a reply updated without note keeps its stored note. A new
 // reply counts reply_submit under the body's lang normalized to en or ro. An event takes at most EVENT_RESPONSES
 // replies; the 429 stores nothing, and existing replies stay editable. Updates, replays, withdrawals and refusals
-// count nothing.
+// count nothing. A guest-list invitation takes no reply through its invitation link, so every PUT to it gets a 403
+// that stores nothing.
 import { normalizeLang } from '../../public/js/i18n.js';
+import { modeOf } from '../../public/js/invite.js';
 import { makeReply, tally } from '../../public/js/rsvp.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
@@ -82,8 +84,9 @@ async function putReply({ db, request, ids: [eventId, id] }) {
   if (!reply) throw new Refusal(400, 'reply');
   return db.transaction(async (tx) => {
     // The event row lock serializes the count and insert below across concurrent replies to one event.
-    const event = (await tx.query('select 1 from events where id = $1 for update', [eventId])).rows[0];
+    const event = (await tx.query('select d from events where id = $1 for update', [eventId])).rows[0];
     if (!event) throw new Refusal(404, 'eventMissing');
+    if (modeOf(event.d) === 'guestList') throw new Refusal(403, 'guestListReply');
     const existing = await ownedReply(tx, eventId, id, secret);
     if (existing) {
       if (body.version === undefined) return json(200, { version: existing.version, created: false });

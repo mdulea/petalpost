@@ -165,6 +165,19 @@
             <label for="rsvp">Cum confirmă invitații</label>
             <input class="input" id="rsvp" name="rsvp" />
           </div>
+          <div class="field" role="radiogroup" aria-labelledby="h-mode" aria-describedby="modeHint">
+            <span class="field-label" id="h-mode">Cine poate confirma</span>
+            <div class="choices">
+              <label class="choice"><input type="radio" name="mode" value="open" checked />Oricine are linkul</label>
+              <label class="choice"
+                ><input type="radio" name="mode" value="guestList" />Doar lista mea de invitați</label
+              >
+            </div>
+            <span class="hint" id="modeHint"
+              >Alegi o singură dată, la prima publicare. Cu lista de invitați, linkul invitației arată invitația fără
+              formularul de confirmare.</span
+            >
+          </div>
         </section>
 
         <section class="panel" id="color-panel" aria-labelledby="h-color">
@@ -290,6 +303,9 @@
             <svg class="icon"><use href="#i-send" /></svg>Răspunde din nou
           </button>
         </section>
+        <p class="hint" id="guestListNotice" hidden>
+          Gazda primește confirmări doar prin linkul personal trimis fiecărui invitat. Acest link arată invitația.
+        </p>
         <div class="reply-cta" id="replyCta" hidden>
           <p>Organizezi un eveniment? Creează o invitație gratuită cu confirmări incluse, fără cont.</p>
           <a class="btn btn-ghost btn-small" href="/ro/?from=invite#templates">

@@ -164,6 +164,17 @@
             <label for="rsvp">How to reply</label>
             <input class="input" id="rsvp" name="rsvp" />
           </div>
+          <div class="field" role="radiogroup" aria-labelledby="h-mode" aria-describedby="modeHint">
+            <span class="field-label" id="h-mode">Who can reply</span>
+            <div class="choices">
+              <label class="choice"><input type="radio" name="mode" value="open" checked />Anyone with the link</label>
+              <label class="choice"><input type="radio" name="mode" value="guestList" />Only my guest list</label>
+            </div>
+            <span class="hint" id="modeHint"
+              >You choose once, when you first publish. With a guest list, the invitation link shows the invitation
+              without a reply form.</span
+            >
+          </div>
         </section>
 
         <section class="panel" id="color-panel" aria-labelledby="h-color">
@@ -288,6 +299,9 @@
             <svg class="icon"><use href="#i-send" /></svg>Reply again
           </button>
         </section>
+        <p class="hint" id="guestListNotice" hidden>
+          The host takes replies only through the personal link sent to each guest. This link shows the invitation.
+        </p>
         <div class="reply-cta" id="replyCta" hidden>
           <p>Planning an event of your own? Make a free invite with RSVP tracking, no account needed.</p>
           <a class="btn btn-ghost btn-small" href="/?from=invite#templates">

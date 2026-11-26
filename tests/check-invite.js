@@ -1,7 +1,7 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
-// Romanian with empty lines left out, invite records, the characters left in a limited field, storage writes, the stored
-// published event identity, template switching, template ids, Romanian localization coverage, the same UI string and
+// Romanian with empty lines left out, invite records and their mode, published records with an optional mode, the
+// characters left in a limited field, storage writes, the stored published event identity, template switching, template ids, Romanian localization coverage, the same UI string and
 // API message keys in English and Romanian, the Romanian occasion order, Romanian-only occasions kept out of the
 // English catalog, 24-hour time formatting, the calendar file with its alarms, the report link or the choice of when the Romanian
 // language banner shows and where it links break.
@@ -145,22 +145,59 @@ const birthday = ctx.getTemplate('birthday');
 check(
   'a draft with an impossible month retains the template date',
   ctx.openInvite({ draft: '{"t":"birthday","d":{"date":"2026-99-99","title":"Zoe turns 30"}}' }).d,
-  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 50, accent: null },
+  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 50, accent: null, mode: 'open' },
 );
-check('a new record is the template sample with centered photo and default accent', ctx.makeInviteData(birthday), {
-  ...birthday.defaults,
-  photoY: 50,
-  accent: null,
-});
+check(
+  'a new record is the template sample with centered photo, default accent and the open mode',
+  ctx.makeInviteData(birthday),
+  {
+    ...birthday.defaults,
+    photoY: 50,
+    accent: null,
+    mode: 'open',
+  },
+);
 check(
   'a record keeps string fields, photoY and a known accent',
   ctx.makeInviteData(birthday, { title: 'Zoe turns 30', photoY: '20', accent: '#52704C' }),
-  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 20, accent: '#52704C' },
+  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 20, accent: '#52704C', mode: 'open' },
 );
 check(
   'a record drops non-string fields, bad photoY and unknown accents',
   ctx.makeInviteData(birthday, { title: 7, photoY: 'top', accent: '#000000', extra: 'x' }),
-  { ...birthday.defaults, photoY: 50, accent: null },
+  { ...birthday.defaults, photoY: 50, accent: null, mode: 'open' },
+);
+check(
+  'a record keeps the guest-list mode and gives an unknown or missing mode the open mode',
+  [{ mode: 'guestList' }, { mode: 'private' }, {}, undefined].map((s) => ctx.makeInviteData(birthday, s).mode),
+  ['guestList', 'open', 'open', 'open'],
+);
+check(
+  'the mode of stored invitation data is open without a known mode',
+  [{ mode: 'guestList' }, { mode: 'open' }, { mode: 'private' }, {}, null].map(ctx.modeOf),
+  ['guestList', 'open', 'open', 'open', 'open'],
+);
+
+// Published records: readPublished takes exactly the text fields, the accent and an optional mode.
+const { photoY: _photoY, mode: _mode, ...publishedFields } = ctx.makeInviteData(birthday);
+const published = (d) => ctx.readPublished({ t: 'birthday', d })?.d.mode ?? null;
+check(
+  'a published record keeps its mode, and one without a mode gets the open mode',
+  [
+    published({ ...publishedFields, mode: 'guestList' }),
+    published({ ...publishedFields, mode: 'open' }),
+    published(publishedFields),
+  ],
+  ['guestList', 'open', 'open'],
+);
+check(
+  'a published record with an unknown mode or an extra field is refused',
+  [
+    published({ ...publishedFields, mode: 'private' }),
+    published({ ...publishedFields, mode: null }),
+    published({ ...publishedFields, extra: 'open' }),
+  ],
+  [null, null, null],
 );
 
 const long = 'x'.repeat(500);
@@ -214,7 +251,7 @@ check(
   'a share link with month zero retains the template date',
   ctx.openInvite({ hash: '#d=eyJ0IjoiYmlydGhkYXkiLCJkIjp7ImRhdGUiOiIyMDI2LTAwLTAxIiwidGl0bGUiOiJab2UgdHVybnMgMzAifX0' })
     .d,
-  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 50, accent: null },
+  { ...birthday.defaults, title: 'Zoe turns 30', photoY: 50, accent: null, mode: 'open' },
 );
 check(
   'a share link with a cleared date and time keeps them empty',
@@ -275,13 +312,13 @@ check(
 
 const edited = {
   t: 'birthday',
-  d: ctx.makeInviteData(birthday, { title: 'Zoe turns 30', photoY: 20, accent: '#52704C' }),
+  d: ctx.makeInviteData(birthday, { title: 'Zoe turns 30', photoY: 20, accent: '#52704C', mode: 'guestList' }),
   photo: 'data:image/jpeg;base64,x',
 };
 ctx.resetInvite(edited);
-check('reset restores the sample text, keeps the photo position and photo, and clears the accent', edited, {
+check('reset restores the sample text, keeps the photo position, mode and photo, and clears the accent', edited, {
   t: 'birthday',
-  d: { ...ctx.makeInviteData(birthday), photoY: 20 },
+  d: { ...ctx.makeInviteData(birthday), photoY: 20, mode: 'guestList' },
   photo: 'data:image/jpeg;base64,x',
 });
 

@@ -14,6 +14,7 @@ import { startServer } from '../scripts/server.js';
 import { CATEGORY_LABELS, ROUTE_PAIRS, alternatesFor, canonicalPath, fileLang } from '../public/js/i18n.js';
 import { EDITABLE } from '../public/js/invite.js';
 import { TEMPLATES, categoriesFor, linkPreviewPath } from '../public/js/templates.js';
+import { SECTIONS } from '../public/js/tracker/sections.js';
 import { OCCASIONS } from '../scripts/occasions.js';
 import { OCCASIONS_RO } from '../scripts/occasions-ro.js';
 import {
@@ -454,11 +455,24 @@ test('no page loads a resource from another origin', () => {
 });
 
 test('no script writes a cookie', () => {
-  const writers = readdirSync(new URL('../public/js', import.meta.url)).filter(
-    (file) => file.endsWith('.js') && /document\.cookie|cookieStore/.test(read(`js/${file}`)),
-  );
+  const writers = readdirSync(new URL('../public/js', import.meta.url), { recursive: true })
+    .map((file) => String(file).split(sep).join('/'))
+    .filter((file) => file.endsWith('.js') && /document\.cookie|cookieStore/.test(read(`js/${file}`)));
   assert.deepEqual(writers, []);
 });
+
+// manage.js shows and hides each tracker section by its element id, so every entry of SECTIONS has its element in
+// both pages and every section of the page has an entry.
+for (const file of ['manage.html', 'ro/manage.html']) {
+  test(`${file} has one section element for each tracker section`, () => {
+    const body = read(file).match(/id="manageContent"[\s\S]*<\/main>/)[0];
+    const ids = [...body.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map(([, id]) => id);
+    assert.deepEqual(
+      ids,
+      SECTIONS.map((section) => section.id),
+    );
+  });
+}
 
 // editor.js writes every invite field to the form control of the same name; it generates the accent swatches into #swatches.
 for (const file of ['editor.html', 'ro/editor.html']) {

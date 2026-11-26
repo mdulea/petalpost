@@ -37,7 +37,7 @@
         </div>
 
         <div>
-          <section class="panel" aria-labelledby="h-replies">
+          <section class="panel" id="replies" aria-labelledby="h-replies">
             <h2 id="h-replies">
               <svg class="icon"><use href="#i-send" /></svg>Replies
             </h2>
@@ -54,7 +54,14 @@
             </div>
           </section>
 
-          <section class="panel" aria-labelledby="h-share">
+          <section class="panel" id="guestList" aria-labelledby="h-guest-list" hidden>
+            <h2 id="h-guest-list">
+              <svg class="icon"><use href="#i-heart" /></svg>Guest list
+            </h2>
+            <p class="hint">No parties on the guest list yet.</p>
+          </section>
+
+          <section class="panel" id="invitationLink" aria-labelledby="h-share">
             <h2 id="h-share">
               <svg class="icon"><use href="#i-link" /></svg>Invitation link
             </h2>
@@ -68,13 +75,16 @@
                 >
               </div>
             </div>
+            <p class="hint" id="eventLinkNoReplies" hidden>
+              This link shows the invitation without a reply form. Guests reply only through their personal links.
+            </p>
             <p class="warning">
               Keep this page's link private. Anyone with it can see the replies and delete the invitation. Petalpost
               cannot recover a lost management link.
             </p>
           </section>
 
-          <section class="panel" aria-labelledby="h-delete">
+          <section class="panel" id="deleteInvitation" aria-labelledby="h-delete">
             <h2 id="h-delete">
               <svg class="icon"><use href="#i-trash" /></svg>Delete
             </h2>
