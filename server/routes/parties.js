@@ -330,7 +330,7 @@ async function ownedPartyReply(tx, eventId, id, secret, now) {
   checkPartyLink(party, secret);
   if (isDeadlinePassed(event?.d?.deadline, now())) throw new Refusal(403, 'deadlinePassed');
   const ids = partySubEventIds(event.d, party.sub_events);
-  return { ...party, subEventIds: ids, reply: await currentPartyReply(tx, id, ids) };
+  return { ...party, d: event.d, subEventIds: ids, reply: await currentPartyReply(tx, id, ids) };
 }
 
 // Verifies the reply version, upserts the party's reply and advances the party version across withdrawals.
