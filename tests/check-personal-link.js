@@ -5,6 +5,9 @@
 // Checks that revoking or regenerating a link blocks old guest access and keeps replies and tracker totals.
 // A passkey session can read the guest list. Adding parties and changing links need the management secret.
 // A host can rename a party and delete it with its reply. The guest credential cannot manage the party.
+// Only a host credential can set a bounded update, and only on a guest-list invitation. The update reaches the tracker,
+// personal link and view link reads but not the public read, survives a concurrent publish, and the host removes it.
+// Saving an update keeps the invitation version and moves the last change time.
 // Run: pnpm exec node --test tests/check-personal-link.js
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
@@ -13,6 +16,81 @@ import { partyTotals } from '../public/js/guest-list.js';
 import { newId, partyLinkSecret, partyStatus, readCredential, viewLink, viewLinkSecret } from '../public/js/rsvp.js';
 import { host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
+
+test('only a host can set a bounded update on a guest-list invitation', async () => {
+  const { client, raw } = await setup();
+  const tracker = client();
+  const cred = host();
+  const open = host();
+  await tracker.publish(open, party);
+  await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+  const id = newId();
+  await tracker.addParty(cred, id, { name: 'Sam', defaultSeats: 2 });
+  const secret = await partyLinkSecret(cred.secret, id, 'personal');
+  const patch = (updateNotice) =>
+    raw(`/api/events/${cred.id}`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${cred.secret}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ updateNotice }),
+    });
+  assert.equal((await patch('x'.repeat(500))).status, 204);
+  const tooLong = await tracker.saveUpdate(cred, 'x'.repeat(501));
+  assert.deepEqual([tooLong.status, tooLong.message], [400, 'Enter an update of 1 to 500 characters.']);
+  for (const invalid of ['', '   ', 1, '\0', '\uD800', undefined]) assert.equal((await patch(invalid)).status, 400);
+  assert.equal((await tracker.saveUpdate({ ...cred, secret }, 'Guest text')).status, 403);
+  assert.equal((await tracker.saveUpdate(open, 'Open invitation text')).status, 403);
+  assert.equal((await tracker.loadResponses(cred)).data.updateNotice, 'x'.repeat(500));
+});
+
+test('saving an update keeps the invitation version and moves the last change time', async () => {
+  const { client, db } = await setup();
+  const tracker = client();
+  const cred = host();
+  await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+  await db.query("update events set updated_at = now() - interval '30 days' where id = $1", [cred.id]);
+  await tracker.saveUpdate(cred, 'The party starts at 19:00.');
+  const event = (
+    await db.query("select version, updated_at > now() - interval '1 day' as fresh from events where id = $1", [
+      cred.id,
+    ])
+  ).rows[0];
+  assert.deepEqual(event, { version: 1, fresh: true });
+});
+
+test('the latest update reaches both party links and survives an invitation edit until the host removes it', async () => {
+  const { client } = await setup();
+  const tracker = client();
+  const cred = host();
+  const invite = { ...party, d: { ...party.d, mode: 'guestList' } };
+  cred.version = (await tracker.publish(cred, invite)).data.version;
+  const id = newId();
+  await tracker.addParty(cred, id, { name: 'Sam', defaultSeats: 2 });
+  const secret = await partyLinkSecret(cred.secret, id, 'personal');
+  const view = { id, secret: await viewLinkSecret(secret, id) };
+  const readUpdates = async () => {
+    const results = await Promise.all([
+      tracker.loadResponses(cred),
+      tracker.loadParty(cred.id, { id, secret }),
+      tracker.loadPartyView(cred.id, view),
+    ]);
+    assert.ok(results.every(({ data }) => !Object.hasOwn(data.d, 'updateNotice')));
+    return results.map(({ data }) => data.updateNotice);
+  };
+  assert.equal((await tracker.saveUpdate(cred, 'The party starts at 18:00.')).status, 204);
+  const latest = 'The party starts at 19:00.\nUse the side door.';
+  const [update, publish] = await Promise.all([
+    tracker.saveUpdate(cred, `  ${latest} `),
+    tracker.publish(cred, { ...invite, d: { ...invite.d, title: 'New invitation title' } }),
+  ]);
+  assert.deepEqual([update.status, publish.status], [204, 200]);
+  assert.deepEqual(await readUpdates(), [latest, latest, latest]);
+  const publicRead = await tracker.loadEvent(cred.id);
+  assert.equal(publicRead.data.d.title, 'New invitation title');
+  assert.ok(!JSON.stringify(publicRead.data).includes(latest.split('\n')[0]));
+  assert.ok(!Object.hasOwn((await tracker.publish(cred, invite)).data.d, 'updateNotice'));
+  assert.equal((await tracker.saveUpdate(cred, null)).status, 204);
+  assert.deepEqual(await readUpdates(), [undefined, undefined, undefined]);
+});
 
 const hash = (secret) => createHash('sha256').update(secret).digest('hex');
 const linkSecret = (secret, id, purpose = 'personal') =>

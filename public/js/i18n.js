@@ -222,6 +222,7 @@ export const UI = {
     personal: {
       greeting: (name) => `Hello, ${name}!`,
       reminder: 'Please let us know if you can come.',
+      updateHeading: 'Update from the host',
       unavailable: 'This link no longer works. Ask the host for a new one.',
       noReply: 'No reply yet',
       showFriend: 'Show a friend',
@@ -318,6 +319,12 @@ export const UI = {
       guestOpen: (date) => `Please reply by ${date}.`,
       saved: 'RSVP deadline saved.',
       cleared: 'RSVP deadline cleared. Replies are open.',
+    },
+    partyUpdate: {
+      invalid: (max) => `Enter an update of 1 to ${max} characters.`,
+      saved: 'Update saved.',
+      removed: 'Update removed.',
+      removeConfirm: 'Remove the update from every personal link and view link?',
     },
     invite: {
       photoAlt: 'Event photo',
@@ -455,6 +462,7 @@ export const UI = {
     personal: {
       greeting: (name) => `Bună, ${name}!`,
       reminder: 'Te rugăm să ne spui dacă poți veni.',
+      updateHeading: 'Mesaj nou de la gazdă',
       unavailable: 'Acest link nu mai funcționează. Cere-i gazdei un link nou.',
       noReply: 'Fără răspuns',
       showFriend: 'Arată invitația unui prieten',
@@ -553,6 +561,12 @@ export const UI = {
       saved: 'Termenul de confirmare a fost salvat.',
       cleared: 'Termenul de confirmare a fost șters. Confirmările sunt deschise.',
     },
+    partyUpdate: {
+      invalid: (max) => `Introdu un mesaj de 1 până la ${max} de caractere.`,
+      saved: 'Mesajul a fost salvat.',
+      removed: 'Mesajul a fost șters.',
+      removeConfirm: 'Ștergi mesajul de pe toate linkurile personale și linkurile de vizualizare?',
+    },
     invite: {
       photoAlt: 'Fotografia evenimentului',
     },
@@ -626,7 +640,8 @@ export const UI = {
  * @param {string} lang
  * @param {{
  *   replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number,
- *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, partySeatsLimit: number, eventParties: number
+ *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, partySeatsLimit: number, eventParties: number,
+ *   updateNoticeLimit: number
  * }} limits
  */
 export function apiMessages(
@@ -641,6 +656,7 @@ export function apiMessages(
     partyNameLimit,
     partySeatsLimit,
     eventParties,
+    updateNoticeLimit,
   },
 ) {
   if (normalizeLang(lang) === 'ro') {
@@ -679,6 +695,8 @@ export function apiMessages(
       partyName: UI.ro.guestList.renameInvalid(partyNameLimit),
       partyMissing: 'Grupul nu mai există pe lista de invitați.',
       partyMode: 'Doar invitațiile cu listă de invitați pot avea linkuri personale.',
+      updateMode: 'Doar invitațiile cu listă de invitați pot avea mesaje noi.',
+      updateNotice: UI.ro.partyUpdate.invalid(updateNoticeLimit),
       partyLimit: UI.ro.guestList.limit(eventParties),
       partyId: 'Grupul nu a putut fi adăugat. Încearcă din nou.',
       partyHasReply: 'Acest grup are deja un răspuns.',
@@ -729,6 +747,8 @@ export function apiMessages(
     partyName: UI.en.guestList.renameInvalid(partyNameLimit),
     partyMissing: 'The party is no longer on the guest list.',
     partyMode: 'Only guest-list invitations can have personal links.',
+    updateMode: 'Only guest-list invitations can have updates.',
+    updateNotice: UI.en.partyUpdate.invalid(updateNoticeLimit),
     partyLimit: UI.en.guestList.limit(eventParties),
     partyId: 'The party could not be added. Try again.',
     partyHasReply: 'This party already has a reply.',
