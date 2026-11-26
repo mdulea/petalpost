@@ -91,5 +91,6 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     finish(result, copy.withdrawn);
   });
   fill(party.reply);
+  if (!party.reply) status.textContent = copy.noReply;
   return form;
 }

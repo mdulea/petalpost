@@ -104,7 +104,7 @@ The private link that opens the tracker of a published invitation. It gives its 
 
 **Passkey**
 
-A credential that a host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. Signing in with it gives the host the same access as the management link for a limited time, except saving another passkey.
+A credential that a host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. Signing in opens the tracker for a limited time, with some actions reserved for the management link.
 _Avoid_ `account`, `login` and `password` for this concept.
 
 **Tracker**
@@ -114,7 +114,7 @@ _Avoid_ `dashboard`, `admin page` and `management page`.
 
 **Personal link**
 
-The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
+The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
 _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 **View link**

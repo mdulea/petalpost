@@ -67,8 +67,9 @@ export const signedInLink = (origin, id, token, lang = 'en') =>
 // The tracker reconstructs the party's link from its management secret without reading any secret from the API.
 export const personalLink = (url, id, secret) => `${url}#p=${id}.${secret}`;
 
-// Separate HMAC domains give each party independent personal and view secrets. Only their hashes are stored.
-export async function partyLinkSecret(managementSecret, partyId, purpose) {
+// Separate HMAC domains give each party independent personal and view secrets for each link generation.
+// The original links have no generation. The tracker can read the generation, but the API never returns a secret.
+export async function partyLinkSecret(managementSecret, partyId, purpose, generation = null) {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -77,7 +78,9 @@ export async function partyLinkSecret(managementSecret, partyId, purpose) {
     false,
     ['sign'],
   );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(`petalpost:${purpose}:${partyId}`));
+  const original = `petalpost:${purpose}:${partyId}`;
+  const message = generation === null ? original : `${original}:${generation}`;
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
   return toBase64url(signature);
 }
 
@@ -202,6 +205,9 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     signIn: (assertion) => call('POST', '/api/passkeys/sign-in', null, assertion),
     // Adds one party using an id that the tracker can reuse after a lost confirmation.
     addParty: (cred, id, party) => call('PUT', partyPath(cred.id, id), cred.secret, { ...party, lang: code }),
+    // Revokes or regenerates a party's links using the management secret.
+    changePartyLink: (cred, id, action, linkGeneration = null) =>
+      call('PATCH', `${partyPath(cred.id, id)}/link`, cred.secret, { action, linkGeneration }),
     loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
     savePartyReply: (eventId, cred, reply) =>
       call('PATCH', partyPath(eventId, cred.id), cred.secret, { ...reply, version: cred.version, lang: code }),
