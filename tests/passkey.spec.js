@@ -81,9 +81,10 @@ test('a passkey session manages parties without personal link controls', async (
   await page.goto('/');
   await page.click('#findInvitations');
   await expect(page).toHaveURL(/\/manage\.html#t=/);
-  await expect(party).toContainText('No reply yet');
+  await expect(party).toContainText('Not opened');
   await expect(page.locator('#addParty')).toBeHidden({ timeout: 5000 });
   await expect(party.getByRole('button', { name: 'Copy personal link' })).toBeHidden();
+  await expect(party.getByRole('link', { name: 'Preview as this guest' })).toBeHidden();
   await expect(page.locator('#refreshParties')).toBeVisible();
   page.once('dialog', (dialog) => dialog.accept('Daria'));
   await party.getByRole('button', { name: 'Rename' }).click({ timeout: 5000 });

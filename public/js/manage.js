@@ -33,7 +33,14 @@ const setStatus = (text) => {
   statusEl.textContent = text;
 };
 
-const page = { lang, locale, copy, client, cred, signedIn: Boolean(signedIn), setStatus, showOnly, load };
+const formatTime = (iso) =>
+  new Date(iso).toLocaleString(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    ...(lang === 'ro' ? { hour12: false } : {}),
+  });
+
+const page = { lang, locale, copy, client, cred, signedIn: Boolean(signedIn), formatTime, setStatus, showOnly, load };
 
 async function showEvent(data) {
   const template = getTemplate(data.t, lang);

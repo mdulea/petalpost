@@ -73,7 +73,7 @@ The promises:
 - Hosts and guests need no account and no email address.
 - The site sets no cookies and loads nothing from another origin except Vercel Web Analytics, which sets no cookie.
 - The photo never leaves the host's browser.
-- The server stores the party names the host enters on a guest list. Deleting the invitation deletes those names.
+- The server stores the party names the host enters on a guest list, and when each personal link was first and last opened. Deleting the invitation deletes those names and times.
 - Petalpost counts a fixed set of actions per day and page language, and stores no cookie, identifier, IP address or invitation content with the counts.
 - The site is in English and Romanian. Botez, Cununie and Moț exist only in Romanian.
 
@@ -83,8 +83,8 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
-- add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by reply status, see totals for the whole guest list and download it as a CSV;
-- use the management link to add a party with a name and default seats and copy its personal link. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows the party's reply and note after opening the management link or after a passkey sign-in;
+- add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by party status, see totals for the whole guest list and download it as a CSV;
+- use the management link to add a party with a name and default seats, copy its personal link and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, and its reply and note after opening the management link or after a passkey sign-in;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.

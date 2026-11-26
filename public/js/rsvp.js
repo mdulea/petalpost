@@ -68,6 +68,9 @@ export const signedInLink = (origin, id, token, lang = 'en') =>
 // The tracker reconstructs the party's link from its management secret without reading any secret from the API.
 export const personalLink = (url, id, secret) => `${url}#p=${id}.${secret}`;
 
+// A party's tracker status: 'replied' when it has a reply, 'opened' after a personal link load, or 'notOpened'.
+export const partyStatus = (party) => (party.reply ? 'replied' : party.firstOpenedAt ? 'opened' : 'notOpened');
+
 // Separate HMAC domains derive each party's personal secret from the management secret for each link generation
 // and its view secret from the personal secret. The original links have no generation. Only their hashes are stored.
 export async function partyLinkSecret(parentSecret, partyId, purpose, generation = null) {
