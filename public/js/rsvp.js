@@ -28,6 +28,14 @@ const validAnswer = (answer, limit) =>
   typeof answer.attending === 'boolean' &&
   !invalidPartySize(answer.attending, answer.partySize, limit);
 
+// Exactly one valid answer for each id, and no other key.
+const validAnswers = (answers, ids, limit) =>
+  Boolean(answers) &&
+  typeof answers === 'object' &&
+  !Array.isArray(answers) &&
+  Object.keys(answers).length === ids.length &&
+  ids.every((id) => Object.hasOwn(answers, id) && validAnswer(answers[id], limit));
+
 // The only constructor for a reply, which also validates it: untrusted {name, attending, partySize, answers, note}
 // becomes {reply, invalid}. reply is the valid {name, attending, partySize, answers?, note}, or null when invalid lists
 // the invalid fields in REPLY_FIELDS order. The name is trimmed and holds 1 to 80 code points without control
@@ -49,26 +57,24 @@ export function makeReply(source, { partySizeLimit = REPLY_LIMITS.partySize, sub
     name: length < 1 || length > REPLY_LIMITS.name || /\p{Cc}/u.test(trimmed),
     attending: !bySubEvent && typeof attending !== 'boolean',
     partySize: !bySubEvent && invalidPartySize(attending, partySize, partySizeLimit),
-    answers:
-      bySubEvent &&
-      !(
-        answers &&
-        typeof answers === 'object' &&
-        !Array.isArray(answers) &&
-        Object.keys(answers).length === subEventIds.length &&
-        subEventIds.every((id) => Object.hasOwn(answers, id) && validAnswer(answers[id], partySizeLimit))
-      ),
+    answers: bySubEvent && !validAnswers(answers, subEventIds, partySizeLimit),
     note: typeof note !== 'string' || [...noteText].length > REPLY_LIMITS.note || /(?!\n)\p{Cc}/u.test(noteText),
   };
   const invalid = REPLY_FIELDS.filter((field) => isInvalid[field]);
   if (invalid.length) return { reply: null, invalid };
   if (!bySubEvent) return { reply: { name: trimmed, attending, partySize, note: noteText }, invalid };
-  const kept = Object.fromEntries(
+  const answersById = Object.fromEntries(
     subEventIds.map((id) => [id, { attending: answers[id].attending, partySize: answers[id].partySize }]),
   );
-  const largest = Math.max(...subEventIds.map((id) => kept[id].partySize));
+  const peopleCovered = Math.max(...subEventIds.map((id) => answersById[id].partySize));
   return {
-    reply: { name: trimmed, attending: largest > 0, partySize: largest, answers: kept, note: noteText },
+    reply: {
+      name: trimmed,
+      attending: peopleCovered > 0,
+      partySize: peopleCovered,
+      answers: answersById,
+      note: noteText,
+    },
     invalid,
   };
 }
@@ -88,6 +94,8 @@ export function tally(responses) {
 // The answers key of a reply read from its stored answers, the database's {} for a reply without sub-events. A reply
 // without answers has no key, so it keeps the shape of a reply from before sub-events.
 export const answersOf = (stored) => (stored && Object.keys(stored).length ? { answers: stored } : {});
+// The answers column value of a reply from makeReply: its answers as JSON, or {} for a reply without sub-events.
+export const storedAnswers = (reply) => JSON.stringify(reply.answers ?? {});
 
 // The answer of reply to the sub-event id as {attending, partySize}, or null when the reply has none. A reply saved
 // before the host added the sub-event has none, and a reply saved before the invitation had sub-events has no answers.

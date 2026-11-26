@@ -21,7 +21,7 @@
 // sub-event that the host added after the reply was saved.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf, subEventIds } from '../../public/js/invite.js';
-import { answersOf, ID_PATTERN, makeReply, tally } from '../../public/js/rsvp.js';
+import { answersOf, ID_PATTERN, makeReply, storedAnswers, tally } from '../../public/js/rsvp.js';
 import { tableSeats } from '../../public/js/seating.js';
 import { presentationOf } from './events.js';
 import { listParties } from './parties.js';
@@ -126,7 +126,7 @@ async function putReply({ db, request, ids: [eventId, id] }) {
     if (modeOf(event.d) === 'guestList') throw new Refusal(403, 'guestListReply');
     const { reply } = makeReply(body, { subEventIds: subEventIds(event.d) });
     if (!reply) throw new Refusal(400, 'reply');
-    const answers = JSON.stringify(reply.answers ?? {});
+    const answers = storedAnswers(reply);
     const existing = await ownedReply(tx, eventId, id, secret);
     if (existing) {
       if (body.version === undefined) return json(200, { version: existing.version, created: false });
