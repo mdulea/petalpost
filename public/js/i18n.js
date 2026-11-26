@@ -251,11 +251,15 @@ export const UI = {
       pendingParties: (n) => (n === 1 ? 'party without a reply' : 'parties without a reply'),
       defaultSeats: (n) => `Default seats: ${n}`,
       answer: (yes, n) => `Replied. ${yes ? 'Yes' : 'No'}, ${n} ${n === 1 ? 'person' : 'people'}.`,
+      overBy: (n) => `Over by ${n}`,
       noReply: 'No reply yet',
       notOpened: 'Not opened',
       opened: 'Opened',
       firstOpened: (time) => `First opened ${time}`,
       lastOpened: (time) => `Last opened ${time}`,
+      seatsLabel: 'Reply seats',
+      saveSeats: 'Save seats',
+      seatsSaved: 'Seats updated.',
       link: 'Personal link',
       copy: 'Copy personal link',
       copied: 'Personal link copied.',
@@ -432,11 +436,15 @@ export const UI = {
       pendingParties: (n) => (n === 1 ? 'grup fără răspuns' : 'grupuri fără răspuns'),
       defaultSeats: (n) => `Locuri implicite: ${n}`,
       answer: (yes, n) => `A răspuns. ${yes ? 'Da' : 'Nu'}, ${n} ${n === 1 ? 'persoană' : 'persoane'}.`,
+      overBy: (n) => `Cu ${n} în plus`,
       noReply: 'Fără răspuns',
       notOpened: 'Nedeschis',
       opened: 'Deschis',
       firstOpened: (time) => `Deschis prima dată ${time}`,
       lastOpened: (time) => `Ultima deschidere ${time}`,
+      seatsLabel: 'Locuri confirmate',
+      saveSeats: 'Salvează locurile',
+      seatsSaved: 'Locurile au fost actualizate.',
       link: 'Link personal',
       copy: 'Copiază linkul personal',
       copied: 'Linkul personal a fost copiat.',
@@ -520,7 +528,7 @@ export const UI = {
  * @param {string} lang
  * @param {{
  *   replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number,
- *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, defaultSeatsLimit: number, eventParties: number
+ *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, partySeatsLimit: number, eventParties: number
  * }} limits
  */
 export function apiMessages(
@@ -533,7 +541,7 @@ export function apiMessages(
     eventResponses,
     eventPasskeys,
     partyNameLimit,
-    defaultSeatsLimit,
+    partySeatsLimit,
     eventParties,
   },
 ) {
@@ -565,7 +573,7 @@ export function apiMessages(
       passkeyMissing:
         'Această cheie de acces nu mai deschide nicio invitație. Este posibil ca invitația să fi fost ștearsă.',
       eventPasskeys: `Această invitație are deja ${eventPasskeys} chei de acces, limita maximă acceptată.`,
-      party: `Introdu un nume de 1 până la ${partyNameLimit} de caractere și alege între 1 și ${defaultSeatsLimit} de locuri.`,
+      party: `Introdu un nume de 1 până la ${partyNameLimit} de caractere și alege între 1 și ${partySeatsLimit} de locuri.`,
       partyName: UI.ro.guestList.renameInvalid(partyNameLimit),
       partyMissing: 'Grupul nu mai există pe lista de invitați.',
       partyMode: 'Doar invitațiile cu listă de invitați pot avea linkuri personale.',
@@ -573,7 +581,8 @@ export function apiMessages(
       partyId: 'Grupul nu a putut fi adăugat. Încearcă din nou.',
       personalLink: UI.ro.personal.unavailable,
       partyLinkChanged: 'Linkul personal s-a schimbat. Verifică linkul actual.',
-      partyReply: 'Verifică numărul de locuri și nota, apoi trimite din nou răspunsul.',
+      partyReply: `Alege un răspuns și între 1 și ${partySeatsLimit} de locuri dacă participi. Nota poate avea cel mult ${replyNoteLimit} de caractere.`,
+      partySeats: `Introdu un număr de locuri între 0 și ${partySeatsLimit}.`,
     };
   }
   return {
@@ -601,7 +610,7 @@ export function apiMessages(
     passkey: 'The passkey could not be checked. Try again.',
     passkeyMissing: 'This passkey no longer opens an invitation. The invitation may have been deleted.',
     eventPasskeys: `This invitation already has ${eventPasskeys} passkeys, the most it can take.`,
-    party: `Enter a name of 1 to ${partyNameLimit} characters and choose between 1 and ${defaultSeatsLimit} seats.`,
+    party: `Enter a name of 1 to ${partyNameLimit} characters and choose between 1 and ${partySeatsLimit} seats.`,
     partyName: UI.en.guestList.renameInvalid(partyNameLimit),
     partyMissing: 'The party is no longer on the guest list.',
     partyMode: 'Only guest-list invitations can have personal links.',
@@ -609,6 +618,7 @@ export function apiMessages(
     partyId: 'The party could not be added. Try again.',
     personalLink: UI.en.personal.unavailable,
     partyLinkChanged: 'The personal link changed. Check the current link.',
-    partyReply: 'Check the number of seats and the note, then send your reply again.',
+    partyReply: `Choose an answer and between 1 and ${partySeatsLimit} seats when attending. A note can have up to ${replyNoteLimit} characters.`,
+    partySeats: `Enter a number of seats from 0 to ${partySeatsLimit}.`,
   };
 }

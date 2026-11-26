@@ -1,10 +1,13 @@
 // A personal-link reply stays on the same page for save, edit and withdrawal. Only the server's confirmed version
 // goes in a subsequent mutation. Conflict responses replace the form values with the current reply.
+import { PARTY_LIMITS } from '../rsvp.js';
+
 export function renderReply(party, { client, eventId, credential, copy, guestCopy, unavailable }) {
   const form = document.createElement('form');
   form.className = 'panel rsvp';
   form.id = 'personalReply';
   form.autocomplete = 'off';
+  form.noValidate = true;
   // Only static UI strings enter the markup. Party data is assigned as DOM properties below.
   form.innerHTML = `
     <h2>${copy.heading}</h2>
@@ -39,7 +42,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
   const note = form.querySelector('textarea');
   const withdraw = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="button"]'));
   const status = form.querySelector('[role="status"]');
-  seats.max = String(party.defaultSeats);
+  seats.max = String(PARTY_LIMITS.seats);
   const cred = { ...credential, version: undefined };
 
   function fill(reply) {

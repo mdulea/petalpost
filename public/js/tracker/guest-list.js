@@ -5,6 +5,7 @@ import { eventLink } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, partyStatus, personalLink, viewLink, viewLinkSecret } from '../rsvp.js';
 import { downloadCsv } from './download.js';
+import { renderTotals } from './totals.js';
 
 let loadedParties = [];
 let rows = [];
@@ -96,27 +97,6 @@ function init({ client, cred, lang, load, signedIn }) {
   });
 }
 
-function renderTotals(parties, words) {
-  const { accepted, declined, pending } = partyTotals(parties);
-  const totals = [
-    [accepted, words.acceptedSeats(accepted)],
-    [declined, words.declinedParties(declined)],
-    [pending, words.pendingParties(pending)],
-  ];
-  document.getElementById('partyTotals').replaceChildren(
-    ...totals.map(([count, label]) => {
-      const item = document.createElement('li');
-      item.className = 'total';
-      const number = document.createElement('strong');
-      number.textContent = String(count);
-      const text = document.createElement('span');
-      text.textContent = String(label);
-      item.append(number, ' ', text);
-      return item;
-    }),
-  );
-}
-
 function button(label, click) {
   const element = document.createElement('button');
   element.type = 'button';
@@ -124,6 +104,36 @@ function button(label, click) {
   element.textContent = label;
   element.addEventListener('click', () => click(element));
   return element;
+}
+
+function seatEditor(party, { client, cred, load }, words) {
+  const form = document.createElement('form');
+  form.className = 'copy-row';
+  form.noValidate = true;
+  const input = document.createElement('input');
+  input.className = 'input';
+  input.type = 'number';
+  input.name = 'partySize';
+  input.min = '0';
+  input.max = String(PARTY_LIMITS.seats);
+  input.value = String(party.reply?.partySize ?? party.defaultSeats);
+  input.setAttribute('aria-label', `${words.seatsLabel} · ${party.name}`);
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.className = 'btn btn-ghost btn-small';
+  save.textContent = words.saveSeats;
+  form.append(input, save);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    return writeAndReload(load, form.elements, async () => {
+      const result = await client.setPartySeats(cred, party.id, {
+        partySize: input.valueAsNumber,
+        version: party.reply?.version,
+      });
+      return result.ok ? { ...result, message: words.seatsSaved } : result;
+    });
+  });
+  return form;
 }
 
 async function renderParty(party, { client, cred, copy, load, signedIn, formatTime }, words) {
@@ -138,6 +148,12 @@ async function renderParty(party, { client, cred, copy, load, signedIn, formatTi
     ? words.answer(party.reply.attending, party.reply.partySize)
     : words[partyStatus(party)];
   row.append(name, seats, reply);
+  if (party.reply?.attending && party.reply.partySize > party.defaultSeats) {
+    const over = document.createElement('span');
+    over.className = 'over-seats';
+    over.textContent = words.overBy(party.reply.partySize - party.defaultSeats);
+    row.append(over);
+  }
   if (party.firstOpenedAt) {
     const opened = document.createElement('span');
     opened.textContent = `${words.firstOpened(formatTime(party.firstOpenedAt))} · ${words.lastOpened(formatTime(party.lastOpenedAt))}`;
@@ -153,6 +169,7 @@ async function renderParty(party, { client, cred, copy, load, signedIn, formatTi
     revoked.textContent = words.revoked;
     row.append(revoked);
   }
+  row.append(seatEditor(party, { client, cred, load }, words));
   const actions = document.createElement('div');
   actions.className = 'reply-actions';
   if (!signedIn) {
@@ -231,7 +248,12 @@ async function show({ parties }, page) {
   const rendered = await Promise.all(parties.map((party) => renderParty(party, page, words)));
   if (loadedParties !== parties) return;
   rows = rendered;
-  renderTotals(parties, words);
+  const { accepted, declined, pending } = partyTotals(parties);
+  renderTotals(document.getElementById('partyTotals'), [
+    [accepted, words.acceptedSeats(accepted)],
+    [declined, words.declinedParties(declined)],
+    [pending, words.pendingParties(pending)],
+  ]);
   document.getElementById('partyList').replaceChildren(...rows.map(({ row }) => row));
   filterRows();
 }
