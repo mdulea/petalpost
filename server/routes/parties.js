@@ -7,6 +7,8 @@
 // PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
 // Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
 // Both preserve the reply and return 204. A request for an older link generation returns 409.
+// PATCH on /{id}/seats accepts a host credential and {partySize, version?}. It sets 0 to PARTY_LIMITS.seats
+// reply seats and returns {version}. A stale write gets 409 and the current reply.
 // On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both accept a host credential.
 import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
@@ -31,6 +33,7 @@ export const routes = [
     pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/manage$/,
     methods: { PATCH: renameParty, DELETE: deleteParty },
   },
+  { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/seats$/, methods: { PATCH: setPartySeats } },
 ];
 
 async function addParty({ db, request, ids: [eventId, id] }) {
@@ -276,7 +279,7 @@ async function saveReply({ db, request, ids: [eventId, id] }) {
   const body = await readBody(request);
   return db.transaction(async (tx) => {
     const party = await ownedPartyReply(tx, eventId, id, secret);
-    const { reply } = makeReply({ ...body, name: party.name }, party.default_seats);
+    const { reply } = makeReply({ ...body, name: party.name }, PARTY_LIMITS.seats);
     if (!reply) throw new Refusal(400, 'partyReply');
     if (body.version !== party.reply?.version) throw new Refusal(409, 'replyChanged', { reply: party.reply });
     // The party version advances across withdrawals, so a stale form cannot change a replacement reply.
@@ -305,5 +308,36 @@ async function withdrawReply({ db, request, ids: [eventId, id] }) {
       await tx.query('delete from responses where party_id = $1', [id]);
     }
     return json(204, null);
+  });
+}
+
+async function setPartySeats({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const { partySize, version } = await readBody(request);
+  if (!Number.isInteger(partySize) || partySize < 0 || partySize > PARTY_LIMITS.seats) {
+    throw new Refusal(400, 'partySeats');
+  }
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, eventId, secret);
+    if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
+    const {
+      rows: [party],
+    } = await tx.query('select name, version from parties where id = $1 and event_id = $2 for update', [id, eventId]);
+    if (!party) throw new Refusal(404, 'partyMissing');
+    const {
+      rows: [replyRow],
+    } = await tx.query(`select ${replyColumns} from responses r where party_id = $1`, [id]);
+    const current = replyOf(replyRow);
+    if (version !== current?.version) throw new Refusal(409, 'replyChanged', { reply: current });
+    const nextVersion = party.version + 1;
+    await tx.query(
+      `insert into responses (id, event_id, party_id, name, attending, party_size, note, version)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (party_id) do update set attending = excluded.attending, party_size = excluded.party_size,
+       version = excluded.version, updated_at = now()`,
+      [newId(), eventId, id, party.name, partySize > 0, partySize, current?.note ?? '', nextVersion],
+    );
+    await tx.query('update parties set version = $2 where id = $1', [id, nextVersion]);
+    return json(200, { version: nextVersion });
   });
 }

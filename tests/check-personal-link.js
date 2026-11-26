@@ -1,6 +1,7 @@
 // Checks party creation, personal access, opened times, view link read-only access, one versioned reply,
 // and withdrawal through the API in both languages.
 // The management tracker can preview an older party before it opens a personal link.
+// Also checks replies above default seats, host seat edits and whole-list seat totals.
 // Checks that revoking or regenerating a link blocks old guest access and keeps replies and tracker totals.
 // A passkey session can read the guest list. Adding parties and changing links need the management secret.
 // A host can rename a party and delete it with its reply. The guest credential cannot manage the party.
@@ -8,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { test } from 'node:test';
+import { partyTotals } from '../public/js/guest-list.js';
 import { newId, partyLinkSecret, partyStatus, readCredential, viewLink, viewLinkSecret } from '../public/js/rsvp.js';
 import { host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
@@ -315,5 +317,121 @@ for (const lang of ['en', 'ro']) {
     assert.equal(partyStatus(replied), 'replied');
     const viewAfterReply = await client(newId(), lang).loadPartyView(cred.id, { id, secret: viewSecret });
     assert.deepEqual([viewAfterReply.status, 'reply' in viewAfterReply.data], [200, false]);
+  });
+
+  test(`in ${lang}, a party can reply above default seats up to 20, totals count them, and 21 is refused`, async () => {
+    const { client } = await setup();
+    const cred = host();
+    const tracker = client(newId(), lang);
+    const guestClient = client(newId(), lang);
+    await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+    const partyId = newId();
+    assert.equal((await tracker.addParty(cred, partyId, { name: 'Familia Pop', defaultSeats: 2 })).status, 201);
+    const secret = createHmac('sha256', cred.secret).update(`petalpost:personal:${partyId}`).digest('base64url');
+    const pCred = { id: partyId, secret };
+
+    const overCap = await guestClient.savePartyReply(cred.id, pCred, { attending: true, partySize: 21, note: '' });
+    assert.equal(overCap.status, 400);
+    assert.match(overCap.message, /20/);
+
+    const overDefault = await guestClient.savePartyReply(cred.id, pCred, {
+      attending: true,
+      partySize: 5,
+      note: 'Plus kids',
+    });
+    assert.equal(overDefault.status, 201);
+
+    const atCap = await guestClient.savePartyReply(
+      cred.id,
+      { ...pCred, version: overDefault.data.version },
+      { attending: true, partySize: 20, note: 'Plus kids' },
+    );
+    assert.equal(atCap.status, 200);
+
+    const list = await tracker.loadResponses(cred);
+    assert.deepEqual(partyTotals(list.data.parties), { accepted: 20, declined: 0, pending: 0 });
+  });
+
+  test(`in ${lang}, the host can edit a party's reply seats at any time and the guest sees the change`, async () => {
+    const { client } = await setup();
+    const cred = host();
+    const tracker = client(newId(), lang);
+    const guestClient = client(newId(), lang);
+    await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+    const phoneParty = newId();
+    const repliedParty = newId();
+    assert.equal((await tracker.addParty(cred, phoneParty, { name: 'Familia Ionescu', defaultSeats: 2 })).status, 201);
+    assert.equal((await tracker.addParty(cred, repliedParty, { name: 'Familia Marin', defaultSeats: 3 })).status, 201);
+    const personalCred = (id) => ({
+      id,
+      secret: createHmac('sha256', cred.secret).update(`petalpost:personal:${id}`).digest('base64url'),
+    });
+    const phoneCred = personalCred(phoneParty);
+    const repliedCred = personalCred(repliedParty);
+
+    // Host sets seats for a party that has not replied yet.
+    const firstEdit = await tracker.setPartySeats(cred, phoneParty, { partySize: 4 });
+    assert.equal(firstEdit.status, 200);
+    assert.deepEqual((await guestClient.loadParty(cred.id, phoneCred)).data.reply, {
+      attending: true,
+      partySize: 4,
+      note: '',
+      version: firstEdit.data.version,
+    });
+
+    // Guest replies with a note, then host edits seats and preserves the note.
+    const guestReply = await guestClient.savePartyReply(cred.id, repliedCred, {
+      attending: true,
+      partySize: 2,
+      note: 'Fără gluten',
+    });
+    assert.equal(guestReply.status, 201);
+    const secondEdit = await tracker.setPartySeats(cred, repliedParty, {
+      partySize: 6,
+      version: guestReply.data.version,
+    });
+    assert.equal(secondEdit.status, 200);
+    assert.deepEqual((await guestClient.loadParty(cred.id, repliedCred)).data.reply, {
+      attending: true,
+      partySize: 6,
+      note: 'Fără gluten',
+      version: secondEdit.data.version,
+    });
+
+    // Totals count both parties' edited seats.
+    assert.deepEqual(partyTotals((await tracker.loadResponses(cred)).data.parties), { accepted: 10, declined: 0, pending: 0 });
+
+    // Stale version gets 409 with the current reply.
+    const stale = await tracker.setPartySeats(cred, repliedParty, {
+      partySize: 5,
+      version: guestReply.data.version,
+    });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.data.reply.partySize, 6);
+
+    // Host can set seats to 0 (declined), keeping the note.
+    const declined = await tracker.setPartySeats(cred, repliedParty, {
+      partySize: 0,
+      version: secondEdit.data.version,
+    });
+    assert.equal(declined.status, 200);
+    assert.deepEqual((await guestClient.loadParty(cred.id, repliedCred)).data.reply, {
+      attending: false,
+      partySize: 0,
+      note: 'Fără gluten',
+      version: declined.data.version,
+    });
+    assert.deepEqual(partyTotals((await tracker.loadResponses(cred)).data.parties), { accepted: 4, declined: 1, pending: 0 });
+
+    // Invalid counts, missing party and non-host credentials are refused.
+    const overCap = await tracker.setPartySeats(cred, phoneParty, { partySize: 21, version: firstEdit.data.version });
+    const negative = await tracker.setPartySeats(cred, phoneParty, { partySize: -1, version: firstEdit.data.version });
+    const missing = await tracker.setPartySeats(cred, newId(), { partySize: 2 });
+    const forbidden = await tracker.setPartySeats({ id: cred.id, secret: phoneCred.secret }, phoneParty, {
+      partySize: 2,
+      version: firstEdit.data.version,
+    });
+    assert.deepEqual([overCap.status, negative.status, missing.status, forbidden.status], [400, 400, 404, 403]);
+    assert.match(overCap.message, /20/);
   });
 }

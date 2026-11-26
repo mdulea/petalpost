@@ -1669,6 +1669,11 @@ textarea.input {
   font-size: 13px;
   color: var(--muted);
 }
+.reply .over-seats {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rose-deep);
+}
 /* A guest's note keeps its line breaks, and a long word wraps inside the list. */
 .reply p {
   margin: 4px 0;

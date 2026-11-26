@@ -126,6 +126,36 @@ function button(label, click) {
   return element;
 }
 
+function seatEditor(party, { client, cred, load }, words) {
+  const form = document.createElement('form');
+  form.className = 'copy-row';
+  form.noValidate = true;
+  const input = document.createElement('input');
+  input.className = 'input';
+  input.type = 'number';
+  input.name = 'partySize';
+  input.min = '0';
+  input.max = String(PARTY_LIMITS.seats);
+  input.value = String(party.reply?.partySize ?? party.defaultSeats);
+  input.setAttribute('aria-label', `${words.seatsLabel} · ${party.name}`);
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.className = 'btn btn-ghost btn-small';
+  save.textContent = words.saveSeats;
+  form.append(input, save);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    return writeAndReload(load, form.elements, async () => {
+      const result = await client.setPartySeats(cred, party.id, {
+        partySize: input.valueAsNumber,
+        version: party.reply?.version,
+      });
+      return result.ok ? { ...result, message: words.seatsSaved } : result;
+    });
+  });
+  return form;
+}
+
 async function renderParty(party, { client, cred, copy, load, signedIn, formatTime }, words) {
   const row = document.createElement('li');
   row.className = 'reply';
@@ -138,6 +168,12 @@ async function renderParty(party, { client, cred, copy, load, signedIn, formatTi
     ? words.answer(party.reply.attending, party.reply.partySize)
     : words[partyStatus(party)];
   row.append(name, seats, reply);
+  if (party.reply?.attending && party.reply.partySize > party.defaultSeats) {
+    const over = document.createElement('span');
+    over.className = 'over-seats';
+    over.textContent = words.overBy(party.reply.partySize - party.defaultSeats);
+    row.append(over);
+  }
   if (party.firstOpenedAt) {
     const opened = document.createElement('span');
     opened.textContent = `${words.firstOpened(formatTime(party.firstOpenedAt))} · ${words.lastOpened(formatTime(party.lastOpenedAt))}`;
@@ -153,6 +189,7 @@ async function renderParty(party, { client, cred, copy, load, signedIn, formatTi
     revoked.textContent = words.revoked;
     row.append(revoked);
   }
+  row.append(seatEditor(party, { client, cred, load }, words));
   const actions = document.createElement('div');
   actions.className = 'reply-actions';
   if (!signedIn) {

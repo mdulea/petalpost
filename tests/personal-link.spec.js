@@ -1,6 +1,7 @@
 // Checks that a host copies a party's personal link, previews the party's page without recording an opened time,
 // filters parties by status (not opened, opened, replied), and sees opened times, replies, edits and withdrawal
 // in both languages. Also checks revoke, regenerate and the unavailable page in both languages.
+// Also checks guest replies above default seats, over-default markers, accepted seats and host seat edits.
 // Run: pnpm test:browser tests/personal-link.spec.js
 import { expect, test } from '@playwright/test';
 import { newBrowser } from './browser-setup.js';
@@ -14,7 +15,6 @@ const COPY = {
     greeting: 'Hello, Familia Radu!',
     notOpened: 'Not opened',
     opened: 'Opened',
-    noReply: 'No reply yet',
     firstOpened: 'First opened',
     lastOpened: 'Last opened',
     sent: 'Reply sent',
@@ -27,6 +27,9 @@ const COPY = {
     revoked: 'Personal link revoked.',
     regenerated: 'Personal link regenerated.',
     unavailable: 'This link no longer works. Ask the host for a new one.',
+    saveSeats: 'Save seats',
+    seatsSaved: 'Seats updated.',
+    overBy: (n) => `Over by ${n}`,
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
@@ -36,7 +39,6 @@ const COPY = {
     greeting: 'Bună, Familia Radu!',
     notOpened: 'Nedeschis',
     opened: 'Deschis',
-    noReply: 'Fără răspuns',
     firstOpened: 'Deschis prima dată',
     lastOpened: 'Ultima deschidere',
     sent: 'Răspuns trimis',
@@ -49,6 +51,9 @@ const COPY = {
     revoked: 'Linkul personal a fost revocat.',
     regenerated: 'Noul link personal a fost generat.',
     unavailable: 'Acest link nu mai funcționează. Cere-i gazdei un link nou.',
+    saveSeats: 'Salvează locurile',
+    seatsSaved: 'Locurile au fost actualizate.',
+    overBy: (n) => `Cu ${n} în plus`,
   },
 };
 
@@ -193,8 +198,60 @@ for (const lang of ['en', 'ro']) {
     await row.getByRole('button', { name: copy.copy }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
     await guest.page.goto(await host.page.evaluate(() => navigator.clipboard.readText()));
-    await expect(form.getByRole('status')).toHaveText(copy.noReply);
+    await expect(form.getByRole('status')).toHaveText(copy.notOpened);
     await expectUnavailable(newLink);
     expect([...host.problems, ...guest.problems, ...oldLink.problems]).toEqual([]);
+  });
+
+  test(`in ${lang}, a guest can reply over default up to 20, the tracker marks the difference and counts totals, and the host can edit seats`, async ({
+    browser,
+  }) => {
+    const copy = COPY[lang];
+    const host = await newBrowser(browser, { permissions: ['clipboard-read', 'clipboard-write'] });
+    await host.page.goto(copy.editor);
+    await host.page.check('input[name="mode"][value="guestList"]');
+    await host.page.fill('#title', 'Daria');
+    await host.page.click('#publish');
+    const manage = host.page.locator('#manageLink');
+    await expect(manage).toHaveValue(/manage\.html#/);
+    await host.page.goto(await manage.inputValue());
+
+    await host.page.locator('#partyName').fill('Familia Radu', { timeout: 5000 });
+    await host.page.locator('#defaultSeats').fill('3');
+    await host.page.getByRole('button', { name: copy.add }).click();
+    const row = host.page.locator('#partyList li').filter({ hasText: 'Familia Radu' });
+    await expect(row).toContainText(copy.notOpened);
+    await row.getByRole('button', { name: copy.copy }).click();
+    const link = await host.page.evaluate(() => navigator.clipboard.readText());
+
+    const guest = await newBrowser(browser);
+    await guest.page.goto(link);
+    const form = guest.page.locator('#personalReply');
+    await expect(form.locator('[name="partySize"]')).toHaveValue('3');
+
+    // Above 20 is refused with a clear message naming 20.
+    await form.locator('[name="partySize"]').fill('21');
+    await form.locator('button[type="submit"]').click();
+    await expect(form.getByRole('status')).toContainText('20');
+
+    // Above default (3) up to 20 is accepted.
+    await form.locator('[name="partySize"]').fill('5');
+    await form.locator('button[type="submit"]').click();
+    await expect(form.getByRole('status')).toHaveText(copy.sent);
+
+    await host.page.reload();
+    await expect(row).toContainText(copy.overBy(2));
+    await expect(host.page.locator('#partyTotals .total').first()).toContainText('5');
+
+    // Host edits the party's seats in the tracker and the guest sees the change.
+    await row.locator('input[name="partySize"]').fill('6');
+    await row.getByRole('button', { name: copy.saveSeats }).click();
+    await expect(host.page.locator('#partyStatus')).toHaveText(copy.seatsSaved);
+    await expect(row).toContainText(copy.overBy(3));
+    await expect(host.page.locator('#partyTotals .total').first()).toContainText('6');
+
+    await guest.page.reload();
+    await expect(form.locator('[name="partySize"]')).toHaveValue('6');
+    expect([...host.problems, ...guest.problems]).toEqual([]);
   });
 }
