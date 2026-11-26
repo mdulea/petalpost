@@ -57,13 +57,13 @@ _Avoid_ `household`, `family` and `invitee` for this concept, and `guest` for th
 **Reply**
 
 A submitted RSVP for one published invitation. It records the name given by the guest, whether the party will attend, how many people will attend, and an optional note. The name is a label, so two replies with the same name are still two replies.
-In the open mode, any guest with the invitation link can add a reply. In the guest-list mode, a reply belongs to one party, each party has at most one reply, and the reply answers each sub-event the party is invited to.
+In the open mode, any guest with the invitation link can add a reply. In the guest-list mode, a reply belongs to one party, each party has at most one reply, and the reply answers each sub-event the party is invited to. Replies added before the host switched the invitation to the guest-list mode belong to no party until the host attaches each one to a party.
 A reply answers the published invitation as it is at any time, so it stays valid when the host changes the invitation's details.
 _Avoid_ `response` when naming this concept in the domain model.
 
 **Note**
 
-Optional free text of up to 300 characters that a guest adds to a reply for the host, such as a dietary need or a message. A reply has at most one note, and an empty note means the guest wrote none. The note belongs to the reply, so the guest changes it through the link that changes the reply, and withdrawing the reply removes it.
+Optional free text of up to 300 characters that a guest adds to a reply for the host, such as a dietary need or a message. A reply has at most one note, and an empty note means the guest wrote none. The note belongs to the reply, so the guest changes it through the reply edit link or the personal link, and withdrawing the reply removes it.
 _Avoid_ `comment`, and `note` for the invitation's own short text, which the editor labels Short note and the domain model calls the message.
 
 **Withdraw**
@@ -77,7 +77,7 @@ The number of people covered by an accepting reply, including the guest if they 
 
 **Menu option**
 
-A meal the host offers, such as standard, vegetarian or child. A reply gives a count for each menu option, and the counts add up to the party size.
+A meal the host offers, such as standard, vegetarian or child. A reply gives a count for each menu option, and the counts add up to the reply's accepted seats.
 _Avoid_ `meal`, `dish` and `diet` for this concept.
 
 **Seating plan**
@@ -109,14 +109,14 @@ _Avoid_ `dashboard`, `admin page` and `management page`.
 
 **Personal link**
 
-The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host regenerates it, the old personal link stops working and the reply stays with the party.
+The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
 _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 **View link**
 
-The link a guest shares with someone else to show their party's invitation. It shows no reply form and no reply.
+The link a guest shares with someone else to show their party's invitation with its greeting. It shows no reply form and no reply.
 _Avoid_ `share link` and `friend link`.
 
 **Reply edit link**
 
-The private link that gives its holder access to view, change, or withdraw a single reply in the open mode. A withdrawn reply no longer belongs to the invitation. In the guest-list mode, a reply that belongs to a party has no reply edit link, because the party's personal link takes its place.
+The private link that gives its holder access to view, change, or withdraw a single reply in the open mode. A withdrawn reply no longer belongs to the invitation. In the guest-list mode, guests change a party's reply through the party's personal link instead.
