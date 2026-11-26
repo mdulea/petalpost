@@ -96,7 +96,8 @@ A host cannot:
 
 A guest can:
 
-- open the invitation link in any browser, add the event to a calendar and open the address on a map;
+- open the invitation link in any browser, add the event to a calendar with reminders one day and two hours before it, and open the address on a map;
+- see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw that reply through the reply edit link.
 
@@ -189,7 +190,7 @@ It starts `scripts/server.js` on a free port with an in-memory database, so it r
 When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
-`test` runs the Prettier format check, ESLint and the browser port, command guard, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, command guard, contrast, countdown, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 

@@ -3,7 +3,7 @@
 // Romanian with empty lines left out, invite records, the characters left in a limited field, storage writes, the stored
 // published event identity, template switching, template ids, Romanian localization coverage, the same UI string and
 // API message keys in English and Romanian, the Romanian occasion order, Romanian-only occasions kept out of the
-// English catalog, 24-hour time formatting, the calendar file, the report link or the choice of when the Romanian
+// English catalog, 24-hour time formatting, the calendar file with its alarms, the report link or the choice of when the Romanian
 // language banner shows and where it links break.
 // Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';
@@ -735,6 +735,22 @@ check(
   'a carriage return and line feed in the venue become one escaped break',
   lines({ title: 'Tea', venue: 'Hall\r\nDoor', date: '2026-12-12' }).find((l) => l.startsWith('LOCATION')),
   'LOCATION:Hall\\nDoor',
+);
+check(
+  'the calendar file shows alarms one day and two hours before the event',
+  afternoon.slice(afternoon.indexOf('BEGIN:VALARM'), afternoon.indexOf('END:VEVENT')),
+  [
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'TRIGGER:-P1D',
+    'DESCRIPTION:Mia turns seven',
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    'TRIGGER:-PT2H',
+    'DESCRIPTION:Mia turns seven',
+    'END:VALARM',
+  ],
 );
 check('an event without a date has no calendar file', ctx.buildIcs({ title: 'Tea' }, now), null);
 check(

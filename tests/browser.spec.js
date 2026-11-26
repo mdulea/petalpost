@@ -1,4 +1,4 @@
-// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the guest note, which counts code points and keeps text past its limit, with their descriptions and limit announcement in English and Romanian, the calendar download, the photo
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the guest note, which counts code points and keeps text past its limit, with their descriptions and limit announcement in English and Romanian, the calendar download with its alarms, the event countdown in English and Romanian, which counts days, then hours on the last day, hides at the start and shows nothing without a date, the photo
 // upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
 // Romanian language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
 // it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
@@ -8,8 +8,8 @@
 // rapid clicks end on another category or leave an animation running, or filtering animates under reduced motion.
 // The motion checks fail when a template or accent change misses the preview's 180ms settle from opacity 0.6 or a
 // text edit animates it, rapid changes leave the preview faded, on an earlier accent or with an animation running, a
-// share link or the sample invitation misses its single 400ms reveal with a 12px rise, or the preview or the guest view animates under reduced
-// motion.
+// share link or the sample invitation misses its single 400ms reveal with a 12px rise, or the preview, the guest view or the countdown animates
+// under reduced motion.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
@@ -293,9 +293,63 @@ test('a share link opens the guest view and its calendar file in another browser
   await expect(guest.locator('#sampleNotice')).toBeHidden();
   const download = guest.waitForEvent('download');
   await guest.click('#addCalendar');
-  expect(await readFile(await (await download).path(), 'utf8')).toContain('SUMMARY:Zoe turns 30');
+  const ics = await readFile(await (await download).path(), 'utf8');
+  expect(ics).toContain('SUMMARY:Zoe turns 30');
+  expect(ics).toContain('TRIGGER:-P1D');
+  expect(ics).toContain('TRIGGER:-PT2H');
   expect(await guest.evaluate(() => localStorage.length)).toBe(0);
   expect(problems).toEqual([]);
+});
+
+// The share link of an invite on 12 December 2026 at 14:00 in Bucharest, 12:00 UTC, opened by a guest in Bucharest
+// whose clock reads now. The guest's timers run only when the test moves the clock.
+async function countdownGuest(page, browser, editor, now, date = '2026-12-12') {
+  await page.goto(editor);
+  await page.fill('#title', 'Zoe turns 30');
+  await page.fill('#date', date);
+  await page.fill('#time', '14:00');
+  const link = await page.locator('#previewGuest').getAttribute('href');
+  const guest = await (await browser.newContext({ timezoneId: 'Europe/Bucharest' })).newPage();
+  await guest.clock.install({ time: new Date(now) });
+  await guest.goto(link);
+  await expect(guest.locator('h1')).toHaveText('Zoe turns 30');
+  return guest;
+}
+const HOUR = 60 * 60 * 1000;
+
+for (const [editor, days, hours] of [
+  ['editor.html', 'Starts in 11 days', 'Starts in 3 hours'],
+  ['ro/editor.html', 'Începe peste 11 zile', 'Începe peste 3 ore'],
+]) {
+  test(`the guest view of ${editor} counts down in days, then in hours on the last day, and hides at the start`, async ({
+    page,
+    browser,
+  }) => {
+    const guest = await countdownGuest(page, browser, editor, '2026-12-01T08:00:00Z');
+    await expect(guest.locator('#countdown')).toHaveText(days);
+    await guest.clock.fastForward(11 * 24 * HOUR + HOUR);
+    await expect(guest.locator('#countdown')).toHaveText(hours);
+    await guest.clock.fastForward(3 * HOUR);
+    await expect(guest.locator('#countdown')).toBeHidden();
+  });
+}
+
+test('the guest view of an invite without a date shows no countdown', async ({ page, browser }) => {
+  const guest = await countdownGuest(page, browser, 'editor.html', '2026-12-01T08:00:00Z', '');
+  await expect(guest.locator('#previewCard .invite')).toBeVisible();
+  await expect(guest.locator('#countdown')).toBeHidden();
+});
+
+test('under reduced motion the countdown shows and changes without animation', async ({ page, browser }) => {
+  const guest = await countdownGuest(page, browser, 'editor.html', '2026-12-12T08:00:00Z');
+  await guest.emulateMedia({ reducedMotion: 'reduce' });
+  await recordAnimations(guest, '#countdown');
+  await guest.reload();
+  await expect(guest.locator('#countdown')).toHaveText('Starts in 4 hours');
+  await guest.clock.fastForward(HOUR);
+  await expect(guest.locator('#countdown')).toHaveText('Starts in 3 hours');
+  expect(await recordedAnimations(guest)).toEqual([]);
+  expect(await guest.locator('#countdown').evaluate((element) => element.getAnimations().length)).toBe(0);
 });
 
 // Publish and Download PNG are the only ways to send the invite, and both sit under the preview.

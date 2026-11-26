@@ -3,6 +3,12 @@
 
 export const LANGS = ['en', 'ro'];
 
+const roPlural = new Intl.PluralRules('ro-RO');
+// A Romanian count with its noun. one is the phrase for 1 and many the plural noun, as in "o zi", "3 zile" and
+// "20 de zile". Counts in the plural category other, such as 20 and 120, take "de".
+const roCount = (count, [one, many]) =>
+  ({ one, few: `${count} ${many}` })[roPlural.select(count)] ?? `${count} de ${many}`;
+
 /** @param {string} [lang] */
 export const normalizeLang = (lang) => (typeof lang === 'string' && lang.toLowerCase().startsWith('ro') ? 'ro' : 'en');
 
@@ -183,6 +189,8 @@ export const UI = {
     },
     // The guest view of a published invitation and its reply form.
     guest: {
+      // The argument is a result of countdown() in countdown.js.
+      countdown: ({ unit, count }) => `Starts in ${count} ${unit === 'days' ? 'day' : 'hour'}${count === 1 ? '' : 's'}`,
       replyErrors: (limits) => ({
         name: 'Enter your name.',
         attending: 'Choose whether you will attend.',
@@ -301,6 +309,9 @@ export const UI = {
     },
     // The guest view of a published invitation and its reply form.
     guest: {
+      // The argument is a result of countdown() in countdown.js.
+      countdown: ({ unit, count }) =>
+        `Începe peste ${roCount(count, unit === 'days' ? ['o zi', 'zile'] : ['o oră', 'ore'])}`,
       replyErrors: (limits) => ({
         name: 'Scrie-ți numele.',
         attending: 'Alege dacă participi.',

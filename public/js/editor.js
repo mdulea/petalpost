@@ -4,6 +4,7 @@ import { UI, accentLabel, categoryLabel, localeOf, normalizeLang } from './i18n.
 import { ACCENTS, categoriesFor, getTemplate, renderInvite, templatesFor } from './templates.js';
 import { mountInvites } from './mount.js';
 import { animate } from './motion.js';
+import { countdown, eventStart } from './countdown.js';
 import {
   EDITABLE,
   FIELDS,
@@ -121,6 +122,24 @@ const RISE = [
 // The guest view reveals the invitation over 400ms, once when the page shows it.
 function revealInvite() {
   animate([previewCard], RISE, { duration: 400, easing: 'ease-out' });
+}
+
+// The guest view shows the time left before the event and refreshes it each minute. It hides once the event starts
+// and shows nothing for an invite without a date. The text changes without animation.
+const countdownEl = document.getElementById('countdown');
+/** @type {ReturnType<typeof setInterval>} */
+let countdownTimer;
+function showCountdown() {
+  const start = eventStart(state.d);
+  const refresh = () => {
+    const left = countdown(start, new Date());
+    countdownEl.hidden = !left;
+    if (left) countdownEl.textContent = guestCopy.countdown(left);
+    else clearInterval(countdownTimer);
+  };
+  clearInterval(countdownTimer);
+  refresh();
+  if (!countdownEl.hidden) countdownTimer = setInterval(refresh, 60 * 1000);
 }
 
 // A limited text field shows the characters left below it once its text passes 80% of the limit. The counter joins
@@ -739,6 +758,7 @@ async function openEvent() {
   document.body.classList.remove('invite-hidden');
   render();
   revealInvite();
+  showCountdown();
   rsvpForm.hidden = false;
   /** @type {HTMLAnchorElement} */ (document.getElementById('reportLink')).href = reportLink(
     eventLink(location.origin, state.event, lang),
@@ -780,9 +800,11 @@ if (state.guest) {
     sampleNotice.hidden = false;
     rsvpForm.hidden = false;
     revealInvite();
+    showCountdown();
   } else {
     setHeading(state.d.title || guestCopy.defaultGuestHeading);
     revealInvite();
+    showCountdown();
   }
 }
 

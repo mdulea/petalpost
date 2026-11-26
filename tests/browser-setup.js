@@ -18,10 +18,12 @@ export async function newBrowser(browser, options = {}) {
   return { page, problems: watch(page) };
 }
 
-// Publishes a birthday invitation with the title and returns the links the editor shows.
-export async function publish(page, title) {
+// Publishes a birthday invitation with the title and the other fields, keyed by input id, and returns the links the
+// editor shows.
+export async function publish(page, title, fields = {}) {
   await page.goto('editor.html?t=birthday');
   await page.fill('#title', title);
+  for (const [id, value] of Object.entries(fields)) await page.fill(`#${id}`, value);
   await page.click('#publish');
   await expect(page.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
   return {
