@@ -94,7 +94,10 @@ test('the retention job counts a guest-list invitation from its latest sub-event
   const { client, raw, clock } = await withClock(t, '2026-06-16T20:59:00Z');
   const cred = host();
   const browser = client();
-  const subEvents = [{ name: 'Party', date: '2026-06-18' }, { name: 'Civil ceremony', date: '2026-06-15' }];
+  const subEvents = [
+    { name: 'Party', date: '2026-06-18' },
+    { name: 'Civil ceremony', date: '2026-06-15' },
+  ];
   await browser.publish(cred, invite({ mode: 'guestList', date: '2026-06-15', subEvents }));
   assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 0 });
   clock.now = new Date('2026-06-19T20:59:00Z');

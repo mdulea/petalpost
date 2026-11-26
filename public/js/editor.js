@@ -221,7 +221,7 @@ function fillSubEvents() {
   const list = state.d.subEvents ?? [];
   subEventList.innerHTML = list
     .map((_, i) => {
-      const text = copy.subEvent(i + 1);
+      const text = editorCopy.subEvent(i + 1);
       const input = (f) => `<div class="field">
           <label for="sub${i}-${f}">${text[f]}</label>
           <input class="input" type="${SUB_EVENT_INPUTS[f]}" id="sub${i}-${f}" data-index="${i}" data-field="${f}" />

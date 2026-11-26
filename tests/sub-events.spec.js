@@ -112,7 +112,7 @@ for (const { lang, editor, locale } of LANGS) {
     expect(await calendarEntries(guest.page)).toEqual([['DTSTART:20270612T160000', 'SUMMARY:Ana & Mihai']]);
     await guest.page.fill('#guestName', 'Sam');
     await guest.page.click('#sendReply');
-    await expect(guest.page.locator('#replyOutcome')).toHaveText(copy.replySent);
+    await expect(guest.page.locator('#replyOutcome')).toHaveText(UI[lang].guest.replySent);
     expect([...host.problems, ...guest.problems]).toEqual([]);
   });
 }
