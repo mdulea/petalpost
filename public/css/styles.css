@@ -1692,6 +1692,25 @@ textarea.input {
   flex-wrap: wrap;
   gap: 8px;
 }
+/* Desktop hosts drag a party by its name onto a table row, which shows a border while the party is over it. */
+.drag-handle {
+  cursor: grab;
+}
+#seatingTables > li {
+  border: 2px solid transparent;
+  border-bottom-color: var(--line);
+}
+#seatingTables > li.drop-target {
+  border-color: var(--rose-deep);
+}
+#seatingTables h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.seated-parties {
+  margin: 0 0 4px;
+  padding-left: 18px;
+}
 #personalReply fieldset {
   min-width: 0;
   margin: 0;
@@ -1854,4 +1873,28 @@ textarea.input {
 .hero-copy .status {
   min-height: 0;
   text-align: left;
+}
+
+/* With a seating plan on the page, printing shows only the event heading and each table with its parties and seats. */
+@media print {
+  body:has(#seatingPlan:not([hidden])) .site-header,
+  body:has(#seatingPlan:not([hidden])) .site-footer,
+  body:has(#seatingPlan:not([hidden])) #manageStatus,
+  body:has(#seatingPlan:not([hidden])) .preview-stage,
+  body:has(#seatingPlan:not([hidden])) .panel:not(#seatingPlan),
+  #seatingPlan form,
+  #seatingPlan .reply-actions,
+  #seatingPlan .status {
+    display: none;
+  }
+  body:has(#seatingPlan:not([hidden])) .manage-body {
+    display: block;
+  }
+  #seatingPlan {
+    border: 0;
+    box-shadow: none;
+  }
+  #seatingTables > li {
+    break-inside: avoid;
+  }
 }

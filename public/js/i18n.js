@@ -247,6 +247,8 @@ export const UI = {
       move: 'Move party',
       seats: (filled, free) => `${filled} filled, ${free} free`,
       over: (seats) => `Over capacity by ${seats}`,
+      partySeats: (seats) => `${seats} ${seats === 1 ? 'seat' : 'seats'}`,
+      declined: 'Declined',
     },
     guestList: {
       invalidName: (max) => `Enter a name of up to ${max} characters on each line.`,
@@ -467,6 +469,8 @@ export const UI = {
       move: 'Mută grupul',
       seats: (filled, free) => `${filled} locuri ocupate, ${free} libere`,
       over: (seats) => `Peste capacitate cu ${seats} ${seats === 1 ? 'loc' : seats < 20 ? 'locuri' : 'de locuri'}`,
+      partySeats: (seats) => `${seats} ${seats === 1 ? 'loc' : seats < 20 ? 'locuri' : 'de locuri'}`,
+      declined: 'A refuzat',
     },
     guestList: {
       invalidName: (max) => `Introdu un nume de cel mult ${max} de caractere pe fiecare rând.`,

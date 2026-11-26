@@ -1,7 +1,11 @@
-// Checks table creation, renaming, resizing, removal, over-capacity counts and assignment by keyboard or touch.
+// Checks table creation, renaming, resizing, removal, over-capacity counts, assignment by keyboard, touch or drag,
+// the drop animation with and without reduced motion, and the printed seating plan.
 // Run: pnpm test:browser tests/seating.spec.js
 import { expect, test } from '@playwright/test';
 import { newBrowser } from './browser-setup.js';
+
+// The table rows of the seating plan. Each table row has a heading with the table name; its party rows have none.
+const tableRows = (plan) => plan.getByRole('listitem').filter({ has: plan.page().getByRole('heading') });
 
 const COPY = {
   en: {
@@ -55,7 +59,7 @@ for (const lang of ['en', 'ro']) {
     await addTable.getByLabel(words.tableName).fill('7');
     await addTable.getByLabel(words.capacity).fill('2');
     await addTable.getByRole('button', { name: words.addTable }).click();
-    const table = plan.getByRole('listitem');
+    const table = tableRows(plan);
     await expect(table.getByLabel(words.tableName)).toHaveValue('7');
     await page.locator('#partyName').fill('Familia Radu');
     await page.locator('#defaultSeats').fill('3');
@@ -96,3 +100,90 @@ for (const lang of ['en', 'ro']) {
     expect([...problems, ...guest.problems]).toEqual([]);
   });
 }
+
+// Opens the tracker of a new guest-list invitation with table 7 for 5 and Familia Radu, who accepted for 3 people.
+async function trackerWithTable(browser, options = {}) {
+  const words = COPY.en;
+  const host = await newBrowser(browser, options);
+  const { page } = host;
+  await page.goto(words.editor);
+  await page.check('input[name="mode"][value="guestList"]');
+  await page.fill('#title', 'Daria');
+  await page.click('#publish');
+  const manage = page.locator('#manageLink');
+  await expect(manage).toHaveValue(/manage\.html#/);
+  await page.goto(await manage.inputValue());
+  const plan = page.getByRole('region', { name: words.heading });
+  const addTable = plan.getByRole('form', { name: words.addTable });
+  await addTable.getByLabel(words.tableName).fill('7');
+  await addTable.getByLabel(words.capacity).fill('5');
+  await addTable.getByRole('button', { name: words.addTable }).click();
+  await expect(tableRows(plan)).toHaveCount(1);
+  await page.locator('#partyName').fill('Familia Radu');
+  await page.locator('#defaultSeats').fill('3');
+  await page.getByRole('button', { name: words.addParty }).click();
+  const link = page.locator('#partyList input[readonly]');
+  await expect(link).toHaveValue(/#p=/);
+  const guest = await newBrowser(browser);
+  await guest.page.goto(await link.inputValue());
+  const reply = guest.page.locator('#personalReply');
+  await reply.locator('button[type="submit"]').click();
+  await expect(reply.getByRole('status')).toHaveText('Reply sent');
+  await page.reload();
+  return { page, plan, problems: [...host.problems, ...guest.problems] };
+}
+
+// Headless Chromium does not scroll during a drag, so the viewport fits the party list and the seating plan.
+const DESKTOP = { viewport: { width: 1280, height: 2400 } };
+
+test('the host drags a party onto a table to seat it there', async ({ browser }) => {
+  const { page, plan, problems } = await trackerWithTable(browser, DESKTOP);
+  await page.locator('#partyList').getByText('Familia Radu', { exact: true }).dragTo(tableRows(plan));
+  await expect(tableRows(plan)).toContainText(COPY.en.seats);
+  await expect(page.getByRole('combobox', { name: /Move to table/ }).locator('option:checked')).toHaveText('7');
+  expect(problems).toEqual([]);
+});
+
+for (const reducedMotion of ['no-preference', 'reduce']) {
+  test(`with ${reducedMotion} motion, a dropped party ${reducedMotion === 'reduce' ? 'animates nothing' : 'lands with an animation'}`, async ({
+    browser,
+  }) => {
+    const { page, plan, problems } = await trackerWithTable(browser, { ...DESKTOP, reducedMotion });
+    await page.evaluate(() => {
+      const animate = Element.prototype.animate;
+      window.animations = 0;
+      Element.prototype.animate = function (...args) {
+        window.animations += 1;
+        return animate.apply(this, args);
+      };
+    });
+    await page.locator('#partyList').getByText('Familia Radu', { exact: true }).dragTo(tableRows(plan));
+    await expect(tableRows(plan)).toContainText(COPY.en.seats);
+    expect(await page.evaluate(() => window.animations)).toBe(reducedMotion === 'reduce' ? 0 : 1);
+    expect(problems).toEqual([]);
+  });
+}
+
+test('the printed seating plan lists each table with its parties and seats', async ({ browser }) => {
+  const { page, plan, problems } = await trackerWithTable(browser);
+  await page.getByRole('combobox', { name: /Move to table/ }).selectOption({ label: '7' });
+  await page.getByRole('button', { name: COPY.en.move }).click();
+  await expect(tableRows(plan).getByRole('listitem')).toHaveText('Familia Radu · 3 seats');
+  await page.evaluate(() => {
+    window.printed = 0;
+    window.print = () => (window.printed += 1);
+  });
+  await plan.getByRole('button', { name: 'Print seating plan' }).click();
+  expect(await page.evaluate(() => window.printed)).toBe(1);
+  await page.emulateMedia({ media: 'print' });
+  const table = tableRows(plan);
+  await expect(table.getByRole('heading')).toHaveText('7');
+  await expect(table).toBeVisible();
+  await expect(table.getByText(COPY.en.seats)).toBeVisible();
+  await expect(table.getByText('Familia Radu · 3 seats')).toBeVisible();
+  await expect(table.getByRole('form')).toBeHidden();
+  await expect(plan.getByRole('button', { name: 'Print seating plan' })).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Guest list' })).toBeHidden();
+  await expect(page.locator('.site-header')).toBeHidden();
+  expect(problems).toEqual([]);
+});
