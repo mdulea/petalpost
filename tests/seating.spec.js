@@ -1,7 +1,9 @@
 // Checks table creation, renaming, resizing, removal, over-capacity counts, assignment by keyboard, touch or drag,
-// the drop animation with and without reduced motion, and the printed seating plan.
+// the drop animation with and without reduced motion, the printed seating plan, and that only a published
+// plan shows a seated party its table on the personal link.
 // Run: pnpm test:browser tests/seating.spec.js
 import { expect, test } from '@playwright/test';
+import { readCredential, viewLink, viewLinkSecret } from '../public/js/rsvp.js';
 import { newBrowser } from './browser-setup.js';
 
 // The table rows of the seating plan. Each table row has a heading with the table name; its party rows have none.
@@ -21,6 +23,11 @@ const COPY = {
     remove: 'Remove table',
     over: 'Over capacity by 1',
     seats: '3 filled, 2 free',
+    publish: 'Publish seating plan',
+    unpublish: 'Unpublish seating plan',
+    published: 'Guests see their table on their personal link.',
+    unpublished: 'Guests do not see their table yet.',
+    guestTable: 'Your table',
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
@@ -35,6 +42,11 @@ const COPY = {
     remove: 'Elimină masa',
     over: 'Peste capacitate cu 1 loc',
     seats: '3 locuri ocupate, 2 libere',
+    publish: 'Publică planul meselor',
+    unpublish: 'Retrage planul meselor',
+    published: 'Invitații își văd masa pe linkul personal.',
+    unpublished: 'Invitații nu își văd încă masa.',
+    guestTable: 'Masa ta',
   },
 };
 
@@ -186,7 +198,78 @@ test('the printed seating plan lists each table with its parties and seats', asy
   await expect(table.getByText('Familia Radu · 3 seats')).toBeVisible();
   await expect(table.getByRole('form')).toBeHidden();
   await expect(plan.getByRole('button', { name: 'Print seating plan' })).toBeHidden();
+  await expect(plan.locator('#seatingSummary')).toBeHidden();
   await expect(page.getByRole('region', { name: 'Guest list' })).toBeHidden();
   await expect(page.locator('.site-header')).toBeHidden();
   expect(problems).toEqual([]);
 });
+
+for (const lang of ['en', 'ro']) {
+  const words = COPY[lang];
+
+  test(`in ${lang}, only a published plan shows a seated party its table on the personal link`, async ({ browser }) => {
+    const { page, problems } = await newBrowser(browser);
+    await page.goto(words.editor);
+    await page.check('input[name="mode"][value="guestList"]');
+    await page.fill('#title', 'Daria');
+    await page.click('#publish');
+    const manage = page.locator('#manageLink');
+    await expect(manage).toHaveValue(/manage\.html#/);
+    await page.goto(await manage.inputValue());
+    const plan = page.getByRole('region', { name: words.heading });
+    const addTable = plan.getByRole('form', { name: words.addTable });
+    await addTable.getByLabel(words.tableName).fill('Window');
+    await addTable.getByLabel(words.capacity).fill('4');
+    await addTable.getByRole('button', { name: words.addTable }).click();
+    await expect(tableRows(plan)).toHaveCount(1);
+    const links = {};
+    for (const name of ['Familia Radu', 'Sam']) {
+      await page.locator('#partyName').fill(name);
+      await page.getByRole('button', { name: words.addParty }).click();
+      const link = page.locator('#partyList li').filter({ hasText: name }).locator('input[readonly]');
+      await expect(link).toHaveValue(/#p=/);
+      links[name] = await link.inputValue();
+    }
+    await page.getByRole('combobox', { name: `${words.picker} · Familia Radu` }).selectOption({ label: 'Window' });
+    await page
+      .locator('#partyList li')
+      .filter({ hasText: 'Familia Radu' })
+      .getByRole('button', { name: words.move })
+      .click();
+    await expect(tableRows(plan)).toHaveCount(1);
+    const summary = plan.locator('#seatingSummary');
+    await expect(summary).toHaveText(words.unpublished);
+
+    const guest = await newBrowser(browser);
+    const tableRegion = guest.page.getByRole('region', { name: words.guestTable });
+    const openPersonal = async (link) => {
+      await guest.page.goto('about:blank');
+      await guest.page.goto(link);
+      await expect(guest.page.locator('#personalReply')).toBeVisible();
+    };
+    await openPersonal(links['Familia Radu']);
+    await expect(tableRegion).toHaveCount(0);
+
+    await plan.getByRole('button', { name: words.publish }).click();
+    await expect(summary).toHaveText(words.published);
+    await openPersonal(links['Familia Radu']);
+    await expect(tableRegion).toContainText('Window');
+    await openPersonal(links.Sam);
+    await expect(tableRegion).toHaveCount(0);
+    await guest.page.goto('about:blank');
+    const [invitation, hash] = links['Familia Radu'].split('#');
+    const personal = readCredential(`#${hash}`, 'p=');
+    await guest.page.goto(viewLink(invitation, personal.id, await viewLinkSecret(personal.secret, personal.id)));
+    await expect(guest.page.locator('#personalSections h2')).toContainText('Familia Radu');
+    await expect(tableRegion).toHaveCount(0);
+    await guest.page.goto(invitation);
+    await expect(guest.page.locator('#guestListNotice')).toBeVisible();
+    await expect(guest.page.getByText('Window')).toHaveCount(0);
+
+    await plan.getByRole('button', { name: words.unpublish }).click();
+    await expect(summary).toHaveText(words.unpublished);
+    await openPersonal(links['Familia Radu']);
+    await expect(tableRegion).toHaveCount(0);
+    expect([...problems, ...guest.problems]).toEqual([]);
+  });
+}

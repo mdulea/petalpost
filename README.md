@@ -89,7 +89,7 @@ A host can:
 - use the tracker to see how many parties have yet to reply and open a WhatsApp reminder for each party with an active personal link. Each reminder uses the party's language and includes its personal link. The tracker marks which reminders the host opened in the current tab session;
 - set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
 - see in the tracker of a guest-list invitation the time left before the RSVP deadline and before the guest list is deleted. In the last 7 days before the deadline, the tracker adds how many parties have not replied. In the last 3 days before the deletion, it asks the host to download the guest-list CSV;
-- create, rename, resize and remove tables in the guest-list tracker. The host can move a party to a table with a picker or, on a desktop, by dragging the party onto the table, and see filled and free seats from accepting replies. The host can print the seating plan with each table and its parties. Removing a table clears its parties' assignments;
+- create, rename, resize and remove tables in the guest-list tracker. The host can move a party to a table with a picker or, on a desktop, by dragging the party onto the table, and see filled and free seats from accepting replies. The host can print the seating plan with each table and its parties. Removing a table clears its parties' assignments. The host can publish and unpublish the seating plan;
 - write, change or remove one update of up to 500 characters for a guest-list invitation, such as "The party starts at 19:00". Every personal link and view link shows it at the top. With the management link, the tracker lists one WhatsApp message per party with the update and the party's personal link, in the party's language;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
@@ -115,7 +115,7 @@ A guest can:
 - see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw an open-mode reply through its reply edit link;
-- open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes, and sees the time left before it. After it passes, the personal link shows the reply read-only;
+- open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes, and sees the time left before it. After it passes, the personal link shows the reply read-only. While the host's seating plan is published, the personal link also shows the party's table;
 - share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private;
 - see the host's latest update at the top of the personal link and the view link.
 
@@ -345,6 +345,7 @@ The personal link and view link API use `parties`. The tracker reads it alongsid
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
 `d.mode` is `open` or `guestList`, and a `d` without a mode, stored before invitations had modes, is open.
+`d.deadline` holds the optional RSVP deadline, and `d.seatingPublished` is `true` while the seating plan is published.
 `d.updateNotice` holds the latest update of a guest-list invitation. `PATCH /api/events/{id}` sets it without changing the invitation version, a publish keeps it, and only the tracker, personal link and view link reads return it.
 `tests/check-migrations.js` applies the migrations to an empty database and to one with the earlier schema and data.
 

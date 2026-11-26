@@ -1,6 +1,7 @@
 // Both party links show the greeting and the host's latest update. The personal link adds the sections in page order.
 import { renderDeadline } from './deadline.js';
 import { renderReply } from './reply.js';
+import { renderTable } from './table.js';
 
 function renderShare(party, page) {
   const button = document.createElement('button');
@@ -11,7 +12,7 @@ function renderShare(party, page) {
   return button;
 }
 
-const sections = [renderShare, renderDeadline, renderReply];
+const sections = [renderShare, renderDeadline, renderTable, renderReply];
 
 // The update is host text, so it enters the page as textContent.
 function renderUpdate(updateNotice, copy) {

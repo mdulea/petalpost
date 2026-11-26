@@ -1890,6 +1890,7 @@ textarea.input {
   body:has(#seatingPlan:not([hidden])) .panel:not(#seatingPlan),
   #seatingPlan form,
   #seatingPlan .reply-actions,
+  #seatingSummary,
   #seatingPlan .status {
     display: none;
   }

@@ -252,6 +252,9 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // Creates a table with a reusable id or updates the current version.
     saveTable: (cred, id, table) => call('PUT', tablePath(cred.id, id), cred.secret, table),
     removeTable: (cred, id, version) => call('DELETE', tablePath(cred.id, id), cred.secret, { version }),
+    // Publishes the seating plan with true and unpublishes it with false.
+    setSeatingPublished: (cred, published) =>
+      call('PATCH', `${eventPath(cred.id)}/seating`, cred.secret, { published }),
     assignParty: (cred, id, tableId) => call('PATCH', `${partyPath(cred.id, id)}/table`, cred.secret, { tableId }),
     loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
     renameParty: (cred, id, name) => call('PATCH', managePartyPath(cred.id, id), cred.secret, { name }),

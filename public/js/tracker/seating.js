@@ -1,5 +1,6 @@
-// Edits tables in the tracker, lists each table's parties and provides the picker and drag handle used in each party
-// row. Dropping a party on a table assigns it as the picker does. Party drags carry the party id as PARTY_TYPE data.
+// Edits tables in the tracker, lists each table's parties, publishes or unpublishes the seating plan, and provides
+// the picker and drag handle used in each party row. Dropping a party on a table assigns it as the picker does.
+// Party drags carry the party id as PARTY_TYPE data.
 import { UI } from '../i18n.js';
 import { animate } from '../motion.js';
 import { newId } from '../rsvp.js';
@@ -120,9 +121,23 @@ export function tablePicker(party, tables, page) {
   return form;
 }
 
+// The last loaded published state, which the publish button toggles.
+let published = false;
+
 function init(page) {
   document.getElementById('addTable').append(tableForm(page));
   document.getElementById('printSeating').addEventListener('click', () => window.print());
+  const { client, cred, load } = page;
+  const button = /** @type {HTMLButtonElement} */ (document.getElementById('publishSeating'));
+  const status = document.getElementById('seatingStatus');
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    status.textContent = '';
+    const result = await client.setSeatingPublished(cred, !published);
+    if (!result.ok) status.textContent = result.message;
+    else await load();
+    button.disabled = false;
+  });
 }
 
 // The party's name with its accepted seats, its decline or its missing reply, as the printed plan lists it.
@@ -136,8 +151,11 @@ function partyLine(party, lang) {
   return `${party.name} · ${answer}`;
 }
 
-function show({ tables, parties }, page) {
+function show({ d, tables, parties }, page) {
   const words = UI[page.lang].seating;
+  published = d?.seatingPublished === true;
+  document.getElementById('seatingSummary').textContent = published ? words.published : words.unpublished;
+  document.getElementById('publishSeating').textContent = published ? words.unpublish : words.publish;
   const rows = tables.map((table) => {
     const row = document.createElement('li');
     row.className = 'reply';
