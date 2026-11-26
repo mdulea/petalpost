@@ -1,7 +1,7 @@
 // Entry module of manage.html and ro/manage.html, the host's page for one published event. The management link
 // manage.html#<id>.<secret> is the only credential; the page shows the invitation, the reply totals and list,
 // and the invitation link, downloads the replies as a CSV file, and deletes the event on request. Each load lists
-// the event under "My invitations" in this browser, and the page shares its own link with the host or a co-host.
+// the published invitation under "My invitations" in this browser, and the page shares its own link with the host or a co-host.
 import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';

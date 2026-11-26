@@ -54,7 +54,7 @@ mountInvites(
 
 // My invitations lists the management pages this browser opened, and stays hidden while it is empty or storage is
 // blocked. Each listed invitation that has not ended is loaded once; a missing one is marked as ended. The load
-// sends only the public event id, as the invitation link does.
+// sends only the invitation id, as the invitation link does.
 let storage = null;
 try {
   storage = localStorage;

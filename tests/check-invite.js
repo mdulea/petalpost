@@ -459,16 +459,16 @@ for (const id of ['', 'short', `${EVENT_ID}A`, `${EVENT_ID.slice(1)}+`]) {
 // Each entry is {id, secret, lang, title, date, ended}; only the management page adds or refreshes one.
 const SECRET = identity.secret;
 const OTHER_ID = 'BBBBBBBBBBBBBBBBBBBBBB';
-const hosted = memory();
+const listStorage = memory();
 const zoeEntry = { id: EVENT_ID, secret: SECRET, lang: 'en', title: 'Zoe turns 30', date: '2026-12-12' };
 const anaEntry = { id: OTHER_ID, secret: SECRET, lang: 'ro', title: 'Botezul Anei', date: '' };
 check(
   'an opened management link lists its invitation, and a later one lists first',
   [
-    ctx.rememberInvitation(hosted, zoeEntry),
-    ctx.rememberInvitation(hosted, anaEntry),
-    ctx.storedInvitations(hosted),
-    [...hosted.items.keys()],
+    ctx.rememberInvitation(listStorage, zoeEntry),
+    ctx.rememberInvitation(listStorage, anaEntry),
+    ctx.storedInvitations(listStorage),
+    [...listStorage.items.keys()],
   ],
   [
     true,
@@ -483,8 +483,8 @@ check(
 check(
   'reopening a listed invitation moves it first with its new title and date',
   [
-    ctx.rememberInvitation(hosted, { ...zoeEntry, title: 'Zoe turns 31' }),
-    ctx.storedInvitations(hosted).map((e) => [e.id, e.title]),
+    ctx.rememberInvitation(listStorage, { ...zoeEntry, title: 'Zoe turns 31' }),
+    ctx.storedInvitations(listStorage).map((e) => [e.id, e.title]),
   ],
   [
     true,
@@ -497,13 +497,13 @@ check(
 check(
   'an ended invitation stays listed as ended until it is opened again or removed',
   [
-    ctx.endInvitation(hosted, OTHER_ID),
-    ctx.endInvitation(hosted, 'CCCCCCCCCCCCCCCCCCCCCC'),
-    ctx.storedInvitations(hosted).map((e) => [e.id, e.ended]),
-    ctx.rememberInvitation(hosted, anaEntry),
-    ctx.storedInvitations(hosted).map((e) => [e.id, e.ended]),
-    ctx.forgetInvitation(hosted, OTHER_ID),
-    ctx.storedInvitations(hosted).map((e) => e.id),
+    ctx.endInvitation(listStorage, OTHER_ID),
+    ctx.endInvitation(listStorage, 'CCCCCCCCCCCCCCCCCCCCCC'),
+    ctx.storedInvitations(listStorage).map((e) => [e.id, e.ended]),
+    ctx.rememberInvitation(listStorage, anaEntry),
+    ctx.storedInvitations(listStorage).map((e) => [e.id, e.ended]),
+    ctx.forgetInvitation(listStorage, OTHER_ID),
+    ctx.storedInvitations(listStorage).map((e) => e.id),
   ],
   [
     true,

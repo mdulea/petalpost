@@ -30,6 +30,10 @@ _Avoid_ `occasion` for the design itself.
 
 The person who prepares an invitation or manages its published copy and replies.
 
+**Co-host**
+
+A person the host sends the management link to, so they can follow the replies too. Petalpost treats a co-host as any holder of the management link.
+
 **Guest**
 
 A person who receives or opens an invitation. A guest can reply on behalf of a party.
@@ -70,6 +74,10 @@ A missing invitation, a storage error, or an unknown template shows the generic 
 **Management link**
 
 The private link that gives its holder access to a published invitation's replies and lets them delete the invitation.
+
+**My invitations**
+
+The list on the home pages of the published invitations whose management link this browser opened, with each one's title, date and management link. It stays in the browser's local storage. An invitation that was deleted or expired stays listed as ended until the host removes it.
 
 **Reply edit link**
 
