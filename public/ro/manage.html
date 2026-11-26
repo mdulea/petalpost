@@ -96,7 +96,18 @@
               Acest link arată invitația fără formularul de confirmare. Invitații confirmă doar prin linkurile
               personale.
             </p>
-            <p class="warning">
+            <div class="reply-actions">
+              <button class="btn btn-ghost btn-small" type="button" data-share-management disabled>
+                Trimite-mi linkul
+              </button>
+              <button class="btn btn-ghost btn-small" type="button" data-share-management disabled>
+                Distribuie unui coorganizator
+              </button>
+            </div>
+            <p class="hint" id="managementShareHint" hidden>
+              Deschide linkul complet de administrare ca să ți-l trimiți sau să-l distribui unui coorganizator.
+            </p>
+            <p class="warning" id="managementShareWarning">
               Păstrează privat linkul acestei pagini. Oricine îl are poate vedea confirmările și șterge invitația.
               Petalpost nu poate recupera un link de administrare pierdut.
             </p>
@@ -104,9 +115,10 @@
 
           <section class="panel" id="passkeyPanel" aria-labelledby="h-passkey" hidden>
             <h2 id="h-passkey">
-              <svg class="icon"><use href="#i-key" /></svg>Cheie de acces
+              <svg class="icon"><use href="#i-key" /></svg>Chei de acces
             </h2>
-            <p class="hint">
+            <ul class="reply-list" id="passkeyList" hidden></ul>
+            <p class="hint" id="passkeyHelp">
               Salvează o cheie de acces cu Face ID, amprenta sau Windows Hello. Pe alt dispozitiv cu același cont Apple,
               Google sau Microsoft, „Găsește invitațiile mele” de pe pagina principală deschide această pagină cu ea.
             </p>

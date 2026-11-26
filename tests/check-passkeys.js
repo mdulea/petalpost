@@ -1,7 +1,9 @@
 // Fails when passkey registration, passkey sign-in or its access token break. Checks: an ES256 and an RS256 passkey
 // saved with the management secret sign in and get a token for their own invitation; the token loads the replies,
 // publishes changes and deletes the invitation, and the sign-in link round trip; a token reaches no other invitation,
-// cannot ask for a registration challenge or save a passkey, and gets a 401 after it expires; a challenge works once,
+// cannot ask for a registration challenge or save a passkey, and gets a 401 after it expires; the management link
+// lists two saved passkeys and their dates and removes only the selected one; a token cannot list or remove them;
+// a challenge works once,
 // belongs to its own invitation or to sign-in, and expires; refusals of a wrong origin, relying party, type, missing
 // user verification, signature, sign counter that stops rising, malformed fields and an unknown passkey; the
 // passkey limit per invitation; deleting the invitation deletes its passkeys and tokens, and its passkey then opens
@@ -57,6 +59,44 @@ test('the sign-in link carries the access token back to the management page', ()
   assert.equal(link, `https://www.petalpost.ro/ro/manage.html#t=${'a'.repeat(22)}.${'b'.repeat(43)}`);
   assert.deepEqual(readCredential(link.slice(link.indexOf('#')), 't='), { id: 'a'.repeat(22), secret: 'b'.repeat(43) });
   assert.equal(readCredential(link.slice(link.indexOf('#')), ''), null);
+});
+
+test('the management link lists both passkeys and removes only the selected passkey', async () => {
+  const { cred, client, guests, key } = await withPasskey();
+  const cohost = authenticator();
+  const { data: challenge } = await guests.passkeyChallenge(cred);
+  assert.equal((await guests.savePasskey(cred, cohost.register(challenge.challenge))).status, 201);
+
+  const first = await signIn(guests, key);
+  const second = await signIn(guests, cohost);
+  for (const result of [first, second]) {
+    assert.equal(result.status, 200);
+    assert.equal(result.data.eventId, cred.id);
+  }
+
+  const owner = client();
+  const listed = await owner.listPasskeys(cred);
+  assert.equal(listed.status, 200);
+  assert.equal(listed.data.passkeys.length, 2);
+  for (const { id, createdAt } of listed.data.passkeys) {
+    assert.match(createdAt, /^\d{4}-\d{2}-\d{2}T/);
+    assert.ok(Math.abs(Date.now() - Date.parse(createdAt)) < 60_000);
+    assert.ok(id === key.id || id === cohost.id);
+  }
+  const tokenCred = { id: cred.id, secret: first.data.token };
+  assert.equal((await guests.listPasskeys(tokenCred)).status, 403);
+  assert.equal((await guests.removePasskey(tokenCred, cohost.id)).status, 403);
+
+  const other = await publishedEvent();
+  assert.equal((await owner.removePasskey(other.cred, cohost.id)).status, 204);
+  assert.equal((await signIn(guests, cohost)).status, 200);
+  assert.equal((await owner.removePasskey(cred, cohost.id)).status, 204);
+  assert.deepEqual(
+    (await owner.listPasskeys(cred)).data.passkeys.map(({ id }) => id),
+    [key.id],
+  );
+  assert.equal((await signIn(guests, cohost)).status, 404);
+  assert.equal((await signIn(guests, key)).status, 200);
 });
 
 test('an access token publishes changes and deletes its invitation', async () => {

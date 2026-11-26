@@ -95,7 +95,18 @@
             <p class="hint" id="eventLinkNoReplies" hidden>
               This link shows the invitation without a reply form. Guests reply only through their personal links.
             </p>
-            <p class="warning">
+            <div class="reply-actions">
+              <button class="btn btn-ghost btn-small" type="button" data-share-management disabled>
+                Send the link to myself
+              </button>
+              <button class="btn btn-ghost btn-small" type="button" data-share-management disabled>
+                Share with a co-host
+              </button>
+            </div>
+            <p class="hint" id="managementShareHint" hidden>
+              Open the full management link to send it to yourself or share it with a co-host.
+            </p>
+            <p class="warning" id="managementShareWarning">
               Keep this page's link private. Anyone with it can see the replies and delete the invitation. Petalpost
               cannot recover a lost management link.
             </p>
@@ -103,9 +114,10 @@
 
           <section class="panel" id="passkeyPanel" aria-labelledby="h-passkey" hidden>
             <h2 id="h-passkey">
-              <svg class="icon"><use href="#i-key" /></svg>Passkey
+              <svg class="icon"><use href="#i-key" /></svg>Passkeys
             </h2>
-            <p class="hint">
+            <ul class="reply-list" id="passkeyList" hidden></ul>
+            <p class="hint" id="passkeyHelp">
               Save a passkey with Face ID, a fingerprint or Windows Hello. On another device with the same Apple, Google
               or Microsoft account, "Find my invitations" on the home page opens this page with it.
             </p>

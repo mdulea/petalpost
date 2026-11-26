@@ -86,9 +86,10 @@ A host can:
 - use the management link to add a party with a name and default seats and copy its personal link. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows the party's reply and note after opening the management link or after a passkey sign-in;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
-- save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
+- save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour;
+- share the full management link with a co-host so they can save their own passkey, and use that link to see when each passkey was saved and remove one.
 
-For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies and delete the invitation, and cannot save another passkey.
+For a passkey, the server stores the credential id, the public key, the save date and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Removing a passkey stops new sign-ins with it. Deleting the invitation deletes all its passkeys. A passkey sign-in can view and download the replies and delete the invitation. Sharing the management link and saving or removing passkeys require the full management link.
 
 A host cannot:
 

@@ -1,9 +1,10 @@
 // Fails when a passkey round trip breaks in Chromium against the real API of scripts/server.js. Checks: in English
 // and Romanian, the host saves a passkey on the management page with a virtual authenticator; another browser whose
 // authenticator holds the synced passkey uses "Find my invitations" on the home page and opens that invitation's
-// management page with an access token, which shows the replies and no passkey panel; a cancelled sign-in shows its
-// message and stays on the home page; a passkey session can read the guest list and requires the management link
-// to add parties or copy personal links; no page breaks the Content-Security-Policy or throws.
+// management page with an access token, which shows the replies and no passkey panel; a co-host opens the shared
+// management link, saves a second passkey, and can sign in until that key is removed; both management share buttons
+// need the full link; a cancelled sign-in stays on the home page; no page breaks the Content-Security-Policy or throws.
+// A passkey session can read the guest list. Adding parties or copying personal links requires the management link.
 // Run: pnpm test:browser tests/passkey.spec.js
 import { expect, test } from '@playwright/test';
 import { UI } from '../public/js/i18n.js';
@@ -25,6 +26,59 @@ async function addAuthenticator(page) {
   });
   return { cdp, authenticatorId };
 }
+
+test('a co-host saves a second passkey and loses sign-in when it is removed', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const cohost = await newBrowser(browser);
+  const share = Promise.withResolvers();
+  await host.page.exposeFunction('shareManagementLink', ({ url }) => share.resolve(url));
+  await host.page.addInitScript(() =>
+    Object.defineProperty(navigator, 'share', { value: window['shareManagementLink'] }),
+  );
+  await addAuthenticator(host.page);
+  await addAuthenticator(cohost.page);
+  const title = 'Party with two hosts';
+  const { manage } = await publish(host.page, title);
+  await host.page.goto(new URL(manage).pathname + new URL(manage).hash);
+  await host.page.locator('#savePasskey').click();
+  await expect(host.page.locator('#passkeyStatus')).toHaveText(UI.en.passkey.saved);
+
+  await host.page.getByRole('button', { name: 'Share with a co-host' }).click();
+  const shared = new URL(await share.promise);
+  expect(shared.hash).toBe(new URL(manage).hash);
+  await cohost.page.goto(shared.pathname + shared.hash);
+  await cohost.page.locator('#savePasskey').click();
+  await expect(cohost.page.locator('#passkeyStatus')).toHaveText(UI.en.passkey.saved);
+  const dates = cohost.page.locator('#passkeyList time');
+  await expect(dates).toHaveCount(2);
+  for (const date of await dates.all()) {
+    await expect(date).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
+    await expect(date).toContainText(/\d{4}/);
+  }
+
+  for (const { page } of [host, cohost]) {
+    await page.goto('/');
+    await page.locator('#findInvitations').click();
+    await expect(page.locator('#manageHeading')).toHaveText(title);
+    await expect(page.getByRole('button', { name: 'Send the link to myself' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Share with a co-host' })).toBeDisabled();
+    await expect(page.locator('#managementShareHint')).toBeVisible();
+    await expect(page.locator('#managementShareHint')).toContainText('Open the full management link');
+  }
+
+  await host.page.goto(shared.pathname + shared.hash);
+  await expect(host.page.locator('#passkeyList time')).toHaveCount(2);
+  host.page.once('dialog', (dialog) => dialog.accept());
+  await host.page.getByRole('button', { name: 'Remove passkey 2' }).click();
+  await expect(host.page.locator('#passkeyList time')).toHaveCount(1);
+  await cohost.page.goto('/');
+  await cohost.page.locator('#findInvitations').click();
+  await expect(cohost.page.locator('#findStatus')).toContainText('This passkey no longer opens an invitation.');
+  await host.page.goto('/');
+  await host.page.locator('#findInvitations').click();
+  await expect(host.page.locator('#manageHeading')).toHaveText(title);
+  expect([...host.problems, ...cohost.problems]).toEqual([]);
+});
 
 for (const lang of ['en', 'ro']) {
   test(`a passkey saved on the management page opens it on another device in ${lang}`, async ({ browser }) => {
