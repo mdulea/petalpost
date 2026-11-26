@@ -113,7 +113,7 @@ _Avoid_ `account`, `login` and `password` for this concept.
 
 **Tracker**
 
-The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply, lets the host set an optional RSVP deadline, and lets the host edit a party's reply.
+The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply, shows the reminder queue, lets the host set an optional RSVP deadline, and lets the host edit a party's reply.
 _Avoid_ `dashboard`, `admin page` and `management page`.
 
 **Personal link**
@@ -125,6 +125,11 @@ _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 The link a guest shares with someone else to show their party's invitation with its greeting, and the link the tracker opens to preview a party's page. It shows no reply form and no reply, and records no opened time.
 _Avoid_ `share link` and `friend link`.
+
+**Reminder**
+
+A WhatsApp message that the host sends from the tracker to a party without a reply. It greets the party in the party's language, asks for a reply and includes the party's personal link. The reminder queue in the tracker lists every party without a reply, and marks the parties whose reminder the host opened in the current tab session.
+_Avoid_ `nudge` and `follow-up`.
 
 **Reply edit link**
 

@@ -2,6 +2,7 @@
 // filters parties by status (not opened, opened, replied), and sees opened times, replies, edits and withdrawal
 // in both languages. Also checks revoke, regenerate and the unavailable page in both languages.
 // Also checks guest replies above default seats, over-default markers, accepted seats and host seat edits.
+// Also checks the reminder queue, localized WhatsApp text and marks that last for the tab session.
 // Run: pnpm test:browser tests/personal-link.spec.js
 import { expect, test } from '@playwright/test';
 import { newBrowser } from './browser-setup.js';
@@ -12,6 +13,11 @@ const COPY = {
     copy: 'Copy message',
     link: /Personal link · Familia Radu/,
     whatsapp: 'Send on WhatsApp',
+    reminderQueue: 'Reminder queue',
+    reminder: 'Remind on WhatsApp',
+    reminderUsed: 'WhatsApp opened',
+    pending: (count) => `${count} ${count === 1 ? 'party' : 'parties'} without a reply`,
+    reminderText: 'Please let us know if you can come.',
     greeting: (name) => `Hello, ${name}!`,
     replyHeading: 'Reply to the host',
     add: 'Add to guest list',
@@ -43,6 +49,11 @@ const COPY = {
     copy: 'Copiază mesajul',
     link: /Link personal · Familia Radu/,
     whatsapp: 'Trimite pe WhatsApp',
+    reminderQueue: 'Mementouri',
+    reminder: 'Trimite un memento pe WhatsApp',
+    reminderUsed: 'WhatsApp a fost deschis',
+    pending: (count) => `${count} ${count === 1 ? 'grup' : 'grupuri'} fără răspuns`,
+    reminderText: 'Te rugăm să ne spui dacă poți veni.',
     greeting: (name) => `Bună, ${name}!`,
     replyHeading: 'Confirmă participarea',
     add: 'Adaugă pe lista de invitați',
@@ -72,6 +83,64 @@ const COPY = {
 };
 
 for (const lang of ['en', 'ro']) {
+  test(`in ${lang}, the reminder queue tracks WhatsApp use and removes a party after its reply`, async ({
+    browser,
+  }) => {
+    const copy = COPY[lang];
+    const otherLang = lang === 'en' ? 'ro' : 'en';
+    const otherCopy = COPY[otherLang];
+    const host = await newBrowser(browser);
+    await host.page.goto(copy.editor);
+    await host.page.check('input[name="mode"][value="guestList"]');
+    await host.page.click('#publish');
+    const manage = host.page.locator('#manageLink');
+    await expect(manage).toHaveValue(/manage\.html#/);
+    await host.page.goto(await manage.inputValue());
+
+    for (const [name, partyLang] of [
+      ['Familia Radu', 'ro'],
+      ['Anna & Tom', 'en'],
+    ]) {
+      await host.page.locator('#partyName').fill(name);
+      await host.page.locator('#partyLang').selectOption(partyLang);
+      await host.page.getByRole('button', { name: copy.add }).click();
+      await expect(host.page.locator('#partyList li').filter({ hasText: name })).toBeVisible();
+    }
+
+    const queue = host.page.getByRole('region', { name: copy.reminderQueue });
+    await expect(queue.getByText(copy.pending(2))).toBeVisible({ timeout: 5000 });
+    const name = otherLang === 'ro' ? 'Familia Radu' : 'Anna & Tom';
+    const pending = queue.getByRole('listitem').filter({ hasText: name });
+    const button = pending.getByRole('link', { name: copy.reminder });
+    const expectedLink = await host.page
+      .locator('#partyList input[readonly]')
+      .filter({ visible: true })
+      .and(host.page.getByRole('textbox', { name: new RegExp(` · ${name}$`) }))
+      .inputValue();
+    await host.page.context().route('https://wa.me/**', (route) => route.fulfill({ body: 'WhatsApp' }));
+    const [popup] = await Promise.all([host.page.waitForEvent('popup'), button.click()]);
+    const url = new URL(popup.url());
+    expect(url.origin).toBe('https://wa.me');
+    expect(url.searchParams.get('text')).toBe(
+      `${otherCopy.greeting(name)}\n${otherCopy.reminderText}\n${expectedLink}`,
+    );
+    await popup.close();
+    await expect(pending.getByText(copy.reminderUsed)).toBeVisible();
+    await host.page.reload();
+    await expect(pending.getByText(copy.reminderUsed)).toBeVisible();
+    await expect(queue.getByText(copy.reminderUsed)).toHaveCount(1);
+
+    const guest = await newBrowser(browser);
+    await guest.page.goto(expectedLink);
+    const form = guest.page.locator('#personalReply');
+    await form.locator('button[type="submit"]').click();
+    await expect(form.getByRole('status')).toHaveText(otherCopy.sent);
+    await host.page.locator('#refreshParties').click();
+    await expect(queue.getByText(copy.pending(1))).toBeVisible();
+    await expect(pending).toHaveCount(0);
+    await expect(queue.getByRole('link', { name: copy.reminder })).toHaveCount(1);
+  });
+
   test(`in ${lang}, a host shares a personal link in each party's language and the party manages its reply there`, async ({
     browser,
   }) => {

@@ -2,8 +2,8 @@
 // and Romanian, the host saves a passkey on the management page with a virtual authenticator; another browser whose
 // authenticator holds the synced passkey uses "Find my invitations" on the home page and opens that invitation's
 // management page with an access token, which shows the replies and no passkey panel; a cancelled sign-in shows its
-// message and stays on the home page; a passkey session can read the guest list, rename and delete parties, and requires the management link
-// to add parties or copy personal links; no page breaks the Content-Security-Policy or throws.
+// message and stays on the home page; a passkey session can read the guest list and the reminder queue, rename and
+// delete parties, and requires the management link to add parties, copy personal links or open reminders; no page breaks the Content-Security-Policy or throws.
 // Run: pnpm test:browser tests/passkey.spec.js
 import { expect, test } from '@playwright/test';
 import { UI } from '../public/js/i18n.js';
@@ -87,6 +87,10 @@ test('a passkey session manages parties without personal link controls', async (
   await expect(party.getByRole('button', { name: 'Copy message' })).toBeHidden();
   await expect(party.getByRole('link', { name: 'Send on WhatsApp' })).toBeHidden();
   await expect(party.getByRole('link', { name: 'Preview as this guest' })).toBeHidden();
+  const queue = page.getByRole('region', { name: 'Reminder queue' });
+  await expect(queue.getByText('Open the management link to send reminders.')).toBeVisible();
+  await expect(queue.getByRole('listitem').filter({ hasText: 'Sam' })).toBeVisible();
+  await expect(queue.getByRole('link', { name: 'Remind on WhatsApp' })).toHaveCount(0);
   await expect(page.locator('#refreshParties')).toBeVisible();
   page.once('dialog', (dialog) => dialog.accept('Daria'));
   await party.getByRole('button', { name: 'Rename' }).click({ timeout: 5000 });
