@@ -316,6 +316,12 @@ Read the totals in the Neon console SQL editor:
 select day, action, lang, count from action_counts order by day desc, action, lang;
 ```
 
+Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features, and no code reads them yet.
+It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `access_tokens` tables, which an invitation's deletion deletes with it.
+A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
+The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
+`tests/check-migrations.js` applies the migrations to an empty database and to one with the earlier schema and data.
+
 Every page loads Vercel Web Analytics.
 `public/js/analytics.js` removes the part after `#` from every address it reports, so private links never reach analytics.
 Enable Web Analytics in the Vercel project dashboard before deploying.
