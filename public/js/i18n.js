@@ -457,7 +457,10 @@ export const UI = {
 /**
  * Localized API error strings for server/api.js.
  * @param {string} lang
- * @param {{ replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number, eventResponses: number, eventPasskeys: number }} limits
+ * @param {{
+ *   replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number,
+ *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, defaultSeatsLimit: number, eventParties: number
+ * }} limits
  */
 export function apiMessages(
   lang,
