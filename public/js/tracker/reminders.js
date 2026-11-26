@@ -3,14 +3,24 @@ import { UI } from '../i18n.js';
 import { partyInviteLinks, reminderMessage, whatsappUrl } from '../invite.js';
 import { renderTotals } from './totals.js';
 
+// Keys of reminders opened in this tab. Memory keeps them through tracker refreshes if storage is blocked.
 const opened = new Set();
+// Counts show calls, so a slower earlier render never replaces the rows of a later one.
 let latestShow = 0;
 
-// Stores only a marker keyed by invitation and party. Memory keeps it through tracker refreshes if storage is blocked.
-function reminderOpened(key, mark = false) {
-  if (mark) opened.add(key);
+// Records that the host opened the reminder keyed by invitation and party. Stores only a marker.
+function markReminderOpened(key) {
+  opened.add(key);
   try {
-    if (mark) sessionStorage.setItem(key, '1');
+    sessionStorage.setItem(key, '1');
+  } catch {
+    // Storage is blocked, so only memory keeps the marker.
+  }
+}
+
+// True when the host opened the reminder keyed by invitation and party in this tab session.
+function isReminderOpened(key) {
+  try {
     return opened.has(key) || sessionStorage.getItem(key) === '1';
   } catch {
     return opened.has(key);
@@ -38,9 +48,9 @@ async function renderParty(party, { cred, signedIn }, words) {
     const status = document.createElement('span');
     status.setAttribute('role', 'status');
     const key = `petalpost:reminder:${cred.id}:${party.id}`;
-    if (reminderOpened(key)) status.textContent = words.reminderUsed;
+    if (isReminderOpened(key)) status.textContent = words.reminderUsed;
     link.addEventListener('click', () => {
-      reminderOpened(key, true);
+      markReminderOpened(key);
       status.textContent = words.reminderUsed;
     });
     const actions = document.createElement('div');

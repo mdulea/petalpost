@@ -3,7 +3,8 @@
 // Romanian with empty lines left out, the personal link message with its greeting, invitation details and personal
 // link in English and Romanian, the reminder message with its greeting and personal link in English and Romanian,
 // invite records and their mode, published records with an optional mode, the characters left in a limited field,
-// storage writes, the stored published event identity, template switching, template ids, Romanian localization coverage, the same UI string and API message keys in English and Romanian, the
+// storage writes, the stored published event identity, template switching, template ids, Romanian localization
+// coverage, the same UI string and API message keys in English and Romanian, the
 // Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
 // calendar file with its alarms, the report link or the choice of when the Romanian
 // language banner shows and where it links break.
