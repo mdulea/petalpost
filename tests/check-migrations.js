@@ -60,15 +60,12 @@ const insertParty = (db, eventId, id, tableId = null) =>
      values ($1, $2, 'Familia Popescu', 'ro', 4, 'personal', 'view', $3)`,
     [id, eventId, tableId],
   );
-const insertPartyReply = (db, eventId, partyId, partySize) =>
+// A reply row with a party and no edit secret hash, or with an edit secret hash and no party. 0 people declines.
+const insertReply = (db, eventId, { partyId = null, secretHash = partyId ? null : 'edit', partySize = 0 }) =>
   db.query(
-    `insert into responses (id, event_id, party_id, name, attending, party_size) values ($1, $2, $3, 'Ana', true, $4)`,
-    [newId(), eventId, partyId, partySize],
-  );
-const insertOpenReply = (db, eventId, partySize) =>
-  db.query(
-    `insert into responses (id, event_id, secret_hash, name, attending, party_size) values ($1, $2, 'edit', 'Lee', true, $3)`,
-    [newId(), eventId, partySize],
+    `insert into responses (id, event_id, party_id, secret_hash, name, attending, party_size)
+     values ($1, $2, $3, $4, 'Ana', $5, $6)`,
+    [newId(), eventId, partyId, secretHash, partySize > 0, partySize],
   );
 
 test('all migrations apply to an empty database, and a second run applies nothing', async (t) => {
@@ -116,8 +113,8 @@ test('deleting an invitation deletes its guest-list rows and keeps those of anot
       eventId,
     ]);
     await insertParty(db, eventId, partyId, tableId);
-    await insertPartyReply(db, eventId, partyId, 4);
-    await insertOpenReply(db, eventId, 2);
+    await insertReply(db, eventId, { partyId, partySize: 4 });
+    await insertReply(db, eventId, { partySize: 2 });
     await db.query(`insert into passkeys (id, event_id, public_key) values ($1, $2, 'key')`, [newId(), eventId]);
     await db.query(
       `insert into passkey_challenges (challenge, event_id, expires_at) values ($1, $2, now() + interval '5 minutes')`,
@@ -160,13 +157,13 @@ test('deleting a table unassigns its parties', async (t) => {
 test('an open reply allows up to 10 people and a party reply up to 20', async (t) => {
   const db = await migrated(t);
   const { id: eventId } = await publish(db);
-  const [a, b] = [newId(), newId()];
-  await insertParty(db, eventId, a);
-  await insertParty(db, eventId, b);
-  await insertOpenReply(db, eventId, 10);
-  await assert.rejects(insertOpenReply(db, eventId, 11), /responses_party_size/);
-  await insertPartyReply(db, eventId, a, 20);
-  await assert.rejects(insertPartyReply(db, eventId, b, 21), /responses_party_size/);
+  const [twenty, twentyOne] = [newId(), newId()];
+  await insertParty(db, eventId, twenty);
+  await insertParty(db, eventId, twentyOne);
+  await insertReply(db, eventId, { partySize: 10 });
+  await assert.rejects(insertReply(db, eventId, { partySize: 11 }), /responses_party_size/);
+  await insertReply(db, eventId, { partyId: twenty, partySize: 20 });
+  await assert.rejects(insertReply(db, eventId, { partyId: twentyOne, partySize: 21 }), /responses_party_size/);
 });
 
 test('a reply has an edit secret hash exactly when it has no party', async (t) => {
@@ -174,12 +171,6 @@ test('a reply has an edit secret hash exactly when it has no party', async (t) =
   const { id: eventId } = await publish(db);
   const partyId = newId();
   await insertParty(db, eventId, partyId);
-  const insert = (party, secretHash) =>
-    db.query(
-      `insert into responses (id, event_id, party_id, secret_hash, name, attending, party_size)
-       values ($1, $2, $3, $4, 'Ana', false, 0)`,
-      [newId(), eventId, party, secretHash],
-    );
-  await assert.rejects(insert(partyId, 'edit'), /responses_link/);
-  await assert.rejects(insert(null, null), /responses_link/);
+  await assert.rejects(insertReply(db, eventId, { partyId, secretHash: 'edit' }), /responses_link/);
+  await assert.rejects(insertReply(db, eventId, { secretHash: null }), /responses_link/);
 });
