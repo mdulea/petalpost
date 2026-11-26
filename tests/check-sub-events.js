@@ -3,7 +3,7 @@
 // a sub-event, and refuse an index, a field or a move outside the list and an add past the cap; publishing and
 // opening an invitation with sub-events in English and Romanian; the refusal of a malformed sub-event list; an
 // invitation without sub-events and its replies, which behave as before, also after a republish with sub-events; the
-// retention job, which counts from the last sub-event's date, or from the invitation's date when no sub-event has
+// retention job, which counts from the latest sub-event date, or from the invitation's date when no sub-event has
 // one; the calendar file with one entry for each sub-event with a date; the guest view's schedule in English and
 // Romanian, with its escaping.
 // Each API test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
@@ -182,19 +182,19 @@ test('an invitation without sub-events and its replies behave as before, also af
 // dayOffset(n) is the UTC date n days from today.
 const dayOffset = (days) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
-test('the retention job counts 90 days from the last sub-event date, or from the invitation date without one', async () => {
+test('the retention job counts 90 days from the latest sub-event date, or from the invitation date without one', async () => {
   const db = await openDatabase();
   after(() => db.close());
   const { client, raw } = await setup(db);
   const browser = client();
   const at = (date) => ({ ...civil, date });
   const cases = {
-    'last sub-event 91 days ago': {
+    'latest sub-event 91 days ago': {
       date: dayOffset(-10),
       subEvents: [at(dayOffset(-92)), at(dayOffset(-91))],
       deleted: true,
     },
-    'last sub-event 90 days ago': {
+    'latest sub-event 90 days ago': {
       date: dayOffset(-200),
       subEvents: [at(dayOffset(-90)), at(dayOffset(-300))],
       deleted: false,
