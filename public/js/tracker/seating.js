@@ -183,9 +183,7 @@ function dropTarget(row, table, page) {
     event.preventDefault();
     row.classList.remove('drop-target');
     if (!(await assign(page, event.dataTransfer.getData(PARTY_TYPE), table.id))) return;
-    const landed = [...document.getElementById('seatingTables').children].find(
-      (element) => element instanceof HTMLElement && element.dataset.tableId === table.id,
-    );
+    const landed = document.querySelector(`#seatingTables > [data-table-id="${table.id}"]`);
     if (landed) animate([landed], LANDING, { duration: 240, easing: 'ease-out' });
   });
 }

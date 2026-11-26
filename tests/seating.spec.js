@@ -150,16 +150,17 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
   }) => {
     const { page, plan, problems } = await trackerWithTable(browser, { ...DESKTOP, reducedMotion });
     await page.evaluate(() => {
+      const counts = /** @type {any} */ (window);
       const animate = Element.prototype.animate;
-      window.animations = 0;
+      counts.animations = 0;
       Element.prototype.animate = function (...args) {
-        window.animations += 1;
+        counts.animations += 1;
         return animate.apply(this, args);
       };
     });
     await page.locator('#partyList').getByText('Familia Radu', { exact: true }).dragTo(tableRows(plan));
     await expect(tableRows(plan)).toContainText(COPY.en.seats);
-    expect(await page.evaluate(() => window.animations)).toBe(reducedMotion === 'reduce' ? 0 : 1);
+    expect(await page.evaluate(() => /** @type {any} */ (window).animations)).toBe(reducedMotion === 'reduce' ? 0 : 1);
     expect(problems).toEqual([]);
   });
 }
@@ -170,11 +171,12 @@ test('the printed seating plan lists each table with its parties and seats', asy
   await page.getByRole('button', { name: COPY.en.move }).click();
   await expect(tableRows(plan).getByRole('listitem')).toHaveText('Familia Radu · 3 seats');
   await page.evaluate(() => {
-    window.printed = 0;
-    window.print = () => (window.printed += 1);
+    const counts = /** @type {any} */ (window);
+    counts.printed = 0;
+    window.print = () => (counts.printed += 1);
   });
   await plan.getByRole('button', { name: 'Print seating plan' }).click();
-  expect(await page.evaluate(() => window.printed)).toBe(1);
+  expect(await page.evaluate(() => /** @type {any} */ (window).printed)).toBe(1);
   await page.emulateMedia({ media: 'print' });
   const table = tableRows(plan);
   await expect(table.getByRole('heading')).toHaveText('7');

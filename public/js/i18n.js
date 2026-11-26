@@ -468,8 +468,8 @@ export const UI = {
       unassigned: 'Fără masă',
       move: 'Mută grupul',
       seats: (filled, free) => `${filled} locuri ocupate, ${free} libere`,
-      over: (seats) => `Peste capacitate cu ${seats} ${seats === 1 ? 'loc' : seats < 20 ? 'locuri' : 'de locuri'}`,
-      partySeats: (seats) => `${seats} ${seats === 1 ? 'loc' : seats < 20 ? 'locuri' : 'de locuri'}`,
+      over: (seats) => `Peste capacitate cu ${roCount(seats, ['1 loc', 'locuri'])}`,
+      partySeats: (seats) => roCount(seats, ['1 loc', 'locuri']),
       declined: 'A refuzat',
     },
     guestList: {

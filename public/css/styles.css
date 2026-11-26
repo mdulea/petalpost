@@ -1692,7 +1692,7 @@ textarea.input {
   flex-wrap: wrap;
   gap: 8px;
 }
-/* Desktop hosts drag a party by its name onto a table row, which shows a border while the party is over it. */
+/* Desktop hosts drag a party by its name onto a table row. The row shows a border while a dragged party is over it. */
 .drag-handle {
   cursor: grab;
 }
