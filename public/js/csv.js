@@ -1,4 +1,4 @@
-// The host's replies as a CSV file for spreadsheets. It has no DOM access, so tests/check-csv.js runs it in Node.
+// The host's replies and guest list as CSV files for spreadsheets.
 import { UI, normalizeLang } from './i18n.js';
 
 // Excel reads a file without a byte order mark in the system code page and breaks the diacritics.
@@ -20,6 +20,11 @@ function cell(value, separator) {
   return /["\r\n]/.test(text) || text.includes(separator) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
+function csv(rows, separator) {
+  const lines = rows.map((row) => row.map((value) => cell(value, separator)).join(separator));
+  return `${BOM}${lines.join('\r\n')}\r\n`;
+}
+
 // responses are the management data's replies [{name, attending, partySize, note, createdAt, updatedAt}]. The file
 // has a header row and one row per reply, with no totals row, and rows end in CRLF. The separator is the one Excel
 // expects for the page language. "Changed" is empty for a reply that never changed.
@@ -33,9 +38,24 @@ export function repliesCsv(responses, lang) {
     dateTime(r.createdAt),
     r.updatedAt === r.createdAt ? '' : dateTime(r.updatedAt),
   ]);
-  const lines = [copy.columns, ...rows].map((row) => row.map((v) => cell(v, copy.separator)).join(copy.separator));
-  return `${BOM}${lines.join('\r\n')}\r\n`;
+  return csv([copy.columns, ...rows], copy.separator);
 }
 
 // The file name with the download date, such as petalpost-replies-2026-07-02.csv.
 export const repliesCsvName = (lang, now) => `${UI[normalizeLang(lang)].csv.file}-${day(now)}.csv`;
+
+// Exports every party in the management read. Seats come from the reply or the party's default before a reply.
+export function guestListCsv(parties, lang) {
+  const { csv: copy, guestList } = UI[normalizeLang(lang)];
+  const rows = parties.map(({ name, defaultSeats, reply }) => [
+    name,
+    reply ? guestList.replied : guestList.noReply,
+    String(reply?.partySize ?? defaultSeats),
+    reply ? (reply.attending ? copy.yes : copy.no) : '',
+    reply?.note ?? '',
+  ]);
+  return csv([guestList.csvColumns, ...rows], copy.separator);
+}
+
+// The file name with the download date in the page language.
+export const guestListCsvName = (lang, now) => `${UI[normalizeLang(lang)].guestList.csvFile}-${day(now)}.csv`;

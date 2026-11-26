@@ -83,6 +83,7 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
+- add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by reply status, see totals for the whole guest list and download it as a CSV;
 - use the management link to add a party with a name and default seats and copy its personal link. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows the party's reply and note after opening the management link or after a passkey sign-in;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;

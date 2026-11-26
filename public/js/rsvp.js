@@ -4,6 +4,7 @@ import { UI, normalizeLang } from './i18n.js';
 
 export const REPLY_LIMITS = { name: 80, partySize: 10, note: 300 };
 export const PARTY_LIMITS = { name: REPLY_LIMITS.name, seats: 20, count: 300 };
+export const API_BODY_LIMIT = 8 * 1024;
 
 // Ids are 16 random bytes and secrets 32, both base64url without padding.
 export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -177,6 +178,7 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
   const eventPath = (id) => `/api/events/${encodeURIComponent(id)}`;
   const replyPath = (eventId, id) => `${eventPath(eventId)}/responses/${encodeURIComponent(id)}`;
   const partyPath = (eventId, id) => `${eventPath(eventId)}/parties/${encodeURIComponent(id)}`;
+  const managePartyPath = (eventId, id) => `${partyPath(eventId, id)}/manage`;
 
   return {
     // Creates the event, or updates it when cred.version is set. record is the editor's {t, d}; the photo
@@ -214,7 +216,28 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // Revokes or regenerates a party's links using the management secret.
     changePartyLink: (cred, id, action, linkGeneration = null) =>
       call('PATCH', `${partyPath(cred.id, id)}/link`, cred.secret, { action, linkGeneration }),
+    // Adds entries with retryable ids. added counts the entries the API confirmed, including replays.
+    async addParties(cred, entries, defaultSeats) {
+      const path = `${eventPath(cred.id)}/parties`;
+      const encoder = new TextEncoder();
+      let added = 0;
+      while (added < entries.length) {
+        const body = { entries: [], defaultSeats, lang: code };
+        for (const entry of entries.slice(added)) {
+          body.entries.push(entry);
+          if (encoder.encode(JSON.stringify(body)).byteLength <= API_BODY_LIMIT) continue;
+          if (body.entries.length > 1) body.entries.pop();
+          break;
+        }
+        const result = await call('POST', path, cred.secret, body);
+        if (!result.ok) return { ...result, added };
+        added += body.entries.length;
+      }
+      return { ok: true, added };
+    },
     loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
+    renameParty: (cred, id, name) => call('PATCH', managePartyPath(cred.id, id), cred.secret, { name }),
+    deleteParty: (cred, id) => call('DELETE', managePartyPath(cred.id, id), cred.secret),
     savePartyReply: (eventId, cred, reply) =>
       call('PATCH', partyPath(eventId, cred.id), cred.secret, { ...reply, version: cred.version, lang: code }),
     withdrawPartyReply: (eventId, cred) =>

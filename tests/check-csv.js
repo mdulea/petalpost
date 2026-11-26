@@ -2,14 +2,14 @@
 // the column order and the localized answers; an empty "Changed" cell for a reply that never changed; times in the
 // runtime's time zone as year-month-day hours:minutes; the localized file name with the download date; the leading
 // apostrophe on cells that start with =, +, -, @, a tab or a carriage return; RFC 4180 quoting with doubled inner
-// quotes; no totals row.
+// quotes; no totals row. The guest-list export shares those rules and includes parties with or without replies.
 // The checks run in the Europe/Bucharest time zone, so a time near midnight UTC shows the next day.
 // Run: pnpm exec node tests/check-csv.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 process.env.TZ = 'Europe/Bucharest';
-const { repliesCsv, repliesCsvName } = await import('../public/js/csv.js');
+const { guestListCsv, repliesCsv, repliesCsvName } = await import('../public/js/csv.js');
 const BOM = String.fromCharCode(0xfeff);
 
 const sam = {
@@ -76,5 +76,24 @@ test('the file name names the download date in the page language', () => {
   assert.deepEqual(
     [repliesCsvName('en', now), repliesCsvName('ro', now)],
     ['petalpost-replies-2026-07-02.csv', 'petalpost-raspunsuri-2026-07-02.csv'],
+  );
+});
+
+test('the guest-list CSV exports replied and pending parties with localized, spreadsheet-safe cells', () => {
+  const parties = [
+    { name: '=Ana "Jr."', defaultSeats: 4, reply: { attending: true, partySize: 2, note: '@Note,1;2\nLine' } },
+    { name: 'Ștefan', defaultSeats: 3, reply: null },
+    { name: 'Daria', defaultSeats: 2, reply: { attending: false, partySize: 0, note: '' } },
+  ];
+  assert.deepEqual(
+    [guestListCsv(parties, 'en'), guestListCsv(parties, 'ro')],
+    [
+      BOM +
+        'Name,Status,Seats,Attending,Note\r\n' +
+        `"'=Ana ""Jr.""",Replied,2,Yes,"'@Note,1;2\nLine"\r\nȘtefan,No reply yet,3,,\r\nDaria,Replied,0,No,\r\n`,
+      BOM +
+        'Nume;Stare;Locuri;Participă;Notă\r\n' +
+        `"'=Ana ""Jr.""";A răspuns;2;Da;"'@Note,1;2\nLine"\r\nȘtefan;Fără răspuns;3;;\r\nDaria;A răspuns;0;Nu;\r\n`,
+    ],
   );
 });

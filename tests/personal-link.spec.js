@@ -7,7 +7,7 @@ import { newBrowser } from './browser-setup.js';
 const COPY = {
   en: {
     editor: '/editor.html?t=birthday',
-    add: 'Add party',
+    add: 'Add to guest list',
     copy: 'Copy personal link',
     greeting: 'Hello, Familia Radu!',
     noReply: 'No reply yet',
@@ -24,7 +24,7 @@ const COPY = {
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
-    add: 'Adaugă un grup',
+    add: 'Adaugă pe lista de invitați',
     copy: 'Copiază linkul personal',
     greeting: 'Bună, Familia Radu!',
     noReply: 'Fără răspuns',

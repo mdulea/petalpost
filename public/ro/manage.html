@@ -58,24 +58,43 @@
             <h2 id="h-guest-list">
               <svg class="icon"><use href="#i-heart" /></svg>Lista de invitați
             </h2>
-            <p class="hint" id="noParties">Încă nu există invitați pe listă.</p>
-            <ul class="reply-list" id="partyList"></ul>
             <form id="addParty">
               <div class="field">
-                <label for="partyName">Numele grupului</label>
-                <input class="input" id="partyName" name="name" required />
+                <label for="partyName">Numele grupurilor, unul pe fiecare rând</label>
+                <textarea class="input" id="partyName" name="name" rows="3" required></textarea>
               </div>
               <div class="field">
                 <label for="defaultSeats">Număr implicit de locuri</label>
                 <input class="input" id="defaultSeats" name="defaultSeats" type="number" min="1" value="1" required />
               </div>
-              <button class="btn btn-primary btn-small" type="submit">Adaugă un grup</button>
+              <button class="btn btn-primary btn-small" type="submit">Adaugă pe lista de invitați</button>
             </form>
             <p class="hint" id="partyManagementLinkRequired" hidden>
               Deschide linkul de administrare ca să adaugi grupuri sau să gestionezi linkurile personale.
             </p>
-            <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Reîncarcă</button>
             <p class="status" role="status" id="partyStatus"></p>
+            <ul class="totals" id="partyTotals"></ul>
+            <div class="field">
+              <label for="partySearch">Caută după nume</label>
+              <input class="input" id="partySearch" type="search" />
+            </div>
+            <div class="field">
+              <label for="partyFilter">Starea răspunsului</label>
+              <select class="input" id="partyFilter">
+                <option value="all">Toate grupurile</option>
+                <option value="replied">A răspuns</option>
+                <option value="pending">Fără răspuns</option>
+              </select>
+            </div>
+            <div class="reply-actions">
+              <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Reîncarcă</button>
+              <button class="btn btn-ghost btn-small" id="downloadGuestList" type="button">
+                Descarcă lista de invitați în format CSV
+              </button>
+            </div>
+            <p class="hint" id="noParties">Încă nu există invitați pe listă.</p>
+            <p class="hint" id="noMatchingParties" hidden>Niciun grup nu corespunde căutării.</p>
+            <ul class="reply-list" id="partyList"></ul>
           </section>
 
           <section class="panel" id="invitationLink" aria-labelledby="h-share">

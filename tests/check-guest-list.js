@@ -4,7 +4,7 @@
 // nothing, while an open invitation takes the reply; a publish without a mode, as from a page loaded before
 // invitations had modes, makes an open invitation that takes replies; an update keeps the stored mode whatever mode
 // it sends or when it sends none; a publish with an unknown mode is refused; the management read of a guest-list
-// invitation gives its mode and no replies.
+// invitation gives its mode and no replies; 300 maximum-length names fit across requests and the API refuses more.
 // Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
 // tests/api-setup.js.
 // Run: pnpm exec node tests/check-guest-list.js
@@ -130,4 +130,21 @@ test('a publish with an unknown mode is refused and stores nothing', async () =>
   const cred = host();
   const refused = await putEvent(raw, cred, { t: 'birthday', d: { ...unmoded, mode: 'private' } });
   assert.deepEqual([refused.status, (await client().loadEvent(cred.id)).status], [400, 404]);
+});
+
+test('300 maximum-length names fit across requests and a full guest list refuses another party', async () => {
+  const { client, cred } = await published('guestList', 'en');
+  const api = client();
+  const entries = Array.from({ length: 300 }, (_, i) => ({
+    id: newId(),
+    name: String(i).padStart(3, '0') + '🎉'.repeat(77),
+  }));
+  const added = await api.addParties(cred, entries, 3);
+  const replayed = await api.addParties(cred, entries, 3);
+  const extra = await api.addParty(cred, newId(), { name: 'Extra', defaultSeats: 3 });
+  const { data } = await api.loadResponses(cred);
+  assert.deepEqual(
+    [added.ok, replayed.ok, extra.status, extra.message, data.parties.map((p) => [p.name, p.defaultSeats]).sort()],
+    [true, true, 429, 'The guest list can have up to 300 parties.', entries.map(({ name }) => [name, 3])],
+  );
 });

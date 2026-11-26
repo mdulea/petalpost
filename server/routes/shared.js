@@ -4,9 +4,7 @@
 // action_counts holds the totals of a fixed set of actions per UTC day and page language, and nothing else. addCount
 // runs inside the transaction that stores what it counts, so a refused or rolled-back request counts nothing.
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { SECRET_PATTERN } from '../../public/js/rsvp.js';
-
-const MAX_BODY = 8 * 1024;
+import { API_BODY_LIMIT, SECRET_PATTERN } from '../../public/js/rsvp.js';
 
 // A thrown Refusal becomes its error response, and rolls back the transaction it leaves. code names the message in
 // apiMessages of public/js/i18n.js, and extra joins the error body.
@@ -48,9 +46,9 @@ export function bearer(request) {
 
 // The JSON object body with a valid optional version, or a 413 or 400 Refusal.
 export async function readBody(request) {
-  if (Number(request.headers.get('content-length')) > MAX_BODY) throw new Refusal(413, 'tooLarge');
+  if (Number(request.headers.get('content-length')) > API_BODY_LIMIT) throw new Refusal(413, 'tooLarge');
   const bytes = await request.arrayBuffer();
-  if (bytes.byteLength > MAX_BODY) throw new Refusal(413, 'tooLarge');
+  if (bytes.byteLength > API_BODY_LIMIT) throw new Refusal(413, 'tooLarge');
   let body;
   try {
     body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));

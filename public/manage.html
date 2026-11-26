@@ -58,24 +58,43 @@
             <h2 id="h-guest-list">
               <svg class="icon"><use href="#i-heart" /></svg>Guest list
             </h2>
-            <p class="hint" id="noParties">No parties on the guest list yet.</p>
-            <ul class="reply-list" id="partyList"></ul>
             <form id="addParty">
               <div class="field">
-                <label for="partyName">Party name</label>
-                <input class="input" id="partyName" name="name" required />
+                <label for="partyName">Party names, one per line</label>
+                <textarea class="input" id="partyName" name="name" rows="3" required></textarea>
               </div>
               <div class="field">
                 <label for="defaultSeats">Default seats</label>
                 <input class="input" id="defaultSeats" name="defaultSeats" type="number" min="1" value="1" required />
               </div>
-              <button class="btn btn-primary btn-small" type="submit">Add party</button>
+              <button class="btn btn-primary btn-small" type="submit">Add to guest list</button>
             </form>
             <p class="hint" id="partyManagementLinkRequired" hidden>
               Open the management link to add parties or manage personal links.
             </p>
-            <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Refresh</button>
             <p class="status" role="status" id="partyStatus"></p>
+            <ul class="totals" id="partyTotals"></ul>
+            <div class="field">
+              <label for="partySearch">Search by name</label>
+              <input class="input" id="partySearch" type="search" />
+            </div>
+            <div class="field">
+              <label for="partyFilter">Reply status</label>
+              <select class="input" id="partyFilter">
+                <option value="all">All parties</option>
+                <option value="replied">Replied</option>
+                <option value="pending">No reply yet</option>
+              </select>
+            </div>
+            <div class="reply-actions">
+              <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Refresh</button>
+              <button class="btn btn-ghost btn-small" id="downloadGuestList" type="button">
+                Download guest-list CSV
+              </button>
+            </div>
+            <p class="hint" id="noParties">No parties on the guest list yet.</p>
+            <p class="hint" id="noMatchingParties" hidden>No parties match.</p>
+            <ul class="reply-list" id="partyList"></ul>
           </section>
 
           <section class="panel" id="invitationLink" aria-labelledby="h-share">

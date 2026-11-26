@@ -1,5 +1,6 @@
 // The tracker section of an open invitation's replies: the totals, the reply list, a refresh and the CSV download.
 import { repliesCsv, repliesCsvName } from '../csv.js';
+import { downloadCsv } from './download.js';
 
 // The replies of the last load, which the CSV download writes.
 let loadedReplies = [];
@@ -18,13 +19,8 @@ function item(className, ...parts) {
 
 function init({ lang, load }) {
   document.getElementById('refresh').addEventListener('click', load);
-  // The browser builds the file from the loaded replies, so the download sends nothing to the server.
   document.getElementById('downloadCsv').addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([repliesCsv(loadedReplies, lang)], { type: 'text/csv;charset=utf-8' }));
-    link.download = repliesCsvName(lang, new Date());
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    downloadCsv(repliesCsv(loadedReplies, lang), repliesCsvName(lang, new Date()));
   });
 }
 

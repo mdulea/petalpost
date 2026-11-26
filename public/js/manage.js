@@ -19,6 +19,7 @@ const signedIn = readCredential(location.hash, 't=');
 const cred = readCredential(location.hash, '') ?? signedIn;
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
+let latestLoad = 0;
 
 // A heading and message for a page that cannot show the event, such as after a failed load or a deletion.
 function showOnly(heading, message) {
@@ -34,7 +35,7 @@ const setStatus = (text) => {
 
 const page = { lang, locale, copy, client, cred, signedIn: Boolean(signedIn), setStatus, showOnly, load };
 
-function showEvent(data) {
+async function showEvent(data) {
   const template = getTemplate(data.t, lang);
   const invite = makeInviteData(template, data.d, lang);
   const heading = invite.title || copy.defaultHeading;
@@ -43,19 +44,23 @@ function showEvent(data) {
   content.hidden = false;
   mountInvites(document.getElementById('managePreview'), renderInvite(template, invite, { locale }));
   const view = { ...data, invite, mode: modeOf(data.d) };
-  for (const section of SECTIONS) {
-    const el = document.getElementById(section.id);
-    el.hidden = !section.modes.includes(view.mode);
-    if (!el.hidden) section.show?.(view, page);
-  }
+  await Promise.all(
+    SECTIONS.map((section) => {
+      const el = document.getElementById(section.id);
+      el.hidden = !section.modes.includes(view.mode);
+      if (!el.hidden) return section.show?.(view, page);
+    }),
+  );
 }
 
 async function load() {
+  const request = ++latestLoad;
   statusEl.textContent = copy.loading;
   const result = await client.loadResponses(cred);
+  if (request !== latestLoad) return;
   if (result.ok) {
-    showEvent(result.data);
-    statusEl.textContent = '';
+    await showEvent(result.data);
+    if (request === latestLoad) statusEl.textContent = '';
   } else if (result.status === 404) {
     showOnly(copy.missingHeading, result.message);
   } else if (content.hidden) {
