@@ -1,4 +1,4 @@
-// Adds parties and shows their seats, replies and copyable personal links in the tracker.
+// Adds parties and shows their seats, replies and personal link controls in the tracker.
 import { UI } from '../i18n.js';
 import { eventLink } from '../invite.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, personalLink } from '../rsvp.js';
@@ -33,8 +33,17 @@ function init({ client, cred, load, signedIn }) {
   });
 }
 
-async function show({ parties }, { cred, lang, copy, signedIn }) {
+function linkButton(label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-ghost btn-small';
+  button.textContent = label;
+  return button;
+}
+
+async function show({ parties }, { client, cred, lang, copy, signedIn, load }) {
   const words = UI[lang].guestList;
+  const status = document.getElementById('partyStatus');
   const rows = await Promise.all(
     parties.map(async (party) => {
       const row = document.createElement('li');
@@ -51,30 +60,59 @@ async function show({ parties }, { cred, lang, copy, signedIn }) {
         note.textContent = party.reply.note;
         row.append(note);
       }
+      if (party.revoked) {
+        const revoked = document.createElement('span');
+        revoked.textContent = words.revoked;
+        row.append(revoked);
+      }
       if (signedIn) return row;
-      const secret = await partyLinkSecret(cred.secret, party.id, 'personal');
-      const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'btn btn-ghost btn-small';
-      button.textContent = words.copy;
-      button.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(link);
-          document.getElementById('partyStatus').textContent = words.copied;
-        } catch {
-          window.prompt(copy.copyPrompt, link);
-        }
-      });
-      const input = document.createElement('input');
-      input.className = 'input';
-      input.readOnly = true;
-      input.value = link;
-      input.setAttribute('aria-label', `${words.link} · ${party.name}`);
-      const controls = document.createElement('div');
-      controls.className = 'copy-row';
-      controls.append(input, button);
-      row.append(controls);
+      const actions = document.createElement('div');
+      actions.className = 'reply-actions';
+      const buttons = [];
+      const change = (revoked) => {
+        const button = linkButton(revoked ? words.revoke : words.regenerate);
+        buttons.push(button);
+        actions.append(button);
+        button.addEventListener('click', async () => {
+          if (!window.confirm(revoked ? words.revokeConfirm : words.regenerateConfirm)) return;
+          for (const control of buttons) control.disabled = true;
+          status.textContent = '';
+          const result = await client.changePartyLink(cred, party.id, revoked);
+          if (result.ok) {
+            status.textContent = revoked ? words.revoked : words.regenerated;
+            await load();
+          } else {
+            status.textContent = result.message;
+            for (const control of buttons) control.disabled = false;
+          }
+        });
+      };
+      if (!party.revoked) {
+        const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
+        const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
+        const button = linkButton(words.copy);
+        buttons.push(button);
+        button.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            status.textContent = words.copied;
+          } catch {
+            window.prompt(copy.copyPrompt, link);
+          }
+        });
+        const input = document.createElement('input');
+        input.className = 'input';
+        input.readOnly = true;
+        input.value = link;
+        input.setAttribute('aria-label', `${words.link} · ${party.name}`);
+        const controls = document.createElement('div');
+        controls.className = 'copy-row';
+        controls.append(input, button);
+        row.append(controls);
+        change(true);
+      }
+      change(false);
+      row.append(actions);
       return row;
     }),
   );

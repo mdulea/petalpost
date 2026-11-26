@@ -1,7 +1,9 @@
-// Every route uses /api/events/{eventId}/parties/{id}. A PUT with the management secret adds a party from
+// At /api/events/{eventId}/parties/{id}, a PUT with the management secret adds a party from
 // {name, defaultSeats, lang}. GET uses the personal secret and returns {t, d, name, defaultSeats, reply}.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
+// PATCH on /api/events/{eventId}/parties/{id}/link needs the management secret and {revoked}. True revokes;
+// false replaces both secrets and enables the new links. Either action preserves the reply and returns 204.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { makeReply, newId, PARTY_LIMITS, partyLinkSecret } from '../../public/js/rsvp.js';
@@ -12,6 +14,7 @@ export const routes = [
     pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)$/,
     methods: { PUT: addParty, GET: getParty, PATCH: saveReply, DELETE: withdrawReply },
   },
+  { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/link$/, methods: { PATCH: changeLink } },
 ];
 
 async function addParty({ db, request, ids: [eventId, id] }) {
@@ -65,11 +68,46 @@ const replyColumns = 'r.attending, r.party_size, r.note, r.version as reply_vers
 // Reads only the authenticated host's parties, joined to each party's current reply.
 export async function listParties(db, eventId) {
   const { rows } = await db.query(
-    `select p.id, p.name, p.lang, p.default_seats, ${replyColumns} from parties p
+    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, ${replyColumns} from parties p
      left join responses r on r.party_id = p.id where p.event_id = $1 order by p.created_at, p.id`,
     [eventId],
   );
-  return rows.map((p) => ({ id: p.id, name: p.name, lang: p.lang, defaultSeats: p.default_seats, reply: replyOf(p) }));
+  return rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    lang: p.lang,
+    defaultSeats: p.default_seats,
+    revoked: p.revoked,
+    linkGeneration: p.link_generation,
+    reply: replyOf(p),
+  }));
+}
+
+async function changeLink({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const { revoked } = await readBody(request);
+  if (typeof revoked !== 'boolean') throw new Refusal(400, 'body');
+  return db.transaction(async (tx) => {
+    await ownedEvent(tx, eventId, secret, { token: false });
+    let result;
+    if (revoked) {
+      result = await tx.query('update parties set revoked = true where id = $1 and event_id = $2 returning id', [
+        id,
+        eventId,
+      ]);
+    } else {
+      const generation = newId();
+      const personal = await partyLinkSecret(secret, id, 'personal', generation);
+      const view = await partyLinkSecret(secret, id, 'view', generation);
+      result = await tx.query(
+        `update parties set revoked = false, link_generation = $3, secret_hash = $4, view_hash = $5
+         where id = $1 and event_id = $2 returning id`,
+        [id, eventId, generation, hash(personal), hash(view)],
+      );
+    }
+    if (!result.rows.length) throw new Refusal(404, 'personalLink');
+    return json(204, null);
+  });
 }
 
 function checkPersonalLink(party, secret) {
