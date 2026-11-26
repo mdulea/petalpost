@@ -259,7 +259,7 @@ A new feature adds its own group under `en` and under `ro`, with the same keys i
 
 ### Add an API route
 
-1. Create a module in `server/routes/` that exports `routes`, a list of `{pattern, methods}` entries. `pattern` matches the whole path and captures its ids, and `methods` maps each HTTP method to an action. An action gets `{db, request, ids, dailyEvents, now}` and returns a `Response`, or throws a `Refusal` from `server/routes/shared.js`.
+1. Create a module in `server/routes/` that exports `routes`, a list of `{pattern, methods}` entries. `pattern` matches the whole path and captures its ids, and `methods` maps each HTTP method to an action. An action gets `{db, request, ids, dailyEvents, now}` and returns a `Response`, or throws a `Refusal` from `server/routes/shared.js`. The `now` function returns the current time as a `Date`.
 2. List the module's endpoints and their contract in its header comment.
 3. Add the module to `ROUTES` in `server/routes/index.js`.
 4. Add a Node check file `tests/check-<module>.js` that imports `setup`, `publishedEvent` and the credentials it needs from `tests/api-setup.js`. A browser test of the route goes in a spec file of its own that imports from `tests/browser-setup.js`.

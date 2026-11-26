@@ -5,7 +5,8 @@
 // invitation link of an open invitation keeps the reply form, and its tracker keeps the replies section without a
 // guest list; the editor refuses to publish a guest-list invitation without a date, and after retention deletes a
 // past guest-list invitation the tracker, personal link and public invitation link show "This invitation has ended"
-// without event details; no page breaks the Content-Security-Policy or throws.
+// without event details, including when the host submits a party from an already open tracker; no page breaks the
+// Content-Security-Policy or throws.
 // The tracker also pastes, searches, filters, exports, renames and deletes parties in both languages.
 // A maximum-length paste fills the list, and the page refuses an extra party.
 // A retry after a lost batch response keeps the same names, seats and language and creates no duplicates.
@@ -210,6 +211,13 @@ for (const lang of ['en', 'ro']) {
 
     const response = await host.page.request.get('/api/retention');
     expect(response.status()).toBe(200);
+
+    await host.page.locator('#partyName').fill('Another party');
+    await host.page.locator('#defaultSeats').fill('2');
+    await host.page.getByRole('button', { name: copy.addParty }).click();
+    await expect(host.page.locator('#manageHeading')).toHaveText(copy.endedHeading);
+    await expect(host.page.locator('#manageStatus')).toHaveText(copy.endedMessage);
+    await expect(host.page.locator('#manageContent')).toBeHidden();
 
     await host.page.reload();
     await expect(host.page.locator('#manageHeading')).toHaveText(copy.endedHeading);
