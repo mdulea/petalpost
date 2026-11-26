@@ -1,5 +1,5 @@
 // Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, including the optional note, its trimming, line breaks, control characters and 300-character limit; link fragment
-// validation; publishing and opening an invitation from another browser with presentation fields only; updates,
+// validation and party link prefixes; publishing and opening an invitation from another browser with presentation fields only; updates,
 // replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
 // reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing, and an update without a note that keeps it; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored row or note, its stale version and its repeat; deletion
 // with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a reply without an answer; the daily
@@ -33,6 +33,7 @@ import {
   manageLink,
   newId,
   newSecret,
+  partyLinkPrefix,
   readCredential,
   responseLink,
 } from '../public/js/rsvp.js';
@@ -42,6 +43,10 @@ import { guest, host, openDatabase, party, publishedEvent, setup } from './api-s
 const ID = 'AAAAAAAAAAAAAAAAAAAAAA';
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const SECRET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJ-_01234';
+
+test('a party fragment keeps its link kind even if its credential is malformed', () => {
+  assert.deepEqual(['#p=', '#v=', '#r=', ''].map(partyLinkPrefix), ['p=', 'v=', undefined, undefined]);
+});
 
 test('a reply keeps the trimmed name, the answer and the party size', () => {
   assert.deepEqual(makeReply({ name: '  Zoë 🎂 ', attending: true, partySize: 3 }), {

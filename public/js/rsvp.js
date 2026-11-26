@@ -67,13 +67,13 @@ export const signedInLink = (origin, id, token, lang = 'en') =>
 // The tracker reconstructs the party's link from its management secret without reading any secret from the API.
 export const personalLink = (url, id, secret) => `${url}#p=${id}.${secret}`;
 
-// Separate HMAC domains give each party independent personal and view secrets for each link generation.
-// The original links have no generation. The tracker can read the generation, but the API never returns a secret.
-export async function partyLinkSecret(managementSecret, partyId, purpose, generation = null) {
+// Separate HMAC domains derive each party's personal secret from the management secret for each link generation
+// and its view secret from the personal secret. The original links have no generation. Only their hashes are stored.
+export async function partyLinkSecret(parentSecret, partyId, purpose, generation = null) {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
-    encoder.encode(managementSecret),
+    encoder.encode(parentSecret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign'],
@@ -85,13 +85,19 @@ export async function partyLinkSecret(managementSecret, partyId, purpose, genera
 }
 
 // A private link fragment #<prefix><id>.<secret> gives {id, secret}, or null when it is incomplete or malformed.
-// The prefix is '' for management links, 't=' for passkey sign-ins, 'r=' for reply edit links and 'p=' for personal links.
+// Prefixes are '' for management, 't=' for passkey sign-in, 'r=' for reply edit, 'p=' for personal and 'v=' for view links.
 export function readCredential(hash, prefix) {
   if (!hash.startsWith(`#${prefix}`)) return null;
   const [id, secret, ...rest] = hash.slice(prefix.length + 1).split('.');
   if (rest.length || !ID_PATTERN.test(id) || !SECRET_PATTERN.test(secret ?? '')) return null;
   return { id, secret };
 }
+
+// The party link prefix, including for a malformed credential that should show the link error.
+export const partyLinkPrefix = (hash) => hash.match(/^#([pv]=)/)?.[1];
+// A view credential derives from the current personal credential and gives no access to the reply.
+export const viewLinkSecret = (personalSecret, id) => partyLinkSecret(personalSecret, id, 'view');
+export const viewLink = (url, id, secret) => `${url}#v=${id}.${secret}`;
 
 // base64url text without padding of the bytes, a Uint8Array or ArrayBuffer.
 export const toBase64url = (bytes) =>
@@ -213,5 +219,6 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
       call('PATCH', partyPath(eventId, cred.id), cred.secret, { ...reply, version: cred.version, lang: code }),
     withdrawPartyReply: (eventId, cred) =>
       call('DELETE', partyPath(eventId, cred.id), cred.secret, { version: cred.version }),
+    loadPartyView: (eventId, cred) => call('GET', `${partyPath(eventId, cred.id)}/view`, cred.secret),
   };
 }

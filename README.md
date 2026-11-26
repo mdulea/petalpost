@@ -107,7 +107,8 @@ A guest can:
 - see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw an open-mode reply through its reply edit link;
-- open a personal link to see the party's greeting and reply on its behalf. The guest can view, change or withdraw the reply through the same link.
+- open a personal link to see the party's greeting and reply on its behalf. The guest can view, change or withdraw the reply through the same link;
+- share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private.
 
 A guest cannot see other guests' replies or the totals.
 
@@ -223,7 +224,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
-The `guestList` group has the tracker guest list strings, and `personal` has the personal link greeting and reply form.
+The `guestList` group has the tracker guest list strings, and `personal` has the party greeting, reply form and view link sharing strings.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.
@@ -331,7 +332,7 @@ select day, action, lang, count from action_counts order by day desc, action, la
 Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features.
 It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `access_tokens` tables, which an invitation's deletion deletes with it.
 The passkey routes read and write `passkeys`, `passkey_challenges` and `access_tokens`.
-The personal link API uses `parties`, and the tracker reads it alongside the party replies.
+The personal link and view link API use `parties`. The tracker reads it alongside the party replies.
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
 `d.mode` is `open` or `guestList`, and a `d` without a mode, stored before invitations had modes, is open.

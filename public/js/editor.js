@@ -40,8 +40,11 @@ import {
   manageLink,
   newId,
   newSecret,
+  partyLinkPrefix,
   readCredential,
   responseLink,
+  viewLink,
+  viewLinkSecret,
 } from './rsvp.js';
 
 const lang = normalizeLang(document.documentElement.lang);
@@ -587,7 +590,7 @@ addCounter(nameInput, REPLY_LIMITS.name);
 addCounter(noteInput, REPLY_LIMITS.note, { codePoints: true });
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
-const isPersonal = location.hash.startsWith('#p=');
+const partyPrefix = partyLinkPrefix(location.hash);
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
 const withdrawButton = /** @type {HTMLButtonElement} */ (document.getElementById('withdrawReply'));
 const replySavedPanel = document.getElementById('replySaved');
@@ -751,7 +754,8 @@ function setHeading(heading) {
 
 // An invitation link shows nothing of the invite until the event loads, and only a message when loading fails.
 async function openEvent() {
-  const personal = readCredential(location.hash, 'p=');
+  const credential = partyPrefix && readCredential(location.hash, partyPrefix);
+  const viewOnly = partyPrefix === 'v=';
   const copy = UI[lang].personal;
   const unavailable = (message) => {
     setHeading(guestCopy.loadFailedHeading);
@@ -762,13 +766,14 @@ async function openEvent() {
     }
     clearInterval(countdownTimer);
   };
-  if (isPersonal && !personal) {
+  if (partyPrefix && !credential) {
     unavailable(copy.unavailable);
     return;
   }
-  const result = personal ? await client.loadParty(state.event, personal) : await client.loadEvent(state.event);
+  const loadParty = viewOnly ? client.loadPartyView : client.loadParty;
+  const result = credential ? await loadParty(state.event, credential) : await client.loadEvent(state.event);
   if (!result.ok) {
-    if (personal) {
+    if (credential) {
       unavailable(result.message);
       return;
     }
@@ -790,15 +795,21 @@ async function openEvent() {
   );
   document.getElementById('replyCta').hidden = false;
   document.getElementById('reportRow').hidden = false;
-  if (personal) {
-    showPersonalSections(result.data, {
-      client,
-      eventId: state.event,
-      credential: personal,
-      copy,
-      guestCopy,
-      unavailable,
-    });
+  if (credential) {
+    const page = { client, eventId: state.event, credential, copy, guestCopy, unavailable };
+    if (!viewOnly) {
+      const url = viewLink(
+        eventLink(location.origin, state.event, lang),
+        credential.id,
+        await viewLinkSecret(credential.secret, credential.id),
+      );
+      const copied = () => setStatus(copy.viewCopied);
+      page.shareView = () => {
+        if (canShareLink) return shareLinkNative(url, () => setStatus(copy.viewShared), copied);
+        return copyLink(url, copied);
+      };
+    }
+    showPersonalSections(result.data, page, viewOnly);
     return;
   }
   // The invitation link of a guest-list invitation takes no reply, so it shows a notice in place of the form.
@@ -833,7 +844,7 @@ if (state.guest) {
     setHeading(guestCopy.openingHeading);
     openEvent();
     window.addEventListener('hashchange', () => {
-      if (isPersonal || location.hash.startsWith('#p=')) location.reload();
+      if (partyPrefix || partyLinkPrefix(location.hash)) location.reload();
     });
   } else if (state.sample) {
     setHeading(state.d.title || guestCopy.defaultGuestHeading);

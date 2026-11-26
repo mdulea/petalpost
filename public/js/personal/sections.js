@@ -1,13 +1,22 @@
-// Sections of the authenticated personal link, in page order. Each section receives the same party read and
-// returns its own element. Register another section here without changing existing sections.
+// Both party links show the greeting. The personal link adds the sections in page order.
 import { renderReply } from './reply.js';
 
-const sections = [renderReply];
+function renderShare(party, page) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-ghost btn-small';
+  button.textContent = page.copy.showFriend;
+  button.addEventListener('click', page.shareView);
+  return button;
+}
 
-export function showPersonalSections(party, page) {
+const sections = [renderShare, renderReply];
+
+export function showPersonalSections(party, page, viewOnly) {
   const container = document.getElementById('personalSections');
   const greeting = document.createElement('h2');
   greeting.textContent = page.copy.greeting(party.name);
-  container.replaceChildren(greeting, ...sections.map((render) => render(party, page)));
+  container.replaceChildren(greeting);
+  if (!viewOnly) container.append(...sections.map((render) => render(party, page)));
   container.hidden = false;
 }
