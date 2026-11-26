@@ -1561,6 +1561,32 @@ textarea.input {
   flex-wrap: wrap;
   gap: 8px;
 }
+/* The answers of a reply to each sub-event: one fieldset for each in a reply form, and lines in the tracker. The
+   personal reply form clears its own fieldset's border, so the id selector restores it for the answers. */
+.sub-event-answers {
+  display: grid;
+  gap: 12px;
+}
+.sub-event-answer,
+#personalReply .sub-event-answer {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+.sub-event-answer legend {
+  padding: 0 6px;
+}
+.sub-event-replies {
+  margin: 0;
+  padding-left: 18px;
+}
+.totals .total-line {
+  grid-column: 1 / -1;
+  text-align: left;
+}
 .schedule {
   margin-top: 16px;
 }

@@ -1,10 +1,10 @@
 // Fails when the schema migrations break a database. Checks: all migrations apply to an empty database, and a second
 // run applies nothing; the guest-list migration applies to a database that holds the earlier schema with an
-// invitation and a reply, which keep their data and their management and reply edit link reads; deleting an
-// invitation through the API deletes its parties, their replies, its open replies, its tables, its passkeys, its
-// passkey challenges and its access tokens, and leaves another invitation's rows; deleting a table unassigns its
-// parties; an open reply allows up to 10 people and a party reply up to 20; a reply has an edit secret hash exactly
-// when it has no party.
+// invitation and a reply, which keep their data, and the management and reply edit link reads after it show them;
+// deleting an invitation through the API deletes its parties, their replies, its open replies, its tables, its
+// passkeys, its passkey challenges and its access tokens, and leaves another invitation's rows; deleting a table
+// unassigns its parties; an open reply allows up to 10 people and a party reply up to 20; a reply has an edit secret
+// hash exactly when it has no party.
 // Each test runs in its own in-memory PGlite database.
 // Run: pnpm exec node tests/check-migrations.js
 import assert from 'node:assert/strict';
@@ -86,17 +86,30 @@ test('the guest-list migration keeps an earlier invitation and reply and their r
     record.t,
     JSON.stringify(d),
   ]);
+  // The current code reads the answers column of the guest-list migration, so the reply is written as the code
+  // before that migration wrote it.
   const edit = { id: newId(), secret: newSecret(), version: null };
-  assert.equal((await client(db).saveReply(cred.id, edit, reply)).status, 201);
-  const reads = async () => ({
-    event: (await client(db).loadEvent(cred.id)).data,
-    responses: (await client(db).loadResponses(cred)).data,
-    reply: (await client(db).loadReply(cred.id, edit)).data,
-  });
-  const before = await reads();
+  await db.query(
+    `insert into responses (id, event_id, secret_hash, name, attending, party_size, note)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [edit.id, cred.id, hash(edit.secret), reply.name, reply.attending, reply.partySize, reply.note],
+  );
   assert.deepEqual(await migrate(db), [GUEST_LISTS, '006_party_link_generation.sql', '007_ended_events.sql']);
-  assert.deepEqual(await reads(), before);
-  assert.deepEqual(before.reply, { ...reply, version: 1 });
+  const responses = (await client(db).loadResponses(cred)).data;
+  assert.deepEqual(
+    {
+      event: (await client(db).loadEvent(cred.id)).data,
+      responses: responses.responses.map(({ createdAt, updatedAt, ...r }) => r),
+      totals: responses.totals,
+      reply: (await client(db).loadReply(cred.id, edit)).data,
+    },
+    {
+      event: { t: record.t, d },
+      responses: [reply],
+      totals: { responses: 1, yes: 1, no: 0, attending: 3 },
+      reply: { ...reply, version: 1 },
+    },
+  );
 });
 
 test('deleting an invitation deletes its guest-list rows and keeps those of another invitation', async (t) => {
