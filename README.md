@@ -88,6 +88,7 @@ A host can:
 - use the management link to add a party with a name, default seats and language, share its personal link message by copying it or opening WhatsApp, and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, its reply, note and any seats over its default after opening the management link or after a passkey sign-in. The host can edit each party's reply seats;
 - use the tracker to see how many parties have yet to reply and open a WhatsApp reminder for each party with an active personal link. Each reminder uses the party's language and includes its personal link. The tracker marks which reminders the host opened in the current tab session;
 - set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
+- see in the tracker of a guest-list invitation the time left before the RSVP deadline and before the guest list is deleted. In the last 7 days before the deadline, the tracker adds how many parties have not replied. In the last 3 days before the deletion, it asks the host to download the guest-list CSV;
 - create, rename, resize and remove tables in the guest-list tracker. The host can move a party to a table with a picker or, on a desktop, by dragging the party onto the table, and see filled and free seats from accepting replies. The host can print the seating plan with each table and its parties. Removing a table clears its parties' assignments;
 - write, change or remove one update of up to 500 characters for a guest-list invitation, such as "The party starts at 19:00". Every personal link and view link shows it at the top. With the management link, the tracker lists one WhatsApp message per party with the update and the party's personal link, in the party's language;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
@@ -114,7 +115,7 @@ A guest can:
 - see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw an open-mode reply through its reply edit link;
-- open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes. After it passes, the personal link shows the reply read-only;
+- open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes, and sees the time left before it. After it passes, the personal link shows the reply read-only;
 - share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private;
 - see the host's latest update at the top of the personal link and the view link.
 
@@ -232,7 +233,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
-The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, `partyUpdate` has the tracker strings of the update for every party, and `personal` has the party greeting, update heading, reply form and view link sharing strings.
+The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, `countdowns` has the tracker's deadline and deletion countdowns with their nudges and the personal link's deadline countdown, `partyUpdate` has the tracker strings of the update for every party, and `personal` has the party greeting, update heading, reply form and view link sharing strings.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.
