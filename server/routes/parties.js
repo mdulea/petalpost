@@ -28,6 +28,7 @@ import {
   newId,
   PARTY_LIMITS,
   partyLinkSecret,
+  storedAnswers,
   viewLinkSecret,
 } from '../../public/js/rsvp.js';
 import { isSeatingPublished } from '../../public/js/seating.js';
@@ -315,17 +316,7 @@ async function writePartyReply(tx, eventId, id, party, reply, expectedVersion) {
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      on conflict (party_id) do update set attending = excluded.attending, party_size = excluded.party_size,
      answers = excluded.answers, note = excluded.note, version = excluded.version, updated_at = now()`,
-    [
-      newId(),
-      eventId,
-      id,
-      reply.name,
-      reply.attending,
-      reply.partySize,
-      JSON.stringify(reply.answers ?? {}),
-      reply.note,
-      version,
-    ],
+    [newId(), eventId, id, reply.name, reply.attending, reply.partySize, storedAnswers(reply), reply.note, version],
   );
   await tx.query('update parties set version = $2 where id = $1', [id, version]);
   return version;

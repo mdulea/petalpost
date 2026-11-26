@@ -5,7 +5,7 @@
 // Romanian, with answers in the reply edit link and management reads and a refused reply that misses a sub-event; a
 // reply saved before the host added sub-events, which shows no answer to them; an invitation stored before sub-events
 // had ids; personal-link and host replies of a guest-list party, and the seat editor refused with sub-events; the
-// replies CSV and the guest-list CSV with a column pair for each sub-event in English and Romanian.
+// replies CSV and the guest-list CSV with a column pair for each sub-event and a totals row in English and Romanian.
 // Each API test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
 // tests/api-setup.js.
 // Run: pnpm exec node tests/check-sub-event-replies.js
@@ -220,7 +220,7 @@ test('a guest-list party answers each sub-event through its personal link and th
   assert.deepEqual([seats.status, seats.message], [400, 'Use Edit reply to change the people at each part.']);
 });
 
-test('the replies CSV and the guest-list CSV add a column pair for each sub-event in English and Romanian', () => {
+test('the replies CSV and the guest-list CSV add a column pair for each sub-event and a totals row in English and Romanian', () => {
   const labels = subEventLabels(wedding([civil, party]).d, 'en');
   const at = '2027-01-02T10:00:00.000Z';
   const replies = [
@@ -239,7 +239,7 @@ test('the replies CSV and the guest-list CSV add a column pair for each sub-even
   // The reply times depend on the runtime's time zone, so the comparison stops before them.
   assert.deepEqual(
     lines(repliesCsv(replies, 'en', labels))
-      .slice(0, 3)
+      .slice(0, 4)
       .map((line) => line.split(',').slice(0, 8)),
     [
       [
@@ -254,6 +254,7 @@ test('the replies CSV and the guest-list CSV add a column pair for each sub-even
       ],
       ['Sam', 'Yes', '2', 'Yes', '2', 'No', '0', ''],
       ['Ana', 'No', '0', '', '', '', '', ''],
+      ['Total', '', '', '1', '2', '0', '0', ''],
     ],
   );
   const roLabels = subEventLabels(wedding([civil, party]).d, 'ro');
@@ -265,9 +266,10 @@ test('the replies CSV and the guest-list CSV add a column pair for each sub-even
     },
     { name: 'Ion', defaultSeats: 1, reply: null },
   ];
-  assert.deepEqual(lines(guestListCsv(parties, 'ro', roLabels)).slice(0, 3), [
+  assert.deepEqual(lines(guestListCsv(parties, 'ro', roLabels)).slice(0, 4), [
     'Nume;Stare;Locuri;Participă;Civil ceremony: participă;Civil ceremony: persoane;Momentul 2: participă;Momentul 2: persoane;Notă',
     'Familia Popescu;A răspuns;3;Da;Nu;0;Da;3;Fără nuci',
     'Ion;Fără răspuns;1;;;;;;',
+    'Total;;;;0;0;1;3;',
   ]);
 });

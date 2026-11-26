@@ -375,6 +375,7 @@ export const UI = {
         `${name}: ${attending} ${attending === 1 ? 'person' : 'people'} attending, ${yes} yes, ${no} no${unanswered ? `, ${unanswered} without an answer` : ''}`,
       csvAnswer: (name) => `${name}: attending`,
       csvPeople: (name) => `${name}: people`,
+      csvTotal: 'Total',
       seatsBySubEvent: 'Use Edit reply to change the people at each part.',
     },
     invite: {
@@ -670,6 +671,7 @@ export const UI = {
         `${name}: ${roCount(attending, ['o persoană confirmată', 'persoane confirmate'])}, ${yes} da, ${no} nu${unanswered ? `, ${unanswered} fără răspuns` : ''}`,
       csvAnswer: (name) => `${name}: participă`,
       csvPeople: (name) => `${name}: persoane`,
+      csvTotal: 'Total',
       seatsBySubEvent: 'Folosește „Modifică răspunsul” ca să schimbi numărul de persoane la fiecare moment.',
     },
     invite: {

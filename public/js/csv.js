@@ -1,6 +1,6 @@
 // The host's replies and guest list as CSV files for spreadsheets.
 import { UI, normalizeLang } from './i18n.js';
-import { answerTo } from './rsvp.js';
+import { answerTo, subEventTally } from './rsvp.js';
 
 // Excel reads a file without a byte order mark in the system code page and breaks the diacritics.
 const BOM = String.fromCharCode(0xfeff);
@@ -34,15 +34,33 @@ const answerCells = (labels, reply, copy) =>
     return answer ? [answer.attending ? copy.yes : copy.no, String(answer.partySize)] : ['', ''];
   });
 
+// The totals row of a file with sub-events, with width cells: the total label first, and under the column pair of
+// each sub-event the number of yes answers and the people attending, from index on. Without sub-events the file has
+// no totals row.
+function totalsRow(labels, replies, lang, width, index) {
+  if (!labels.length) return [];
+  const row = Array(width).fill('');
+  row[0] = UI[normalizeLang(lang)].subEventReplies.csvTotal;
+  const totals = subEventTally(
+    labels.map(({ id }) => id),
+    replies,
+  );
+  totals.forEach(({ yes, attending }, i) => {
+    row[index + 2 * i] = String(yes);
+    row[index + 2 * i + 1] = String(attending);
+  });
+  return [row];
+}
+
 function csv(rows, separator) {
   const lines = rows.map((row) => row.map((value) => cell(value, separator)).join(separator));
   return `${BOM}${lines.join('\r\n')}\r\n`;
 }
 
 // responses are the management data's replies [{name, attending, partySize, answers, note, createdAt, updatedAt}].
-// The file has a header row and one row per reply, with no totals row, and rows end in CRLF. The separator is the one
-// Excel expects for the page language. "Changed" is empty for a reply that never changed. The answer columns of the
-// sub-events of labels follow the party size.
+// The file has a header row and one row per reply, and rows end in CRLF. The separator is the one Excel expects for
+// the page language. "Changed" is empty for a reply that never changed. The answer columns of the sub-events of labels
+// follow the party size, and a totals row of the sub-events ends the file.
 export function repliesCsv(responses, lang, labels = []) {
   const copy = UI[normalizeLang(lang)].csv;
   const rows = responses.map((r) => [
@@ -55,14 +73,17 @@ export function repliesCsv(responses, lang, labels = []) {
     r.updatedAt === r.createdAt ? '' : dateTime(r.updatedAt),
   ]);
   const [name, attending, partySize, ...rest] = copy.columns;
-  return csv([[name, attending, partySize, ...answerColumns(labels, lang), ...rest], ...rows], copy.separator);
+  const header = [name, attending, partySize, ...answerColumns(labels, lang), ...rest];
+  const totals = totalsRow(labels, responses, lang, header.length, 3);
+  return csv([header, ...rows, ...totals], copy.separator);
 }
 
 // The file name with the download date, such as petalpost-replies-2026-07-02.csv.
 export const repliesCsvName = (lang, now) => `${UI[normalizeLang(lang)].csv.file}-${day(now)}.csv`;
 
 // Exports every party in the management read. Seats come from the reply or the party's default before a reply. The
-// answer columns of the sub-events of labels follow the attending column.
+// answer columns of the sub-events of labels follow the attending column, and a totals row of the sub-events over the
+// replies ends the file.
 export function guestListCsv(parties, lang, labels = []) {
   const { csv: copy, guestList } = UI[normalizeLang(lang)];
   const rows = parties.map(({ name, defaultSeats, reply }) => [
@@ -75,7 +96,9 @@ export function guestListCsv(parties, lang, labels = []) {
   ]);
   const columns = guestList.csvColumns;
   const header = [...columns.slice(0, -1), ...answerColumns(labels, lang), columns.at(-1)];
-  return csv([header, ...rows], copy.separator);
+  const replies = parties.map(({ reply }) => reply).filter(Boolean);
+  const totals = totalsRow(labels, replies, lang, header.length, columns.length - 1);
+  return csv([header, ...rows, ...totals], copy.separator);
 }
 
 // The file name with the download date in the page language.
