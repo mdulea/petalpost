@@ -2,7 +2,10 @@
 // in local time; days counted in calendar days, including across a daylight saving change; hours, rounded up, on the
 // event's day and in the last 24 hours, including a 23-hour and a 25-hour day; nothing without a date or once the event
 // starts; the English and Romanian countdown text with Romanian plural forms; RSVP deadline date validation and
-// Europe/Bucharest midnight checks across winter and summer time.
+// Europe/Bucharest midnight checks across winter and summer time; the last minute of the RSVP deadline and the start of
+// the deletion at 23:59 Europe/Bucharest time in winter and summer, whatever the runtime's time zone; the tracker's
+// deadline countdown until the deadline passes, and its nudge in the last 7 days while a party has not replied; the
+// deletion countdown, and its nudge in the last 3 days; the English and Romanian countdown and nudge text.
 // The checks run in the Europe/Bucharest time zone, which changes to summer time on 29 March 2026 at 03:00 and back
 // on 25 October 2026 at 04:00.
 // Run: pnpm exec node tests/check-countdown.js
@@ -10,7 +13,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 process.env.TZ = 'Europe/Bucharest';
-const { bucharestDate, countdown, eventStart, isDeadlinePassed, isValidDate } =
+const { bucharestDate, countdown, deadlineEnd, deletionStart, eventStart, isDeadlinePassed, isValidDate, trackerDue } =
   await import('../public/js/countdown.js');
 const { UI } = await import('../public/js/i18n.js');
 
@@ -106,4 +109,83 @@ test('the RSVP deadline closes after 23:59 Europe/Bucharest time in winter and s
   assert.equal(bucharestDate(new Date('2026-01-15T22:00:00Z')), '2026-01-16');
   assert.equal(isDeadlinePassed('2026-01-15', new Date('2026-01-15T21:59:59Z')), false);
   assert.equal(isDeadlinePassed('2026-01-15', new Date('2026-01-15T22:00:00Z')), true);
+});
+
+test('the deadline ends and the deletion starts at 23:59 Europe/Bucharest time in winter and summer', () => {
+  assert.equal(deadlineEnd('2026-06-15').toISOString(), '2026-06-15T20:59:00.000Z');
+  assert.equal(deadlineEnd('2026-01-15').toISOString(), '2026-01-15T21:59:00.000Z');
+  // The deletion starts on the day after the event, here the first day of summer time and of winter time.
+  assert.equal(deletionStart('2026-03-28').toISOString(), '2026-03-29T20:59:00.000Z');
+  assert.equal(deletionStart('2026-10-24').toISOString(), '2026-10-25T21:59:00.000Z');
+  assert.equal(deletionStart('2026-12-31').toISOString(), '2027-01-01T21:59:00.000Z');
+  for (const bad of [undefined, '', '2026-02-30']) {
+    assert.equal(deadlineEnd(bad), null);
+    assert.equal(deletionStart(bad), null);
+  }
+});
+
+test('the deadline and deletion moments do not depend on the runtime time zone', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const script = `const c = await import(${JSON.stringify(new URL('../public/js/countdown.js', import.meta.url).href)});
+    console.log(c.deadlineEnd('2026-06-15').toISOString(), c.deletionStart('2026-01-15').toISOString());`;
+  for (const TZ of ['America/Los_Angeles', 'Asia/Tokyo', 'UTC']) {
+    const output = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+      env: { ...process.env, TZ },
+      encoding: 'utf8',
+    });
+    assert.equal(output.trim(), '2026-06-15T20:59:00.000Z 2026-01-16T21:59:00.000Z', TZ);
+  }
+});
+
+const due = (d, pending, now) => trackerDue(d, pending, new Date(now));
+
+test('the tracker counts down to the deadline until it passes', () => {
+  const d = { date: '2026-12-20', deadline: '2026-12-10' };
+  assert.deepEqual(due(d, 0, '2026-11-26T10:00:00Z').deadline, { left: { unit: 'days', count: 14 }, nudge: false });
+  // 23:00 on the deadline day leaves 59 minutes, shown as 1 hour.
+  assert.deepEqual(due(d, 0, '2026-12-10T21:00:00Z').deadline, { left: { unit: 'hours', count: 1 }, nudge: false });
+  assert.equal(due(d, 0, '2026-12-10T21:59:00Z').deadline, null);
+  assert.equal(due({ date: '2026-12-20' }, 3, '2026-11-26T10:00:00Z').deadline, null);
+});
+
+test('the deadline nudge shows in the last 7 days while a party has not replied', () => {
+  const d = { date: '2026-12-20', deadline: '2026-12-10' };
+  assert.equal(due(d, 12, '2026-12-02T10:00:00Z').deadline.nudge, false);
+  assert.deepEqual(due(d, 12, '2026-12-03T10:00:00Z').deadline, { left: { unit: 'days', count: 7 }, nudge: true });
+  assert.deepEqual(due(d, 1, '2026-12-10T10:00:00Z').deadline, { left: { unit: 'hours', count: 12 }, nudge: true });
+  assert.equal(due(d, 0, '2026-12-07T10:00:00Z').deadline.nudge, false);
+});
+
+test('the tracker counts down to the deletion and nudges in the last 3 days', () => {
+  const d = { date: '2026-12-20' };
+  assert.deepEqual(due(d, 0, '2026-11-26T10:00:00Z').deletion, { left: { unit: 'days', count: 25 }, nudge: false });
+  assert.equal(due(d, 0, '2026-12-17T10:00:00Z').deletion.nudge, false);
+  assert.deepEqual(due(d, 0, '2026-12-18T10:00:00Z').deletion, { left: { unit: 'days', count: 3 }, nudge: true });
+  assert.deepEqual(due(d, 5, '2026-12-21T21:00:00Z').deletion, { left: { unit: 'hours', count: 1 }, nudge: true });
+  assert.equal(due(d, 0, '2026-12-21T21:59:00Z').deletion, null);
+  assert.equal(due({ date: '' }, 0, '2026-11-26T10:00:00Z').deletion, null);
+});
+
+test('the countdown and nudge text is English', () => {
+  const words = UI.en.countdowns;
+  assert.equal(words.deadline({ unit: 'days', count: 1 }), 'Replies close in 1 day.');
+  assert.equal(words.deadline({ unit: 'hours', count: 5 }), 'Replies close in 5 hours.');
+  assert.equal(words.pending(1), '1 party has not replied.');
+  assert.equal(words.pending(12), '12 parties have not replied.');
+  assert.equal(words.deletion({ unit: 'days', count: 2 }), 'The guest list and its replies are deleted in 2 days.');
+  assert.equal(words.download, 'Download the guest-list CSV to keep a copy.');
+});
+
+test('the countdown and nudge text is Romanian, with "de" from 20', () => {
+  const words = UI.ro.countdowns;
+  assert.equal(words.deadline({ unit: 'days', count: 1 }), 'Confirmările se închid peste o zi.');
+  assert.equal(words.deadline({ unit: 'hours', count: 5 }), 'Confirmările se închid peste 5 ore.');
+  assert.equal(words.pending(1), 'Încă nu a răspuns un grup.');
+  assert.equal(words.pending(12), 'Încă nu au răspuns 12 grupuri.');
+  assert.equal(words.pending(20), 'Încă nu au răspuns 20 de grupuri.');
+  assert.equal(
+    words.deletion({ unit: 'days', count: 2 }),
+    'Lista de invitați și răspunsurile ei se șterg peste 2 zile.',
+  );
+  assert.equal(words.download, 'Descarcă lista de invitați în format CSV ca să păstrezi o copie.');
 });

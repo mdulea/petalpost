@@ -6,6 +6,7 @@
 // showOnly, load}, where signedIn is true when cred holds a passkey access token instead of the management secret, setStatus(text) writes the page status, showOnly(heading, message) replaces the page with a message,
 // and load() reloads the view. A new feature adds its module, one entry here and its element in both pages.
 // tests/check-site.js fails when an entry and the elements disagree.
+import { section as countdowns } from './countdowns.js';
 import { section as rsvpDeadline } from './deadline.js';
 import { section as deleteInvitation } from './delete.js';
 import { section as guestList } from './guest-list.js';
@@ -19,6 +20,7 @@ import { section as partyUpdate } from './update.js';
 
 /** @type {{id: string, modes: string[], init?: (page: any) => void, show?: (view: any, page: any) => void | Promise<void>}[]} */
 export const SECTIONS = [
+  countdowns,
   replies,
   switchMode,
   guestList,

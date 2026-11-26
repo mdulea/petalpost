@@ -8,6 +8,9 @@ const roPlural = new Intl.PluralRules('ro-RO');
 // "20 de zile". Counts in the plural category other, such as 20 and 120, take "de".
 const roCount = (count, [one, many]) =>
   ({ one, few: `${count} ${many}` })[roPlural.select(count)] ?? `${count} de ${many}`;
+// The time left in a result of countdown() in countdown.js, as in "3 days" and "3 zile".
+const enLeft = ({ unit, count }) => `${count} ${unit === 'days' ? 'day' : 'hour'}${count === 1 ? '' : 's'}`;
+const roLeft = ({ unit, count }) => roCount(count, unit === 'days' ? ['o zi', 'zile'] : ['o oră', 'ore']);
 
 /** @param {string} [lang] */
 export const normalizeLang = (lang) => (typeof lang === 'string' && lang.toLowerCase().startsWith('ro') ? 'ro' : 'en');
@@ -326,6 +329,14 @@ export const UI = {
       removed: 'Update removed.',
       removeConfirm: 'Remove the update from every personal link and view link?',
     },
+    // The countdowns to the RSVP deadline and the deletion of a guest list, and the tracker's nudges. A left argument
+    // is a result of countdown() in countdown.js.
+    countdowns: {
+      deadline: (left) => `Replies close in ${enLeft(left)}.`,
+      pending: (n) => `${n} ${n === 1 ? 'party has' : 'parties have'} not replied.`,
+      deletion: (left) => `The guest list and its replies are deleted in ${enLeft(left)}.`,
+      download: 'Download the guest-list CSV to keep a copy.',
+    },
     invite: {
       photoAlt: 'Event photo',
     },
@@ -566,6 +577,14 @@ export const UI = {
       saved: 'Mesajul a fost salvat.',
       removed: 'Mesajul a fost șters.',
       removeConfirm: 'Ștergi mesajul de pe toate linkurile personale și linkurile de vizualizare?',
+    },
+    // The countdowns to the RSVP deadline and the deletion of a guest list, and the tracker's nudges. A left argument
+    // is a result of countdown() in countdown.js.
+    countdowns: {
+      deadline: (left) => `Confirmările se închid peste ${roLeft(left)}.`,
+      pending: (n) => `Încă nu ${n === 1 ? 'a' : 'au'} răspuns ${roCount(n, ['un grup', 'grupuri'])}.`,
+      deletion: (left) => `Lista de invitați și răspunsurile ei se șterg peste ${roLeft(left)}.`,
+      download: 'Descarcă lista de invitați în format CSV ca să păstrezi o copie.',
     },
     invite: {
       photoAlt: 'Fotografia evenimentului',
