@@ -160,6 +160,10 @@ export const UI = {
     landing: {
       all: 'All',
       useTemplate: (name) => `Use the ${name} template`,
+      untitled: 'Your invitation',
+      ended: 'Ended',
+      remove: 'Remove',
+      removeLabel: (title) => `Remove ${title} from My invitations`,
     },
     editor: {
       defaultSwatch: 'Template default',
@@ -435,6 +439,10 @@ export const UI = {
     landing: {
       all: 'Toate',
       useTemplate: (name) => `Folosește modelul ${name}`,
+      untitled: 'Invitația ta',
+      ended: 'Încheiată',
+      remove: 'Elimină',
+      removeLabel: (title) => `Elimină ${title} din Invitațiile mele`,
     },
     editor: {
       defaultSwatch: 'Culoarea modelului',

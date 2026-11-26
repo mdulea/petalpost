@@ -19,7 +19,7 @@
 // anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
 // analytics gets page addresses without the fragment; the WhatsApp link on the published panel and the management page, in
 // English and Romanian, opens wa.me in a new tab with no opener and prefills the title, the date and venue line and the
-// invitation link, never the management link, and the pages request nothing from another origin; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; in English and Romanian, a count to /api/stats with the page language after an invitation link copy, a share fallback copy, an invitation link share, a PNG share, a PNG download and a calendar file, and none after a cancelled link or PNG share or a copy of the management link, the reply edit link or the invitation link on the management page; each of those actions with the same status and file when navigator.sendBeacon throws; the page language in publish and reply bodies in English and Romanian; no page breaks the Content-Security-Policy or throws.
+// invitation link, never the management link, and the pages request nothing from another origin; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; in English and Romanian, a count to /api/stats with the page language after an invitation link copy, a share fallback copy, an invitation link share, a PNG share, a PNG download and a calendar file, and none after a cancelled link or PNG share or a copy of the management link, the reply edit link or the invitation link on the management page; each of those actions with the same status and file when navigator.sendBeacon throws; the page language in publish and reply bodies in English and Romanian; in English and Romanian, an opened management link lists its invitation with its title, link and date under My invitations on both home pages, without a cookie or a request that carries its secret, until Remove takes it off, and a deleted invitation shows there as ended in the deleting browser and, after its load fails, in another; Send the link to myself and Share with a co-host share the management link, ignore a cancelled share, copy the link after a failed share or without navigator.share, and send no count; with storage blocked, the management page loads and both home pages work without My invitations; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
@@ -1129,4 +1129,162 @@ test('a Moț invitation publishes in Romanian and a guest replies through its li
   await guest.page.click('#sendReply');
   await expect(guest.page.locator('#replyOutcome')).toHaveText('Răspuns trimis');
   expect([...host.problems, ...guest.problems]).toEqual([]);
+});
+
+// My invitations and the management link buttons, in each page language.
+for (const { lang, editor, home, shareLabels } of [
+  {
+    lang: 'en',
+    editor: 'editor.html?t=birthday',
+    home: '/',
+    shareLabels: ['Send the link to myself', 'Share with a co-host'],
+  },
+  {
+    lang: 'ro',
+    editor: '/ro/editor.html?t=botez-porumbel',
+    home: '/ro/',
+    shareLabels: ['Trimite-mi linkul', 'Distribuie unui coorganizator'],
+  },
+]) {
+  const copy = UI[lang];
+
+  test(`in ${lang}, an opened management link lists its invitation under My invitations on both home pages until it is removed`, async ({
+    browser,
+  }) => {
+    const host = await newBrowser(browser);
+    const { manage } = await publishFrom(host.page, editor);
+    const secret = manage.split('.').at(-1);
+    const leaks = [];
+    host.page.on('request', (request) => {
+      if (`${request.url()} ${request.postData() ?? ''}`.includes(secret)) leaks.push(request.url());
+    });
+    await host.page.goto(home);
+    await expect(host.page.locator('#gallery .card').first()).toBeVisible();
+    await expect(host.page.locator('#invitations')).toBeHidden();
+
+    await host.page.goto(manage);
+    await expect(host.page.locator('#manageContent')).toBeVisible();
+    const title = await host.page.locator('#manageHeading').innerText();
+    const { pathname, hash } = new URL(manage);
+    for (const path of ['/', '/ro/']) {
+      await host.page.goto(path);
+      const entry = host.page.locator('#invitationList li');
+      await expect(entry).toHaveCount(1);
+      await expect(entry.locator('a')).toHaveText(title);
+      await expect(entry.locator('a')).toHaveAttribute('href', `${pathname}${hash}`);
+      await expect(entry.locator('span').first()).toHaveText(/\d{4}/);
+      await expect(entry.locator('.hosted-ended')).toHaveCount(0);
+    }
+
+    await host.page.goto(home);
+    await host.page.locator('#invitationList a').click();
+    await expect(host.page.locator('#manageContent')).toBeVisible();
+    expect(host.page.url()).toBe(manage);
+
+    await host.page.goto(home);
+    await host.page.getByRole('button', { name: copy.landing.removeLabel(title) }).click();
+    await expect(host.page.locator('#invitations')).toBeHidden();
+    await host.page.reload();
+    await expect(host.page.locator('#gallery .card').first()).toBeVisible();
+    await expect(host.page.locator('#invitations')).toBeHidden();
+    expect({ cookies: await host.page.context().cookies(), leaks, problems: host.problems }).toEqual({
+      cookies: [],
+      leaks: [],
+      problems: [],
+    });
+  });
+
+  test(`in ${lang}, a deleted invitation shows as ended in My invitations and can be removed`, async ({ browser }) => {
+    const host = await newBrowser(browser);
+    const { manage } = await publishFrom(host.page, editor);
+    await host.page.goto(manage);
+    await expect(host.page.locator('#manageContent')).toBeVisible();
+    const title = await host.page.locator('#manageHeading').innerText();
+
+    const cohost = await newBrowser(browser);
+    await cohost.page.goto(manage);
+    cohost.page.once('dialog', (dialog) => dialog.accept());
+    await cohost.page.click('#deleteEvent');
+    await expect(cohost.page.locator('#manageStatus')).toHaveText(copy.manage.deletedMessage);
+
+    for (const { page } of [cohost, host]) {
+      await page.goto(home);
+      const entry = page.locator('#invitationList li');
+      await expect(entry.locator('.hosted-ended')).toHaveText(copy.landing.ended);
+      await expect(entry.locator('strong')).toHaveText(title);
+      await expect(entry.locator('a')).toHaveCount(0);
+      await page.getByRole('button', { name: copy.landing.removeLabel(title) }).click();
+      await expect(page.locator('#invitations')).toBeHidden();
+    }
+    expect([...host.problems, ...cohost.problems]).toEqual([]);
+  });
+
+  test(`in ${lang}, Send the link to myself and Share with a co-host share the management link, or copy it where sharing is unavailable`, async ({
+    browser,
+  }) => {
+    const host = await stubbedBrowser(browser);
+    const { manage } = await publishFrom(host.page, editor);
+    await host.page.goto(manage);
+    await expect(host.page.locator('#manageContent')).toBeVisible();
+    const [sendToSelf, shareWithCohost] = await host.page.locator('button[data-share-management]').all();
+    await expect(sendToSelf).toHaveText(shareLabels[0]);
+    await expect(shareWithCohost).toHaveText(shareLabels[1]);
+    const shareTest = () => host.page.evaluate(() => /** @type {any} */ (window).__shareTest);
+    const status = host.page.locator('#manageStatus');
+
+    await sendToSelf.click();
+    await shareWithCohost.click();
+    await expect.poll(async () => (await shareTest()).calls.length).toBe(2);
+
+    await failNext(host.page, 'AbortError');
+    await sendToSelf.click();
+    await shareSettled(host.page);
+    await expect(status).toHaveText('');
+    await failNext(host.page, 'NotAllowedError');
+    await shareWithCohost.click();
+    await expect(status).toHaveText(copy.manage.managementLinkCopied);
+    expect(await shareTest()).toMatchObject({ calls: [{ url: manage }, { url: manage }], copied: [manage] });
+
+    const noShare = await stubbedBrowser(browser, () =>
+      Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }),
+    );
+    await noShare.page.goto(manage);
+    await expect(noShare.page.locator('#manageContent')).toBeVisible();
+    const buttons = noShare.page.locator('button[data-share-management]');
+    await buttons.nth(0).click();
+    await expect(noShare.page.locator('#manageStatus')).toHaveText(copy.manage.managementLinkCopied);
+    await buttons.nth(1).click();
+    await expect
+      .poll(() => noShare.page.evaluate(() => /** @type {any} */ (window).__shareTest.copied))
+      .toEqual([manage, manage]);
+    expect({ counts: [...host.counts, ...noShare.counts], problems: [...host.problems, ...noShare.problems] }).toEqual({
+      counts: [],
+      problems: [],
+    });
+  });
+}
+
+test('with storage blocked, the management page loads and the home pages work without My invitations', async ({
+  browser,
+}) => {
+  const host = await newBrowser(browser);
+  const { manage } = await publish(host.page, 'Zoe turns 30');
+  const blocked = await newBrowser(browser);
+  await blocked.page.addInitScript(() =>
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('Storage is blocked', 'SecurityError');
+      },
+    }),
+  );
+  await blocked.page.goto(manage);
+  await expect(blocked.page.locator('#manageHeading')).toHaveText('Zoe turns 30');
+  for (const path of ['/', '/ro/']) {
+    await blocked.page.goto(path);
+    await expect(blocked.page.locator('#gallery .card').first()).toBeVisible();
+    await blocked.page.locator('#filters .filter').nth(1).click();
+    await expect(blocked.page.locator('#filters .filter').nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await expect(blocked.page.locator('#invitations')).toBeHidden();
+  }
+  expect([...host.problems, ...blocked.problems]).toEqual([]);
 });

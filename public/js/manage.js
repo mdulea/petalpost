@@ -1,12 +1,13 @@
 // Entry module of manage.html and ro/manage.html, the tracker of one published event. The credential is the
 // management link manage.html#<id>.<secret>, or after a passkey sign-in manage.html#t=<id>.<token> with an access
 // token. The page loads the event with its replies, shows the invitation, and hands the rest to the sections in
-// tracker/sections.js, which show only in the modes they list.
+// tracker/sections.js, which show only in the modes they list. A load with the management link lists the published
+// invitation under "My invitations" in this browser, and a 404 or 410 marks it as ended there.
 import './icons.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { getTemplate, renderInvite } from './templates.js';
 import { mountInvites } from './mount.js';
-import { makeInviteData, modeOf } from './invite.js';
+import { endInvitation, makeInviteData, modeOf, rememberInvitation } from './invite.js';
 import { createClient, readCredential } from './rsvp.js';
 import { SECTIONS } from './tracker/sections.js';
 
@@ -19,6 +20,13 @@ const cred = readCredential(location.hash, '') ?? signedIn;
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
 let latestLoad = 0;
+// Reading localStorage throws when the browser blocks storage; null storage then keeps nothing.
+let storage = null;
+try {
+  storage = localStorage;
+} catch {
+  storage = null;
+}
 let ended = false;
 
 // A 410 from any tracker action ends the view, even if another request is still in flight.
@@ -27,6 +35,7 @@ const client = createClient(
     const response = await fetch(path, options);
     if (response.status === 410) {
       ended = true;
+      endInvitation(storage, cred.id);
       showOnly(copy.endedHeading, `${copy.endedHeading}.`);
     }
     return response;
@@ -53,7 +62,19 @@ const formatTime = (iso) =>
     ...(lang === 'ro' ? { hour12: false } : {}),
   });
 
-const page = { lang, locale, copy, client, cred, signedIn: Boolean(signedIn), formatTime, setStatus, showOnly, load };
+const page = {
+  lang,
+  locale,
+  copy,
+  client,
+  cred,
+  signedIn: Boolean(signedIn),
+  storage,
+  formatTime,
+  setStatus,
+  showOnly,
+  load,
+};
 
 async function showEvent(data) {
   const template = getTemplate(data.t, lang);
@@ -63,6 +84,11 @@ async function showEvent(data) {
   document.title = `${heading} | Petalpost`;
   content.hidden = false;
   mountInvites(document.getElementById('managePreview'), renderInvite(template, invite, { locale }));
+  // An access token is not the management link, so a passkey sign-in leaves My invitations unchanged.
+  if (!signedIn) {
+    const { title = '', date = '' } = data.d;
+    rememberInvitation(storage, { id: cred.id, secret: cred.secret, lang, title, date });
+  }
   const view = { ...data, invite, mode: modeOf(data.d) };
   await Promise.all(
     SECTIONS.map((section) => {
@@ -83,6 +109,7 @@ async function load() {
     await showEvent(result.data);
     if (request === latestLoad && !ended) statusEl.textContent = '';
   } else if (result.status === 404) {
+    endInvitation(storage, cred.id);
     showOnly(copy.missingHeading, result.message);
   } else if (content.hidden) {
     showOnly(copy.loadFailedHeading, result.message);

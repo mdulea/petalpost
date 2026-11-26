@@ -5,7 +5,8 @@
 // invitation link of an open invitation keeps the reply form, and its tracker keeps the replies section without a
 // guest list; the editor refuses to publish a guest-list invitation without a date, and after retention deletes a
 // past guest-list invitation the tracker, personal link and public invitation link show "This invitation has ended"
-// without event details, including when the host submits a party from an already open tracker; switching a published
+// without event details, including when the host submits a party from an already open tracker, and My invitations
+// on the home page shows it as ended; switching a published
 // open invitation to the guest-list mode keeps its link and earlier replies under "Replies without a personal link"
 // and in the totals, stops taking public replies, lets the host attach a reply to a party so its personal link shows
 // it, and makes the old reply edit link show the unavailable message; no page breaks the Content-Security-Policy or
@@ -17,6 +18,7 @@
 // Run: pnpm test:browser tests/guest-list.spec.js
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { UI } from '../public/js/i18n.js';
 import { newBrowser } from './browser-setup.js';
 
 const COPY = {
@@ -230,6 +232,8 @@ for (const lang of ['en', 'ro']) {
     await expect(host.page.locator('#manageHeading')).toHaveText(copy.endedHeading);
     await expect(host.page.locator('#manageStatus')).toHaveText(copy.endedMessage);
     await expect(host.page.locator('#manageContent')).toBeHidden();
+    await host.page.goto(lang === 'ro' ? 'ro/' : '/');
+    await expect(host.page.locator('#invitationList .hosted-ended')).toHaveText(UI[lang].landing.ended);
 
     const guest = await newBrowser(browser);
     await guest.page.goto(invitation);

@@ -4,7 +4,7 @@
 // link in English and Romanian, the reminder message with its greeting and personal link in English and Romanian,
 // the party update message with its greeting, update and personal link in English and Romanian, invite records and
 // their mode, published records with an optional mode, the characters left in a limited field, storage writes, the
-// stored published event identity, template switching, template ids, Romanian localization coverage, the same UI
+// stored published event identity, the "My invitations" list, template switching, template ids, Romanian localization coverage, the same UI
 // string and API message keys in English and Romanian, the
 // Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
 // calendar file with its alarms, the report link or the choice of when the Romanian
@@ -513,6 +513,122 @@ for (const id of ['', 'short', `${EVENT_ID}A`, `${EVENT_ID.slice(1)}+`]) {
     [true, null],
   );
 }
+// My invitations: every management link this browser opened, newest first, under one key for both languages.
+// Each entry is {id, secret, lang, title, date, ended}; only the management page adds or refreshes one.
+const SECRET = identity.secret;
+const OTHER_ID = 'BBBBBBBBBBBBBBBBBBBBBB';
+const hosted = memory();
+const zoeEntry = { id: EVENT_ID, secret: SECRET, lang: 'en', title: 'Zoe turns 30', date: '2026-12-12' };
+const anaEntry = { id: OTHER_ID, secret: SECRET, lang: 'ro', title: 'Botezul Anei', date: '' };
+check(
+  'an opened management link lists its invitation, and a later one lists first',
+  [
+    ctx.rememberInvitation(hosted, zoeEntry),
+    ctx.rememberInvitation(hosted, anaEntry),
+    ctx.storedInvitations(hosted),
+    [...hosted.items.keys()],
+  ],
+  [
+    true,
+    true,
+    [
+      { ...anaEntry, ended: false },
+      { ...zoeEntry, ended: false },
+    ],
+    ['petalpost:invitations'],
+  ],
+);
+check(
+  'reopening a listed invitation moves it first with its new title and date',
+  [
+    ctx.rememberInvitation(hosted, { ...zoeEntry, title: 'Zoe turns 31' }),
+    ctx.storedInvitations(hosted).map((e) => [e.id, e.title]),
+  ],
+  [
+    true,
+    [
+      [EVENT_ID, 'Zoe turns 31'],
+      [OTHER_ID, 'Botezul Anei'],
+    ],
+  ],
+);
+check(
+  'an ended invitation stays listed as ended until it is opened again or removed',
+  [
+    ctx.endInvitation(hosted, OTHER_ID),
+    ctx.endInvitation(hosted, 'CCCCCCCCCCCCCCCCCCCCCC'),
+    ctx.storedInvitations(hosted).map((e) => [e.id, e.ended]),
+    ctx.rememberInvitation(hosted, anaEntry),
+    ctx.storedInvitations(hosted).map((e) => [e.id, e.ended]),
+    ctx.forgetInvitation(hosted, OTHER_ID),
+    ctx.storedInvitations(hosted).map((e) => e.id),
+  ],
+  [
+    true,
+    true,
+    [
+      [EVENT_ID, false],
+      [OTHER_ID, true],
+    ],
+    true,
+    [
+      [OTHER_ID, false],
+      [EVENT_ID, false],
+    ],
+    true,
+    [EVENT_ID],
+  ],
+);
+const crowded = memory();
+for (let i = 0; i < ctx.INVITATIONS_LIMIT + 1; i += 1)
+  ctx.rememberInvitation(crowded, { ...zoeEntry, id: `${String(i).padStart(2, '0')}${EVENT_ID.slice(2)}` });
+check(
+  `the list keeps the ${ctx.INVITATIONS_LIMIT} invitations opened last`,
+  [ctx.storedInvitations(crowded).length, ctx.storedInvitations(crowded).at(-1).id.slice(0, 2)],
+  [ctx.INVITATIONS_LIMIT, '01'],
+);
+const tampered = memory();
+tampered.setItem(
+  'petalpost:invitations',
+  JSON.stringify([
+    { ...zoeEntry, ended: false },
+    { ...zoeEntry, id: 'short', ended: false },
+    { ...zoeEntry, secret: 'short', ended: false },
+    { ...zoeEntry, lang: 'de', ended: false },
+    { ...zoeEntry, title: 7, ended: false },
+    { ...zoeEntry, date: '12/12/2026', ended: false },
+    { ...zoeEntry, ended: 'yes' },
+    null,
+  ]),
+);
+const notJson = memory();
+notJson.setItem('petalpost:invitations', '{');
+check(
+  'a stored list keeps only well-formed entries, and an unreadable one counts as empty',
+  [ctx.storedInvitations(tampered), ctx.storedInvitations(notJson)],
+  [[{ ...zoeEntry, ended: false }], []],
+);
+const blocked = {
+  getItem() {
+    throw new Error('SecurityError');
+  },
+  setItem() {
+    throw new Error('SecurityError');
+  },
+  removeItem() {
+    throw new Error('SecurityError');
+  },
+};
+check(
+  'blocked storage lists nothing and refuses every change without throwing',
+  [
+    ctx.storedInvitations(blocked),
+    ctx.rememberInvitation(blocked, zoeEntry),
+    ctx.endInvitation(blocked, EVENT_ID),
+    ctx.forgetInvitation(blocked, EVENT_ID),
+  ],
+  [[], false, false, false],
+);
 // The message a WhatsApp link prefills, decoded.
 const whatsappText = (link) => {
   const url = new URL(link);

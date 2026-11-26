@@ -1,11 +1,12 @@
 // Fails when a passkey round trip breaks in Chromium against the real API of scripts/server.js. Checks: in English
 // and Romanian, the host saves a passkey on the management page with a virtual authenticator; another browser whose
 // authenticator holds the synced passkey uses "Find my invitations" on the home page and opens that invitation's
-// management page with an access token, which shows replies and read-only passkey dates; a co-host opens the shared
-// management link, saves a second passkey, and can sign in until that key is removed; both management share buttons
-// need the full link and can fall back to copying it; a passkey session can read the guest list and the reminder
-// queue, rename and delete parties, and requires the management link to add parties, copy personal links or open
-// reminders; a cancelled sign-in stays on the home page; no page breaks the Content-Security-Policy or throws.
+// management page with an access token, which shows replies and read-only passkey dates and leaves My invitations
+// empty; a co-host opens the shared management link, saves a second passkey, and can sign in until that key is
+// removed; both management share buttons need the full link and can fall back to copying it; a passkey session can
+// read the guest list and the reminder queue, rename and delete parties, and requires the management link to add
+// parties, copy personal links or open reminders; a cancelled sign-in stays on the home page; no page breaks the
+// Content-Security-Policy or throws.
 // Run: pnpm test:browser tests/passkey.spec.js
 import { expect, test } from '@playwright/test';
 import { UI } from '../public/js/i18n.js';
@@ -121,6 +122,9 @@ for (const lang of ['en', 'ro']) {
     await expect(other.page.locator('#passkeyList time')).toHaveCount(1);
     await expect(other.page.locator('#savePasskey')).toBeHidden();
     await expect(other.page.locator('#passkeyList button')).toHaveCount(0);
+    await other.page.goto(lang === 'ro' ? 'ro/' : '/');
+    await expect(other.page.locator('#gallery .card').first()).toBeVisible();
+    await expect(other.page.locator('#invitations')).toBeHidden();
     expect([...host.problems, ...other.problems]).toEqual([]);
   });
 }
