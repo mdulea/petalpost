@@ -6,7 +6,7 @@
 // sha256 hex hashes, and no response or log line contains a secret, hash or SQL. Accept-Language picks only the
 // error message language.
 import { apiMessages, normalizeLang } from '../public/js/i18n.js';
-import { ID_PATTERN, REPLY_LIMITS } from '../public/js/rsvp.js';
+import { ID_PATTERN, PARTY_LIMITS, REPLY_LIMITS } from '../public/js/rsvp.js';
 import { DAILY_EVENTS } from './routes/events.js';
 import { ROUTES } from './routes/index.js';
 import { EVENT_PASSKEYS } from './routes/passkeys.js';
@@ -20,6 +20,9 @@ const LIMITS = {
   dailyEvents: DAILY_EVENTS,
   eventResponses: EVENT_RESPONSES,
   eventPasskeys: EVENT_PASSKEYS,
+  partyNameLimit: PARTY_LIMITS.name,
+  defaultSeatsLimit: PARTY_LIMITS.seats,
+  eventParties: PARTY_LIMITS.count,
 };
 const MESSAGES = {
   en: apiMessages('en', LIMITS),

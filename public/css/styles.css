@@ -1683,6 +1683,12 @@ textarea.input {
   flex-wrap: wrap;
   gap: 8px;
 }
+#personalReply fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 @media (max-width: 900px) {
   .manage-body {
     grid-template-columns: 1fr;

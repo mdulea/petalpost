@@ -78,10 +78,10 @@
         and its position stay in the host's browser.
       </p>
       <p>
-        When a guest replies, Petalpost stores the name the guest enters, the answer, the party size and the note, if
-        the guest writes one. A reply can include a note of up to 300 characters, which the host sees with the reply.
-        The note is optional, so a guest who writes a health detail in it, such as an allergy, chooses to share it with
-        the host.
+        For a guest-list invitation, Petalpost stores the names and default seats the host enters for each party. When a
+        guest replies, Petalpost stores the name, the answer, the party size and any note. The guest enters the name for
+        an open invitation. A reply can include a note of up to 300 characters, which the host sees. The note is
+        optional, so a guest who writes a health detail in it, such as an allergy, chooses to share it with the host.
       </p>
       <p>Petalpost also stores when each invitation and each reply was created and last changed.</p>
       <p>
@@ -93,20 +93,21 @@
 
       <h2>Private links</h2>
       <p>
-        Publishing gives the host a management link. Anyone with it can see every reply and delete the invitation.
-        Replying gives the guest an edit link. Anyone with it can see and change that one reply. Anyone with the
-        invitation link can read the invitation and send a reply.
+        Anyone with the management link can see the guest list and replies and delete the invitation. Anyone with the
+        invitation link can read the invitation. For an open invitation, a guest can also reply there and gets an edit
+        link. For a guest-list invitation, a guest uses the party's personal link. Anyone with an edit link or a
+        personal link can see, change or withdraw that one reply.
       </p>
       <p>
         The secret part of a private link comes after the <code>#</code>. Browsers do not send that part of an address
         to any server. The page sends the secret in a request header to prove access, and Petalpost stores only a hash
-        of it. Petalpost therefore cannot recover a lost link.
+        of it. The host can copy a party's personal link again from the tracker.
       </p>
       <p>
         When the host clicks "Publish", the editor saves the management secret in the browser's local storage, so the
         editor can publish changes after a reload. Clearing site data in the browser removes it. The management link
-        still works if the host saved it. The page saves nothing in a guest's browser, but the edit link stays in the
-        address bar and in the browser history.
+        still works if the host saved it. The edit link or personal link stays in the guest's address bar and browser
+        history.
       </p>
       <p>
         On the management page, the host can save a passkey for the invitation. The host's device keeps the passkey's
@@ -136,20 +137,19 @@
 
       <h2>Deletion and retention</h2>
       <p>
-        The host deletes the invitation from the management page. That removes the invitation and all its replies.
-        Petalpost also deletes an invitation and all its replies automatically 90 days after the event date. An
-        invitation without an event date is deleted 90 days after it was last changed, and changing an invitation after
-        its event date delays the deletion. Deleting an invitation also deletes its passkeys and access tokens. A
-        passkey of a deleted invitation stays on the host's device until the host removes it there, but it opens
-        nothing. A guest can change a reply but cannot delete it, so ask the host to delete the invitation, or email
-        contact@petalpost.ro, if you need your reply removed sooner.
+        The host can delete the invitation from the tracker. That removes the invitation, the party names and all
+        replies. Petalpost also deletes them automatically 90 days after the later of the event date and the last change
+        to the invitation. For an invitation without an event date, the 90 days start at the last change. A guest can
+        withdraw a reply through its edit link or personal link. Deleting an invitation also deletes its passkeys and
+        access tokens. A passkey of a deleted invitation stays on the host's device until the host removes it there. It
+        can no longer open the invitation.
       </p>
 
       <h2>Your rights</h2>
       <p>
         Petalpost has no accounts, so the only proof that data is yours is its private link. A host with the management
-        link sees the invitation and every reply, and can correct or delete them. A guest with the edit link sees,
-        changes and receives their own reply. Those links give you a copy of your data without asking anyone.
+        link sees the invitation, guest list and replies. A guest with an edit link or a personal link sees and can
+        change their own reply.
       </p>
       <p>
         For anything else, write to <a href="mailto:contact@petalpost.ro">contact@petalpost.ro</a>. You can ask for
