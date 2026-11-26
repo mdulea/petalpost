@@ -58,7 +58,21 @@
             <h2 id="h-guest-list">
               <svg class="icon"><use href="#i-heart" /></svg>Guest list
             </h2>
-            <p class="hint">No parties on the guest list yet.</p>
+            <p class="hint" id="noParties">No parties on the guest list yet.</p>
+            <ul class="reply-list" id="partyList"></ul>
+            <form id="addParty">
+              <div class="field">
+                <label for="partyName">Party name</label>
+                <input class="input" id="partyName" name="name" required />
+              </div>
+              <div class="field">
+                <label for="defaultSeats">Default seats</label>
+                <input class="input" id="defaultSeats" name="defaultSeats" type="number" min="1" value="1" required />
+              </div>
+              <button class="btn btn-primary btn-small" type="submit">Add party</button>
+              <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Refresh</button>
+            </form>
+            <p class="status" role="status" id="partyStatus"></p>
           </section>
 
           <section class="panel" id="invitationLink" aria-labelledby="h-share">

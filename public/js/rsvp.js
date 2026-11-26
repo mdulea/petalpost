@@ -3,6 +3,7 @@
 import { UI, normalizeLang } from './i18n.js';
 
 export const REPLY_LIMITS = { name: 80, partySize: 10, note: 300 };
+export const PARTY_LIMITS = { name: REPLY_LIMITS.name, seats: 20, count: 300 };
 
 // Ids are 16 random bytes and secrets 32, both base64url without padding.
 export const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -17,7 +18,7 @@ export const REPLY_FIELDS = ['name', 'attending', 'partySize', 'note'];
 // a party of 1 to 10 people; a declined reply has a party size of exactly 0. Without a valid answer, the party size
 // only has to be a whole number. The note is optional and defaults to empty. It is trimmed, its line breaks become
 // \n, and it holds at most 300 code points without control characters other than \n.
-export function makeReply(source) {
+export function makeReply(source, partySizeLimit = REPLY_LIMITS.partySize) {
   const { name, attending, partySize, note = '' } = source && typeof source === 'object' ? source : {};
   const trimmed = typeof name === 'string' ? name.trim() : '';
   const length = [...trimmed].length;
@@ -27,7 +28,7 @@ export function makeReply(source) {
     attending: typeof attending !== 'boolean',
     partySize:
       !Number.isInteger(partySize) ||
-      (attending === true && (partySize < 1 || partySize > REPLY_LIMITS.partySize)) ||
+      (attending === true && (partySize < 1 || partySize > partySizeLimit)) ||
       (attending === false && partySize !== 0),
     note: typeof note !== 'string' || [...noteText].length > REPLY_LIMITS.note || /(?!\n)\p{Cc}/u.test(noteText),
   };
@@ -63,8 +64,25 @@ export const manageLink = (origin, id, secret, lang = 'en') =>
 export const signedInLink = (origin, id, token, lang = 'en') =>
   `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#t=${id}.${token}`;
 
+// The tracker reconstructs the party's link from its management secret without reading any secret from the API.
+export const personalLink = (url, id, secret) => `${url}#p=${id}.${secret}`;
+
+// Separate HMAC domains give each party independent personal and view secrets. Only their hashes are stored.
+export async function partyLinkSecret(managementSecret, partyId, purpose) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(managementSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(`petalpost:${purpose}:${partyId}`));
+  return toBase64url(signature);
+}
+
 // A private link fragment #<prefix><id>.<secret> gives {id, secret}, or null when it is incomplete or malformed.
-// The prefix is '' for management links, 't=' for passkey sign-ins and 'r=' for response edit links.
+// The prefix is '' for management links, 't=' for passkey sign-ins, 'r=' for reply edit links and 'p=' for personal links.
 export function readCredential(hash, prefix) {
   if (!hash.startsWith(`#${prefix}`)) return null;
   const [id, secret, ...rest] = hash.slice(prefix.length + 1).split('.');
@@ -149,6 +167,7 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
 
   const eventPath = (id) => `/api/events/${encodeURIComponent(id)}`;
   const replyPath = (eventId, id) => `${eventPath(eventId)}/responses/${encodeURIComponent(id)}`;
+  const partyPath = (eventId, id) => `${eventPath(eventId)}/parties/${encodeURIComponent(id)}`;
 
   return {
     // Creates the event, or updates it when cred.version is set. record is the editor's {t, d}; the photo
@@ -181,5 +200,12 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     // Signs in with the base64url {id, clientDataJSON, authenticatorData, signature}; data is
     // {eventId, token, expiresAt}, and the token works in place of the management secret until expiresAt.
     signIn: (assertion) => call('POST', '/api/passkeys/sign-in', null, assertion),
+    // Adds one party using an id that the tracker can reuse after a lost confirmation.
+    addParty: (cred, id, party) => call('PUT', partyPath(cred.id, id), cred.secret, { ...party, lang: code }),
+    loadParty: (eventId, cred) => call('GET', partyPath(eventId, cred.id), cred.secret),
+    savePartyReply: (eventId, cred, reply) =>
+      call('PATCH', partyPath(eventId, cred.id), cred.secret, { ...reply, version: cred.version, lang: code }),
+    withdrawPartyReply: (eventId, cred) =>
+      call('DELETE', partyPath(eventId, cred.id), cred.secret, { version: cred.version }),
   };
 }

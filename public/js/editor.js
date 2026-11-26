@@ -5,6 +5,7 @@ import { ACCENTS, categoriesFor, getTemplate, renderInvite, templatesFor } from 
 import { mountInvites } from './mount.js';
 import { animate } from './motion.js';
 import { countdown, eventStart } from './countdown.js';
+import { showPersonalSections } from './personal/sections.js';
 import {
   EDITABLE,
   FIELDS,
@@ -586,6 +587,7 @@ addCounter(nameInput, REPLY_LIMITS.name);
 addCounter(noteInput, REPLY_LIMITS.note, { codePoints: true });
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
+const isPersonal = location.hash.startsWith('#p=');
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
 const withdrawButton = /** @type {HTMLButtonElement} */ (document.getElementById('withdrawReply'));
 const replySavedPanel = document.getElementById('replySaved');
@@ -749,8 +751,27 @@ function setHeading(heading) {
 
 // An invitation link shows nothing of the invite until the event loads, and only a message when loading fails.
 async function openEvent() {
-  const result = await client.loadEvent(state.event);
+  const personal = readCredential(location.hash, 'p=');
+  const copy = UI[lang].personal;
+  const unavailable = (message) => {
+    setHeading(guestCopy.loadFailedHeading);
+    setStatus(message, { keep: true });
+    document.body.classList.add('invite-hidden');
+    for (const id of ['personalSections', 'countdown', 'replyCta', 'reportRow']) {
+      document.getElementById(id).hidden = true;
+    }
+    clearInterval(countdownTimer);
+  };
+  if (isPersonal && !personal) {
+    unavailable(copy.unavailable);
+    return;
+  }
+  const result = personal ? await client.loadParty(state.event, personal) : await client.loadEvent(state.event);
   if (!result.ok) {
+    if (personal) {
+      unavailable(result.message);
+      return;
+    }
     setHeading(result.status === 404 ? guestCopy.missingHeading : guestCopy.loadFailedHeading);
     setStatus(result.message, { keep: true });
     return;
@@ -769,6 +790,17 @@ async function openEvent() {
   );
   document.getElementById('replyCta').hidden = false;
   document.getElementById('reportRow').hidden = false;
+  if (personal) {
+    showPersonalSections(result.data, {
+      client,
+      eventId: state.event,
+      credential: personal,
+      copy,
+      guestCopy,
+      unavailable,
+    });
+    return;
+  }
   // The invitation link of a guest-list invitation takes no reply, so it shows a notice in place of the form.
   const takesReplies = state.d.mode === 'open';
   rsvpForm.hidden = !takesReplies;
@@ -800,6 +832,9 @@ if (state.guest) {
   } else if (state.event) {
     setHeading(guestCopy.openingHeading);
     openEvent();
+    window.addEventListener('hashchange', () => {
+      if (isPersonal || location.hash.startsWith('#p=')) location.reload();
+    });
   } else if (state.sample) {
     setHeading(state.d.title || guestCopy.defaultGuestHeading);
     const sampleNotice = document.getElementById('sampleNotice');

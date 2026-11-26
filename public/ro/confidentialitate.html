@@ -91,10 +91,11 @@
         cookie.
       </p>
       <p>
-        Când un invitat răspunde, Petalpost stochează numele introdus de invitat, răspunsul, numărul de persoane și
-        nota, dacă invitatul scrie una. Un răspuns poate include o notă de cel mult 300 de caractere, pe care gazda o
-        vede împreună cu răspunsul. Nota este opțională, așa că un invitat care scrie în ea o informație despre
-        sănătate, cum ar fi o alergie, alege să o împărtășească gazdei.
+        Pentru o invitație cu listă de invitați, Petalpost stochează numele și numărul implicit de locuri pe care gazda
+        le introduce pentru fiecare grup. Când un invitat răspunde, Petalpost stochează numele, răspunsul, numărul de
+        persoane și nota, dacă există. La o invitație deschisă, invitatul introduce numele. Gazda vede nota de cel mult
+        300 de caractere. Nota este opțională, așa că un invitat care scrie în ea o informație despre sănătate, cum ar
+        fi o alergie, alege să o împărtășească gazdei.
       </p>
       <p>Petalpost stochează și momentul în care fiecare invitație și fiecare răspuns au fost create și modificate.</p>
       <p>
@@ -107,20 +108,21 @@
 
       <h2>Linkuri private</h2>
       <p>
-        Publicarea oferă gazdei un link de administrare. Oricine îl are poate vedea toate răspunsurile și poate șterge
-        invitația. Trimiterea unui răspuns oferă invitatului un link de modificare. Oricine îl are poate vedea și
-        schimba acel răspuns. Oricine are linkul invitației o poate citi și poate trimite un răspuns.
+        Oricine are linkul de administrare poate vedea lista de invitați și răspunsurile și poate șterge invitația.
+        Oricine are linkul invitației o poate citi. La o invitație deschisă, invitatul poate și răspunde acolo și
+        primește un link de modificare. La o invitație cu listă de invitați, folosește linkul personal al grupului.
+        Oricine are un link de modificare sau un link personal poate vedea, modifica ori retrage acel răspuns.
       </p>
       <p>
         Partea secretă a unui link privat apare după <code>#</code>. Browserele nu trimit această parte a adresei către
         niciun server. Pagina trimite secretul într-un antet al cererii pentru a dovedi accesul, iar Petalpost stochează
-        doar un hash al acestuia. Din acest motiv, Petalpost nu poate recupera un link pierdut.
+        doar un hash al acestuia. Gazda poate copia din nou linkul personal al unui grup din pagina de administrare.
       </p>
       <p>
         Când gazda apasă „Publică”, editorul salvează secretul de administrare în stocarea locală a browserului, astfel
         încât să poată publica modificări după o reîncărcare. Ștergerea datelor site-ului îl elimină. Linkul de
-        administrare rămâne valabil dacă gazda l-a salvat. Pagina nu salvează nimic în browserul invitatului, însă
-        linkul de modificare rămâne în bara de adrese și în istoricul browserului.
+        administrare rămâne valabil dacă gazda l-a salvat. Linkul de modificare sau linkul personal rămâne în bara de
+        adrese și în istoricul browserului invitatului.
       </p>
 
       <h2>Temeiul legal al prelucrării</h2>
@@ -144,21 +146,19 @@
 
       <h2>Ștergere și durată de păstrare</h2>
       <p>
-        Gazda poate șterge invitația din pagina de administrare, eliminând invitația și toate răspunsurile. Petalpost
-        șterge automat o invitație și toate răspunsurile ei la 90 de zile după data evenimentului. O invitație fără dată
-        este ștearsă la 90 de zile de la ultima modificare, iar modificarea după data evenimentului amână ștergerea.
-        Ștergerea unei invitații șterge și cheile ei de acces și tokenurile de acces. O cheie de acces a unei invitații
-        șterse rămâne pe dispozitivul gazdei până când gazda o elimină, dar nu mai deschide nimic. Un invitat își poate
-        schimba răspunsul, dar nu îl poate șterge singur; dacă dorești ștergerea mai devreme, roagă gazda să șteargă
-        invitația sau scrie la contact@petalpost.ro.
+        Gazda poate șterge invitația din pagina de administrare. Odată cu invitația dispar numele grupurilor și toate
+        răspunsurile. Petalpost le șterge și automat, la 90 de zile de la data evenimentului sau de la ultima modificare
+        a invitației, dacă aceasta este mai recentă. Pentru o invitație fără dată, cele 90 de zile curg de la ultima
+        modificare. Invitatul își poate retrage răspunsul prin linkul de modificare sau prin linkul personal.
+        Ștergerea invitației elimină și cheile ei de acces și tokenurile de acces. O cheie de acces a unei invitații
+        șterse rămâne pe dispozitivul gazdei până când gazda o elimină. Cheia nu mai poate deschide invitația.
       </p>
 
       <h2>Drepturile tale</h2>
       <p>
         Petalpost nu are conturi, deci singura dovadă că datele îți aparțin este linkul privat. Gazda cu linkul de
-        administrare vede invitația și toate răspunsurile și le poate corecta sau șterge. Invitatul cu linkul de
-        modificare își vede și modifică propriul răspuns. Aceste linkuri îți oferă o copie a datelor fără să ceri
-        nimănui.
+        administrare vede invitația, lista de invitați și răspunsurile. Invitatul cu linkul de modificare sau cu linkul
+        personal își poate vedea și modifica propriul răspuns.
       </p>
       <p>
         Pentru orice altă solicitare, scrie la <a href="mailto:contact@petalpost.ro">contact@petalpost.ro</a>. Poți cere

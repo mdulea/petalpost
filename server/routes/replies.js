@@ -16,6 +16,7 @@
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { makeReply, tally } from '../../public/js/rsvp.js';
+import { listParties } from './parties.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
 export const EVENT_RESPONSES = 200;
@@ -34,7 +35,7 @@ async function listResponses({ db, request, ids: [id] }) {
   const event = await ownedEvent(db, id, secret, { lock: false });
   const { rows } = await db.query(
     `select name, attending, party_size, note, created_at, updated_at from responses
-     where event_id = $1 order by created_at, updated_at`,
+     where event_id = $1 and party_id is null order by created_at, updated_at`,
     [id],
   );
   const responses = rows.map((r) => ({
@@ -45,7 +46,8 @@ async function listResponses({ db, request, ids: [id] }) {
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   }));
-  return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses) });
+  const parties = modeOf(event.d) === 'guestList' ? await listParties(db, id) : undefined;
+  return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses), parties });
 }
 
 // The response row, locked for the transaction, after checking that it belongs to the event and that the edit
@@ -53,7 +55,7 @@ async function listResponses({ db, request, ids: [id] }) {
 async function ownedReply(tx, eventId, id, secret) {
   const reply = (
     await tx.query(
-      'select event_id, secret_hash, name, attending, party_size, note, version from responses where id = $1 for update',
+      'select event_id, secret_hash, name, attending, party_size, note, version from responses where id = $1 and party_id is null for update',
       [id],
     )
   ).rows[0];

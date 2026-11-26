@@ -215,6 +215,28 @@ export const UI = {
       openingHeading: 'Opening the invitation',
       sampleNotice: 'Sample invitation. Replies submitted here are not saved.',
     },
+    personal: {
+      greeting: (name) => `Hello, ${name}!`,
+      unavailable: 'This link no longer works. Ask the host for a new one.',
+      heading: 'Reply to the host',
+      attending: 'Will you come?',
+      yes: 'Yes, I will come',
+      no: 'No, I cannot come',
+      seats: 'People in your party, you included',
+      note: 'Note (optional)',
+      noteHint: 'Dietary needs or a message. Visible only to the host.',
+      send: 'Send reply',
+      withdraw: 'Withdraw my reply',
+      withdrawn: 'Reply withdrawn',
+    },
+    guestList: {
+      defaultSeats: (n) => `Default seats: ${n}`,
+      answer: (yes, n) => `Replied. ${yes ? 'Yes' : 'No'}, ${n} ${n === 1 ? 'person' : 'people'}.`,
+      noReply: 'No reply yet',
+      link: 'Personal link',
+      copy: 'Copy personal link',
+      copied: 'Personal link copied.',
+    },
     invite: {
       photoAlt: 'Event photo',
     },
@@ -343,6 +365,28 @@ export const UI = {
       openingHeading: 'Se deschide invitația',
       sampleNotice: 'Invitație demonstrativă. Răspunsurile trimise aici nu se salvează.',
     },
+    personal: {
+      greeting: (name) => `Bună, ${name}!`,
+      unavailable: 'Acest link nu mai funcționează. Cere-i gazdei un link nou.',
+      heading: 'Confirmă participarea',
+      attending: 'Vei participa?',
+      yes: 'Da, voi veni',
+      no: 'Nu pot ajunge',
+      seats: 'Număr de persoane, inclusiv tu',
+      note: 'Notă (opțional)',
+      noteHint: 'Restricții alimentare sau un mesaj. Doar gazda îl vede.',
+      send: 'Trimite răspunsul',
+      withdraw: 'Retrage răspunsul',
+      withdrawn: 'Răspuns retras',
+    },
+    guestList: {
+      defaultSeats: (n) => `Locuri implicite: ${n}`,
+      answer: (yes, n) => `A răspuns. ${yes ? 'Da' : 'Nu'}, ${n} ${n === 1 ? 'persoană' : 'persoane'}.`,
+      noReply: 'Fără răspuns',
+      link: 'Link personal',
+      copy: 'Copiază linkul personal',
+      copied: 'Linkul personal a fost copiat.',
+    },
     invite: {
       photoAlt: 'Fotografia evenimentului',
     },
@@ -417,7 +461,17 @@ export const UI = {
  */
 export function apiMessages(
   lang,
-  { replyNameLimit, partySizeLimit, replyNoteLimit, dailyEvents, eventResponses, eventPasskeys },
+  {
+    replyNameLimit,
+    partySizeLimit,
+    replyNoteLimit,
+    dailyEvents,
+    eventResponses,
+    eventPasskeys,
+    partyNameLimit,
+    defaultSeatsLimit,
+    eventParties,
+  },
 ) {
   if (normalizeLang(lang) === 'ro') {
     return {
@@ -447,6 +501,12 @@ export function apiMessages(
       passkeyMissing:
         'Această cheie de acces nu mai deschide nicio invitație. Este posibil ca invitația să fi fost ștearsă.',
       eventPasskeys: `Această invitație are deja ${eventPasskeys} chei de acces, limita maximă acceptată.`,
+      party: `Introdu un nume de 1 până la ${partyNameLimit} de caractere și alege între 1 și ${defaultSeatsLimit} de locuri.`,
+      partyMode: 'Doar invitațiile cu listă de invitați pot avea linkuri personale.',
+      partyLimit: `Lista de invitați poate avea cel mult ${eventParties} de grupuri.`,
+      partyId: 'Grupul nu a putut fi adăugat. Încearcă din nou.',
+      personalLink: UI.ro.personal.unavailable,
+      partyReply: 'Verifică numărul de locuri și nota, apoi trimite din nou răspunsul.',
     };
   }
   return {
@@ -474,5 +534,11 @@ export function apiMessages(
     passkey: 'The passkey could not be checked. Try again.',
     passkeyMissing: 'This passkey no longer opens an invitation. The invitation may have been deleted.',
     eventPasskeys: `This invitation already has ${eventPasskeys} passkeys, the most it can take.`,
+    party: `Enter a name of 1 to ${partyNameLimit} characters and choose between 1 and ${defaultSeatsLimit} seats.`,
+    partyMode: 'Only guest-list invitations can have personal links.',
+    partyLimit: `The guest list can have up to ${eventParties} parties.`,
+    partyId: 'The party could not be added. Try again.',
+    personalLink: UI.en.personal.unavailable,
+    partyReply: 'Check the number of seats and the note, then send your reply again.',
   };
 }

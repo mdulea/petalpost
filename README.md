@@ -73,6 +73,7 @@ The promises:
 - Hosts and guests need no account and no email address.
 - The site sets no cookies and loads nothing from another origin except Vercel Web Analytics, which sets no cookie.
 - The photo never leaves the host's browser.
+- The server stores the party names the host enters on a guest list. Deleting the invitation deletes those names.
 - Petalpost counts a fixed set of actions per day and page language, and stores no cookie, identifier, IP address or invitation content with the counts.
 - The site is in English and Romanian. Botez, Cununie and Moț exist only in Romanian.
 
@@ -82,6 +83,7 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
+- add a party with a name and default seats, copy its personal link, and see its reply and note in the tracker;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
@@ -93,7 +95,6 @@ A host cannot:
 - put the photo on the published invitation, which shows the template art instead;
 - recover a lost management link, although a saved passkey still opens the management page;
 - change the mode after the first publish;
-- add parties to a guest list, so a guest-list invitation takes no replies yet;
 - edit or delete a single reply;
 - publish changes from another browser, because only the publishing browser keeps the management secret;
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
@@ -105,7 +106,8 @@ A guest can:
 - open the invitation link in any browser, add the event to a calendar with reminders one day and two hours before it, and open the address on a map;
 - see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
-- view, change or withdraw that reply through the reply edit link.
+- view, change or withdraw an open-mode reply through its reply edit link;
+- open a personal link to see the party's greeting and reply on its behalf. The guest can view, change or withdraw the reply through the same link.
 
 A guest cannot see other guests' replies or the totals.
 
@@ -221,6 +223,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
+The `guestList` group has the tracker guest list strings, and `personal` has the personal link greeting and reply form.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.

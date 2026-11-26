@@ -872,6 +872,9 @@ const apiLimits = {
   dailyEvents: 1,
   eventResponses: 1,
   eventPasskeys: 1,
+  partyNameLimit: 1,
+  defaultSeatsLimit: 1,
+  eventParties: 1,
 };
 const parityGaps = (groups) => {
   const [en, ro] = [keyPaths(groups.en), keyPaths(groups.ro)];
