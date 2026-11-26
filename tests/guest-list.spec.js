@@ -35,8 +35,6 @@ const COPY = {
       'Victor,No reply yet,3,,',
     ],
     dateRequired: 'Add an event date before publishing a guest-list invitation.',
-    addParty: 'Add party',
-    copyPersonal: 'Copy personal link',
     endedHeading: 'This invitation has ended',
     endedMessage: 'This invitation has ended.',
   },
@@ -59,8 +57,6 @@ const COPY = {
       'Victor;Fără răspuns;3;;',
     ],
     dateRequired: 'Adaugă data evenimentului înainte de a publica o invitație cu listă de invitați.',
-    addParty: 'Adaugă un grup',
-    copyPersonal: 'Copiază linkul personal',
     endedHeading: 'Această invitație s-a încheiat',
     endedMessage: 'Această invitație s-a încheiat.',
   },
@@ -185,7 +181,7 @@ for (const lang of ['en', 'ro']) {
   test(`in ${lang}, a guest-list invitation needs a date and shows ended on every link after retention`, async ({
     browser,
   }) => {
-    const host = await newBrowser(browser, { permissions: ['clipboard-read', 'clipboard-write'] });
+    const host = await newBrowser(browser);
     await host.page.goto(copy.editor);
     await host.page.check('input[name="mode"][value="guestList"]');
     await host.page.fill('#title', copy.title);
@@ -204,17 +200,16 @@ for (const lang of ['en', 'ro']) {
     await host.page.goto(manage);
     await host.page.locator('#partyName').fill('Familia Radu');
     await host.page.locator('#defaultSeats').fill('2');
-    await host.page.getByRole('button', { name: copy.addParty }).click();
+    await host.page.getByRole('button', { name: copy.add }).click();
     const row = host.page.locator('#partyList li').filter({ hasText: 'Familia Radu' });
-    await row.getByRole('button', { name: copy.copyPersonal }).click();
-    const personal = await host.page.evaluate(() => navigator.clipboard.readText());
+    const personal = await row.locator('input[readonly]').inputValue();
 
     const response = await host.page.request.get('/api/retention');
     expect(response.status()).toBe(200);
 
     await host.page.locator('#partyName').fill('Another party');
     await host.page.locator('#defaultSeats').fill('2');
-    await host.page.getByRole('button', { name: copy.addParty }).click();
+    await host.page.getByRole('button', { name: copy.add }).click();
     await expect(host.page.locator('#manageHeading')).toHaveText(copy.endedHeading);
     await expect(host.page.locator('#manageStatus')).toHaveText(copy.endedMessage);
     await expect(host.page.locator('#manageContent')).toBeHidden();

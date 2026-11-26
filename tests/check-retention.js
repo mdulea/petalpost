@@ -1,8 +1,8 @@
 // Fails when guest-list retention breaks in the RSVP API or dynamic /e/{id} route. Checks: a guest-list invitation
 // is deleted after 23:59 Europe/Bucharest time on the day after the event and not before, across both the spring
 // and autumn daylight saving changes and even when updated on the day after the event; the deletion removes its
-// parties and their replies; afterwards the public invitation API, the tracker API, the personal link API and the
-// /e/{id} and /ro/e/{id} pages return 410 with "This invitation has ended" (and its Romanian wording) without event
+// parties and their replies; afterwards the public invitation API, the tracker API, the personal link API, the view
+// link API and the /e/{id} and /ro/e/{id} pages return 410 with "This invitation has ended" (and its Romanian wording) without event
 // details; a retried publish cannot restore an ended link; open invitations keep the 90-day rule, including one
 // without a date.
 // Each test uses its own migrated in-memory PGlite database.
@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeInviteData } from '../public/js/invite.js';
-import { newId, partyLinkSecret } from '../public/js/rsvp.js';
+import { newId, partyLinkSecret, viewLinkSecret } from '../public/js/rsvp.js';
 import { getTemplate } from '../public/js/templates.js';
 import { createEventPage } from '../server/event-page.js';
 import { guest, host, openDatabase, setup } from './api-setup.js';
@@ -107,6 +107,10 @@ for (const lang of ['en', 'ro']) {
     const publicRead = await browser.loadEvent(cred.id);
     const trackerRead = await browser.loadResponses(cred);
     const personalRead = await browser.loadParty(cred.id, personal);
+    const viewRead = await browser.loadPartyView(cred.id, {
+      id: partyId,
+      secret: await viewLinkSecret(personal.secret, partyId),
+    });
     const personalPatch = await browser.savePartyReply(cred.id, personal, { attending: false, partySize: 0, note: '' });
     const personalDelete = await browser.withdrawPartyReply(cred.id, personal);
     const hostUpdate = await browser.publish(
@@ -118,6 +122,7 @@ for (const lang of ['en', 'ro']) {
       publicRead,
       trackerRead,
       personalRead,
+      viewRead,
       personalPatch,
       personalDelete,
       hostUpdate,
