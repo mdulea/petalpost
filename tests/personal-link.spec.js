@@ -1,4 +1,4 @@
-// Checks that a host copies a party's personal link, previews the party's page without recording an opened time,
+// Checks that a host shares a party's personal link message in its language, previews the party's page without recording an opened time,
 // filters parties by status (not opened, opened, replied), and sees opened times, replies, edits and withdrawal
 // in both languages. Also checks revoke, regenerate and the unavailable page in both languages.
 // Also checks guest replies above default seats, over-default markers, accepted seats and host seat edits.
@@ -9,10 +9,13 @@ import { newBrowser } from './browser-setup.js';
 const COPY = {
   en: {
     editor: '/editor.html?t=birthday',
+    copy: 'Copy message',
+    link: /Personal link · Familia Radu/,
+    whatsapp: 'Send on WhatsApp',
+    greeting: (name) => `Hello, ${name}!`,
+    replyHeading: 'Reply to the host',
     add: 'Add to guest list',
-    copy: 'Copy personal link',
     preview: 'Preview as this guest',
-    greeting: 'Hello, Familia Radu!',
     notOpened: 'Not opened',
     opened: 'Opened',
     noReply: 'No reply yet',
@@ -22,7 +25,9 @@ const COPY = {
     updated: 'Reply updated',
     withdrawn: 'Reply withdrawn',
     decline: 'No, I cannot come',
-    copied: 'Personal link copied.',
+    copied: 'Message copied.',
+    linkPath: /\/e\/[\w-]+#p=[\w-]+\.[\w-]+$/,
+    excludeRo: true,
     revoke: 'Revoke personal link',
     regenerate: 'Regenerate personal link',
     revoked: 'Personal link revoked.',
@@ -34,10 +39,13 @@ const COPY = {
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
+    copy: 'Copiază mesajul',
+    link: /Link personal · Familia Radu/,
+    whatsapp: 'Trimite pe WhatsApp',
+    greeting: (name) => `Bună, ${name}!`,
+    replyHeading: 'Confirmă participarea',
     add: 'Adaugă pe lista de invitați',
-    copy: 'Copiază linkul personal',
     preview: 'Previzualizează ca acest invitat',
-    greeting: 'Bună, Familia Radu!',
     notOpened: 'Nedeschis',
     opened: 'Deschis',
     noReply: 'Fără răspuns',
@@ -47,7 +55,9 @@ const COPY = {
     updated: 'Răspuns actualizat',
     withdrawn: 'Răspuns retras',
     decline: 'Nu pot ajunge',
-    copied: 'Linkul personal a fost copiat.',
+    copied: 'Mesajul a fost copiat.',
+    linkPath: /\/ro\/e\/[\w-]+#p=[\w-]+\.[\w-]+$/,
+    excludeRo: false,
     revoke: 'Revocă linkul personal',
     regenerate: 'Generează un link personal nou',
     revoked: 'Linkul personal a fost revocat.',
@@ -60,10 +70,12 @@ const COPY = {
 };
 
 for (const lang of ['en', 'ro']) {
-  test(`in ${lang}, a host tracks opened status, previews a party, filters by status and sees replies`, async ({
+  test(`in ${lang}, a host shares a personal link in each party's language and the party manages its reply there`, async ({
     browser,
   }) => {
     const copy = COPY[lang];
+    const otherLang = lang === 'en' ? 'ro' : 'en';
+    const otherCopy = COPY[otherLang];
     const host = await newBrowser(browser, { permissions: ['clipboard-read', 'clipboard-write'] });
     await host.page.goto(copy.editor);
     await host.page.check('input[name="mode"][value="guestList"]');
@@ -73,26 +85,29 @@ for (const lang of ['en', 'ro']) {
     await expect(manage).toHaveValue(/manage\.html#/);
     await host.page.goto(await manage.inputValue());
 
-    await host.page.locator('#partyName').fill('Familia Radu', { timeout: 5000 });
+    // The language picker defaults to the invitation's language.
+    await expect(host.page.locator('#partyLang')).toHaveValue(lang, { timeout: 5000 });
+    await host.page.locator('#partyName').fill('Familia Radu');
     await host.page.locator('#defaultSeats').fill('3');
     await host.page.getByRole('button', { name: copy.add }).click();
     const row = host.page.locator('#partyList li').filter({ hasText: 'Familia Radu' });
     await expect(row).toContainText(copy.notOpened);
-    await expect(row).not.toContainText(copy.firstOpened);
 
-    await host.page.locator('#partyName').fill('Familia Dima');
+    // A second party in the opposite language gets a message and personal link in that language.
+    await host.page.locator('#partyName').fill('Anna & Tom');
     await host.page.locator('#defaultSeats').fill('2');
+    await host.page.locator('#partyLang').selectOption(otherLang);
     await host.page.getByRole('button', { name: copy.add }).click();
-    const otherRow = host.page.locator('#partyList li').filter({ hasText: 'Familia Dima' });
-    await expect(otherRow).toContainText(copy.notOpened);
-
-    // Preview as this guest shows the party's greeting without a reply form and records no opened time.
+    const abroadRow = host.page.locator('#partyList li').filter({ hasText: 'Anna & Tom' });
+    await expect(abroadRow).toContainText(copy.notOpened);
+    await expect(host.page.locator('#partyLang')).toHaveValue(lang);
+    await expect(row).not.toContainText(copy.firstOpened);
     const [previewPage] = await Promise.all([
       host.page.context().waitForEvent('page'),
       row.getByRole('link', { name: copy.preview }).click(),
     ]);
     await expect(previewPage.locator('#previewCard .invite-title')).toHaveText('Daria');
-    await expect(previewPage.getByRole('heading', { name: copy.greeting })).toBeVisible();
+    await expect(previewPage.getByRole('heading', { name: copy.greeting('Familia Radu') })).toBeVisible();
     await expect(previewPage.locator('#personalReply')).toHaveCount(0);
     await expect(previewPage.locator('#rsvpForm')).toBeHidden();
     await previewPage.close();
@@ -103,13 +118,19 @@ for (const lang of ['en', 'ro']) {
 
     await row.getByRole('button', { name: copy.copy }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
-    const link = await host.page.evaluate(() => navigator.clipboard.readText());
-    expect(link).toMatch(/\/e\/[\w-]+#p=[\w-]+\.[\w-]+$/);
+    const copiedMessage = (await host.page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n');
+    const whatsappHref = await row.getByRole('link', { name: copy.whatsapp }).getAttribute('href');
+    expect(new URL(whatsappHref).searchParams.get('text')).toBe(copiedMessage);
+    expect(copiedMessage.startsWith(`${copy.greeting('Familia Radu')}\n`)).toBe(true);
+    const link = copiedMessage.split('\n').at(-1);
+    expect(link).toMatch(copy.linkPath);
+    if (copy.excludeRo) expect(link).not.toContain('/ro/e/');
 
     const guest = await newBrowser(browser);
     await guest.page.goto(link);
+    await expect(guest.page.locator('html')).toHaveAttribute('lang', lang);
     await expect(guest.page.locator('#previewCard .invite-title')).toHaveText('Daria');
-    await expect(guest.page.getByRole('heading', { name: copy.greeting })).toBeVisible();
+    await expect(guest.page.getByRole('heading', { name: copy.greeting('Familia Radu') })).toBeVisible();
 
     await host.page.reload();
     await expect(row).toContainText(copy.opened);
@@ -123,7 +144,7 @@ for (const lang of ['en', 'ro']) {
     await expect(row).toBeVisible();
     await filter.selectOption('notOpened');
     await expect(visibleRows).toHaveCount(1);
-    await expect(otherRow).toBeVisible();
+    await expect(abroadRow).toBeVisible();
     await filter.selectOption('replied');
     await expect(visibleRows).toHaveCount(0);
     await filter.selectOption('all');
@@ -151,7 +172,7 @@ for (const lang of ['en', 'ro']) {
       await oldLink.page.goto(url);
       await expect(oldLink.page.getByText(copy.unavailable)).toBeVisible();
       await expect(oldLink.page.getByText('Daria', { exact: true })).toBeHidden();
-      await expect(oldLink.page.getByRole('heading', { name: copy.greeting })).toBeHidden();
+      await expect(oldLink.page.getByRole('heading', { name: copy.greeting('Familia Radu') })).toBeHidden();
       await expect(oldLink.page.locator('#personalReply')).toBeHidden();
     };
     host.page.once('dialog', (dialog) => dialog.accept());
@@ -170,11 +191,12 @@ for (const lang of ['en', 'ro']) {
       host.page.context().waitForEvent('page'),
       row.getByRole('link', { name: copy.preview }).click(),
     ]);
-    await expect(regeneratedPreview.getByRole('heading', { name: copy.greeting })).toBeVisible();
+    await expect(regeneratedPreview.getByRole('heading', { name: copy.greeting('Familia Radu') })).toBeVisible();
     await regeneratedPreview.close();
     await row.getByRole('button', { name: copy.copy }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
-    const newLink = await host.page.evaluate(() => navigator.clipboard.readText());
+    const newMessage = (await host.page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n');
+    const newLink = newMessage.split('\n').at(-1);
     expect(newLink).not.toBe(link);
     await expectUnavailable();
 
@@ -199,10 +221,31 @@ for (const lang of ['en', 'ro']) {
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.regenerated);
     await row.getByRole('button', { name: copy.copy }).click();
     await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
-    await guest.page.goto(await host.page.evaluate(() => navigator.clipboard.readText()));
+    const regeneratedMessage = (await host.page.evaluate(() => navigator.clipboard.readText())).replaceAll(
+      '\r\n',
+      '\n',
+    );
+    await guest.page.goto(regeneratedMessage.split('\n').at(-1));
     await expect(form.getByRole('status')).toHaveText(copy.noReply);
     await expectUnavailable(newLink);
-    expect([...host.problems, ...guest.problems, ...oldLink.problems]).toEqual([]);
+
+    // Check the abroad party's WhatsApp/copy message and personal link in the opposite language.
+    await abroadRow.getByRole('button', { name: copy.copy }).click();
+    await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
+    const abroadMessage = (await host.page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n');
+    const abroadWhatsapp = await abroadRow.getByRole('link', { name: copy.whatsapp }).getAttribute('href');
+    expect(new URL(abroadWhatsapp).searchParams.get('text')).toBe(abroadMessage);
+    expect(abroadMessage.startsWith(`${otherCopy.greeting('Anna & Tom')}\n`)).toBe(true);
+    const abroadLink = abroadMessage.split('\n').at(-1);
+    expect(abroadLink).toMatch(otherCopy.linkPath);
+    if (otherCopy.excludeRo) expect(abroadLink).not.toContain('/ro/e/');
+
+    const abroadGuest = await newBrowser(browser);
+    await abroadGuest.page.goto(abroadLink);
+    await expect(abroadGuest.page.locator('html')).toHaveAttribute('lang', otherLang);
+    await expect(abroadGuest.page.getByRole('heading', { name: otherCopy.greeting('Anna & Tom') })).toBeVisible();
+    await expect(abroadGuest.page.getByRole('heading', { name: otherCopy.replyHeading })).toBeVisible();
+    expect([...host.problems, ...guest.problems, ...oldLink.problems, ...abroadGuest.problems]).toEqual([]);
   });
 
   test(`in ${lang}, a guest can reply over default up to 20, the tracker marks the difference and counts totals, and the host can edit seats`, async ({
@@ -223,8 +266,7 @@ for (const lang of ['en', 'ro']) {
     await host.page.getByRole('button', { name: copy.add }).click();
     const row = host.page.locator('#partyList li').filter({ hasText: 'Familia Radu' });
     await expect(row).toContainText(copy.notOpened);
-    await row.getByRole('button', { name: copy.copy }).click();
-    const link = await host.page.evaluate(() => navigator.clipboard.readText());
+    const link = await row.getByRole('textbox', { name: copy.link }).inputValue();
 
     const guest = await newBrowser(browser);
     await guest.page.goto(link);

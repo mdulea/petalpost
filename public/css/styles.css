@@ -1423,6 +1423,10 @@ textarea.input {
   html:has(.jump-preview) {
     scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
+  /* Finish the browser's focus scroll before the editor clears the floating button. */
+  html:has(.jump-preview):has(#form :focus) {
+    scroll-behavior: auto;
+  }
   .editor {
     grid-template-columns: 1fr;
   }

@@ -67,6 +67,13 @@
                 <label for="defaultSeats">Default seats</label>
                 <input class="input" id="defaultSeats" name="defaultSeats" type="number" min="1" value="1" required />
               </div>
+              <div class="field">
+                <label for="partyLang">Language</label>
+                <select class="input" id="partyLang" name="lang">
+                  <option value="en" selected>English</option>
+                  <option value="ro">Romanian</option>
+                </select>
+              </div>
               <button class="btn btn-primary btn-small" type="submit">Add to guest list</button>
             </form>
             <p class="hint" id="partyManagementLinkRequired" hidden>

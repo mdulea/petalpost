@@ -1,7 +1,7 @@
 // Invite records, share links and the calendar file. No DOM access, so tests/check-invite.js runs it in Node.
 
 import { eventFields } from './countdown.js';
-import { UI, normalizeLang } from './i18n.js';
+import { UI, localeOf, normalizeLang } from './i18n.js';
 import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
 import { ACCENTS, formatDate, formatTime, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
@@ -134,11 +134,24 @@ export function eventPreviewMeta(data, locale = 'en-US') {
   };
 }
 
+// A WhatsApp link that prefills text.
+export const whatsappUrl = (text) => `https://wa.me/?text=${encodeURIComponent(text)}`;
+
 // A WhatsApp link that opens a message with the invite's title, its date and venue line, and url, each on its own
 // line and with empty lines left out. url is the invitation link from eventLink, never the management link.
 export function whatsappLink(data, locale, url) {
   const { title, details } = eventPreviewMeta(data, locale);
-  return `https://wa.me/?text=${encodeURIComponent([title, details, url].filter(Boolean).join('\n'))}`;
+  return whatsappUrl([title, details, url].filter(Boolean).join('\n'));
+}
+
+// The message a host sends a party with its personal link, in the party's language: the party's greeting, the
+// invite's title and date and venue line in that language's locale, and the personal link, with empty lines left out.
+export function personalMessage(party, data, url) {
+  const code = normalizeLang(party.lang);
+  const name = typeof party.name === 'string' ? party.name.trim() : '';
+  const greeting = name ? UI[code].personal.greeting(name) : '';
+  const { title, details } = eventPreviewMeta(data, localeOf(code));
+  return [greeting, title, details, url].filter(Boolean).join('\n');
 }
 
 // The single contact address of the site, for users and authorities. scripts/pages.js puts it in every footer.

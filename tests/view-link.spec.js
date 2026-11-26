@@ -7,8 +7,6 @@ const COPY = {
   en: {
     editor: '/editor.html?t=birthday',
     add: 'Add to guest list',
-    copy: 'Copy personal link',
-    copied: 'Personal link copied.',
     greeting: 'Hello, Familia Radu!',
     sent: 'Reply sent',
     showFriend: 'Show a friend',
@@ -21,8 +19,6 @@ const COPY = {
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
     add: 'Adaugă pe lista de invitați',
-    copy: 'Copiază linkul personal',
-    copied: 'Linkul personal a fost copiat.',
     greeting: 'Bună, Familia Radu!',
     sent: 'Răspuns trimis',
     showFriend: 'Arată invitația unui prieten',
@@ -49,9 +45,7 @@ for (const lang of ['en', 'ro']) {
     await host.page.locator('#partyName').fill('Familia Radu');
     await host.page.getByRole('button', { name: copy.add }).click();
     const row = host.page.locator('#partyList li').filter({ hasText: 'Familia Radu' });
-    await row.getByRole('button', { name: copy.copy }).click();
-    await expect(host.page.locator('#partyStatus')).toHaveText(copy.copied);
-    const link = await host.page.evaluate(() => navigator.clipboard.readText());
+    const link = await row.getByRole('textbox', { name: / · Familia Radu$/ }).inputValue();
 
     const guest = await newBrowser(browser, options);
     await guest.page.addInitScript((useShareSheet) => {

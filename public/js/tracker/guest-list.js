@@ -1,7 +1,7 @@
 // Edits the guest list and renders its parties, replies, totals and personal links.
 import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
-import { eventLink } from '../invite.js';
+import { eventLink, personalMessage, whatsappUrl } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, partyStatus, personalLink, viewLink, viewLinkSecret } from '../rsvp.js';
 import { downloadCsv } from './download.js';
@@ -59,6 +59,7 @@ function init({ client, cred, lang, load, signedIn }) {
   const words = UI[lang].guestList;
   const namesInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('partyName'));
   const seats = /** @type {HTMLInputElement} */ (document.getElementById('defaultSeats'));
+  const language = /** @type {HTMLSelectElement} */ (document.getElementById('partyLang'));
   seats.max = String(PARTY_LIMITS.seats);
   // Hold the remaining request unchanged until an ambiguous result can be retried.
   let retry;
@@ -76,13 +77,18 @@ function init({ client, cred, lang, load, signedIn }) {
         setStatus(words.limit(PARTY_LIMITS.count));
         return;
       }
-      addition = { entries: names.map((name) => ({ name, id: newId() })), defaultSeats: seats.valueAsNumber };
+      addition = {
+        entries: names.map((name) => ({ name, id: newId() })),
+        defaultSeats: seats.valueAsNumber,
+        lang: language.value,
+      };
     }
     await writeAndReload(load, form.elements, async () => {
-      const { entries, defaultSeats } = addition;
-      const result = await client.addParties(cred, entries, defaultSeats);
+      const { entries, defaultSeats, lang } = addition;
+      const result = await client.addParties(cred, entries, defaultSeats, lang);
       const remaining = entries.slice(result.added);
-      retry = !result.ok && (result.status === 0 || result.status >= 500) ? { entries: remaining, defaultSeats } : null;
+      retry =
+        !result.ok && (result.status === 0 || result.status >= 500) ? { entries: remaining, defaultSeats, lang } : null;
       namesInput.readOnly = seats.readOnly = Boolean(retry);
       if (result.ok) {
         form.reset();
@@ -94,6 +100,7 @@ function init({ client, cred, lang, load, signedIn }) {
         .join(' ');
       return { ...result, message };
     });
+    language.disabled = Boolean(retry);
   });
 }
 
@@ -136,18 +143,20 @@ function seatEditor(party, { client, cred, load }, words) {
   return form;
 }
 
-async function renderParty(party, { client, cred, copy, load, signedIn, formatTime }, words) {
+async function renderParty(party, { client, cred, load, signedIn, formatTime }, invite, words) {
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
   name.textContent = party.name;
+  const language = document.createElement('span');
+  language.textContent = words.language[party.lang];
   const seats = document.createElement('span');
   seats.textContent = words.defaultSeats(party.defaultSeats);
   const reply = document.createElement('span');
   reply.textContent = party.reply
     ? words.answer(party.reply.attending, party.reply.partySize)
     : words[partyStatus(party)];
-  row.append(name, seats, reply);
+  row.append(name, language, seats, reply);
   if (party.reply?.attending && party.reply.partySize > party.defaultSeats) {
     const over = document.createElement('span');
     over.className = 'over-seats';
@@ -186,7 +195,7 @@ async function renderParty(party, { client, cred, copy, load, signedIn, formatTi
       actions.append(element);
     };
     if (!party.revoked) {
-      row.append(await personalLinkControls(party, cred, copy, words, linkControls));
+      row.append(await personalLinkControls(party, cred, invite, words, linkControls));
       linkAction('revoke', { label: words.revoke, confirm: words.revokeConfirm, done: words.revoked });
     }
     linkAction('regenerate', { label: words.regenerate, confirm: words.regenerateConfirm, done: words.regenerated });
@@ -212,23 +221,24 @@ async function renderParty(party, { client, cred, copy, load, signedIn, formatTi
   return { party, row };
 }
 
-async function personalLinkControls(party, cred, copy, words, linkControls) {
+async function personalLinkControls(party, cred, invite, words, linkControls) {
   const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
   const base = eventLink(location.origin, cred.id, party.lang);
   const link = personalLink(base, party.id, secret);
-  const copyLink = button(words.copy, async () => {
+  const message = personalMessage(party, invite, link);
+  const copyMessage = button(words.copy, async () => {
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(message);
       setStatus(words.copied);
     } catch {
-      window.prompt(copy.copyPrompt, link);
+      window.prompt(words.copyPrompt, message);
     }
   });
   const input = document.createElement('input');
   input.className = 'input';
   input.readOnly = true;
   input.value = link;
-  linkControls.push(input, copyLink);
+  linkControls.push(input, copyMessage);
   input.setAttribute('aria-label', `${words.link} · ${party.name}`);
   const controls = document.createElement('div');
   controls.className = 'copy-row';
@@ -238,14 +248,20 @@ async function personalLinkControls(party, cred, copy, words, linkControls) {
   preview.target = '_blank';
   preview.rel = 'noopener';
   preview.textContent = words.preview;
-  controls.append(input, copyLink, preview);
+  const whatsapp = document.createElement('a');
+  whatsapp.className = 'btn btn-ghost btn-small';
+  whatsapp.href = whatsappUrl(message);
+  whatsapp.target = '_blank';
+  whatsapp.rel = 'noopener noreferrer';
+  whatsapp.textContent = words.whatsapp;
+  controls.append(input, copyMessage, whatsapp, preview);
   return controls;
 }
 
-async function show({ parties }, page) {
+async function show({ parties, invite }, page) {
   loadedParties = parties;
   const words = UI[page.lang].guestList;
-  const rendered = await Promise.all(parties.map((party) => renderParty(party, page, words)));
+  const rendered = await Promise.all(parties.map((party) => renderParty(party, page, invite, words)));
   if (loadedParties !== parties) return;
   rows = rendered;
   const { accepted, declined, pending } = partyTotals(parties);
