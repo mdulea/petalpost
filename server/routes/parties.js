@@ -107,13 +107,15 @@ const replyOf = (row) =>
 
 const replyColumns = 'r.attending, r.party_size, r.note, r.version as reply_version';
 
-// Reads only the authenticated host's parties, joined to each party's current reply.
-export async function listParties(db, eventId) {
+// Reads the authenticated host's parties and prepares older view hashes when the host has the management link.
+export async function listParties(db, eventId, managementSecret) {
   const { rows } = await db.query(
-    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, p.first_opened_at, p.last_opened_at, ${replyColumns} from parties p
+    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, p.secret_hash, p.view_hash,
+            p.first_opened_at, p.last_opened_at, ${replyColumns} from parties p
      left join responses r on r.party_id = p.id where p.event_id = $1 order by p.created_at, p.id`,
     [eventId],
   );
+  if (managementSecret) await preparePreviews(db, eventId, managementSecret, rows);
   return rows.map((p) => ({
     id: p.id,
     name: p.name,
@@ -125,6 +127,29 @@ export async function listParties(db, eventId) {
     lastOpenedAt: p.last_opened_at ? new Date(p.last_opened_at).toISOString() : null,
     reply: replyOf(p),
   }));
+}
+
+async function preparePreviews(db, eventId, managementSecret, parties) {
+  const candidates = await Promise.all(
+    parties
+      .filter((party) => !party.revoked)
+      .map(async (party) => {
+        const personal = await partyLinkSecret(managementSecret, party.id, 'personal', party.link_generation);
+        const viewHash = hash(await viewLinkSecret(personal, party.id));
+        if (viewHash === party.view_hash || !matches(personal, party.secret_hash)) return null;
+        return { id: party.id, secret_hash: party.secret_hash, previous_hash: party.view_hash, view_hash: viewHash };
+      }),
+  );
+  const changes = candidates.filter(Boolean);
+  if (!changes.length) return;
+  // An older row can need a view hash before anyone opens its personal link. Leave opened times untouched.
+  await db.query(
+    `update parties p set view_hash = v.view_hash
+     from jsonb_to_recordset($2) as v(id text, secret_hash text, previous_hash text, view_hash text)
+     where p.event_id = $1 and p.id = v.id and not p.revoked
+       and p.secret_hash = v.secret_hash and p.view_hash = v.previous_hash`,
+    [eventId, JSON.stringify(changes)],
+  );
 }
 
 async function changeLink({ db, request, ids: [eventId, id] }) {

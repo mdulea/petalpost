@@ -1,5 +1,6 @@
 // Checks party creation, personal access, opened times, view link read-only access, one versioned reply,
 // and withdrawal through the API in both languages.
+// The management tracker can preview an older party before it opens a personal link.
 // Checks that revoking or regenerating a link blocks old guest access and keeps replies and tracker totals.
 // A passkey session can read the guest list. Adding parties and changing links need the management secret.
 // A host can rename a party and delete it with its reply. The guest credential cannot manage the party.
@@ -12,6 +13,29 @@ import { host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
 
 const hash = (secret) => createHash('sha256').update(secret).digest('hex');
+
+test('the tracker prepares a preview for a party created before guest sharing', async () => {
+  const { db, client } = await setup();
+  const cred = host();
+  const tracker = client();
+  await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+  const id = newId();
+  assert.equal((await tracker.addParty(cred, id, { name: 'Radu', defaultSeats: 2 })).status, 201);
+  assert.equal((await tracker.changePartyLink(cred, id, 'regenerate')).status, 204);
+  const { linkGeneration } = (await tracker.loadResponses(cred)).data.parties[0];
+  const previousView = await partyLinkSecret(cred.secret, id, 'view', linkGeneration);
+  await db.query('update parties set view_hash = $1 where id = $2', [hash(previousView), id]);
+
+  const personal = await partyLinkSecret(cred.secret, id, 'personal', linkGeneration);
+  const previewSecret = await viewLinkSecret(personal, id);
+  const guest = client(newId());
+  assert.equal((await guest.loadPartyView(cred.id, { id, secret: previewSecret })).status, 404);
+  await tracker.loadResponses(cred);
+  const preview = await guest.loadPartyView(cred.id, { id, secret: previewSecret });
+  assert.deepEqual([preview.status, preview.data.name], [200, 'Radu']);
+  const [row] = (await tracker.loadResponses(cred)).data.parties;
+  assert.deepEqual([row.firstOpenedAt, row.lastOpenedAt], [null, null]);
+});
 
 test('renaming preserves the personal link and reply and deleting removes the party and reply', async () => {
   const { client } = await setup();
@@ -248,7 +272,10 @@ for (const lang of ['en', 'ro']) {
     assert.equal(viewBad.status, 404);
 
     const view = await client(newId(), lang).loadPartyView(cred.id, { id, secret: viewSecret });
-    assert.deepEqual([view.status, Object.keys(view.data).sort(), view.data.name], [200, ['d', 'name', 't'], 'Familia Radu']);
+    assert.deepEqual(
+      [view.status, Object.keys(view.data).sort(), view.data.name],
+      [200, ['d', 'name', 't'], 'Familia Radu'],
+    );
 
     const afterView = (await tracker.loadResponses(cred)).data.parties[0];
     assert.deepEqual(

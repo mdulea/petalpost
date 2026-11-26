@@ -29,7 +29,7 @@ export const routes = [
   },
 ];
 
-// A read without a lock, so a host refreshing the list never makes guest replies wait.
+// Read the tracker without locking the event. Only older view hashes may need an update.
 async function listResponses({ db, request, ids: [id] }) {
   const secret = bearer(request);
   const event = await ownedEvent(db, id, secret, { lock: false });
@@ -47,7 +47,8 @@ async function listResponses({ db, request, ids: [id] }) {
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   }));
-  const parties = hasGuestList ? await listParties(db, id) : undefined;
+  const managementSecret = matches(secret, event.secret_hash) ? secret : undefined;
+  const parties = hasGuestList ? await listParties(db, id, managementSecret) : undefined;
   return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses), parties });
 }
 
