@@ -5,7 +5,7 @@ import { partyInviteLinks, personalMessage, whatsappUrl } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyStatus } from '../rsvp.js';
 import { downloadCsv } from './download.js';
-import { tablePicker } from './seating.js';
+import { partyHandle, tablePicker } from './seating.js';
 import { renderTotals } from './totals.js';
 
 let loadedParties = [];
@@ -214,6 +214,7 @@ async function renderParty(party, tables, page, invite, words) {
   row.className = 'reply';
   const name = document.createElement('strong');
   name.textContent = party.name;
+  partyHandle(name, party);
   const language = document.createElement('span');
   language.textContent = words.language[party.lang];
   const seats = document.createElement('span');

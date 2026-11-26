@@ -1,5 +1,7 @@
-// Edits tables in the tracker and provides the picker used in each party row.
+// Edits tables in the tracker, lists each table's parties and provides the picker and drag handle used in each party
+// row. Dropping a party on a table assigns it as the picker does. Party drags carry the party id as PARTY_TYPE data.
 import { UI } from '../i18n.js';
+import { animate } from '../motion.js';
 import { newId } from '../rsvp.js';
 import { TABLE_LIMITS } from '../seating.js';
 
@@ -73,10 +75,32 @@ function tableForm({ client, cred, lang, load }, table) {
   return form;
 }
 
-// Saves a party's chosen table or clears its assignment. The native select supplies touch and keyboard interaction.
-export function tablePicker(party, tables, { client, cred, lang, load }) {
-  const words = UI[lang].seating;
+const PARTY_TYPE = 'application/x-petalpost-party';
+const LANDING = [{ transform: 'scale(1.02)' }, { transform: 'none' }];
+
+// Saves the party's table, or null to unassign it, then reloads the tracker. Returns whether the save succeeded.
+async function assign({ client, cred, load }, partyId, tableId) {
   const status = document.getElementById('partyStatus');
+  status.textContent = '';
+  const result = await client.assignParty(cred, partyId, tableId);
+  if (!result.ok) status.textContent = result.message;
+  if (result.ok || result.status === 404) await load();
+  return result.ok;
+}
+
+// Makes the element a drag handle for the party. Touch and keyboard users seat parties with the picker.
+export function partyHandle(element, party) {
+  element.draggable = true;
+  element.classList.add('drag-handle');
+  element.addEventListener('dragstart', (event) => {
+    event.dataTransfer.setData(PARTY_TYPE, party.id);
+    event.dataTransfer.effectAllowed = 'move';
+  });
+}
+
+// Saves a party's chosen table or clears its assignment. The native select supplies touch and keyboard interaction.
+export function tablePicker(party, tables, page) {
+  const words = UI[page.lang].seating;
   const form = document.createElement('form');
   const select = document.createElement('select');
   select.id = `party-table-${party.id}`;
@@ -89,10 +113,7 @@ export function tablePicker(party, tables, { client, cred, lang, load }) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     select.disabled = submit.disabled = true;
-    status.textContent = '';
-    const result = await client.assignParty(cred, party.id, select.value || null);
-    if (!result.ok) status.textContent = result.message;
-    if (result.ok || result.status === 404) await load();
+    await assign(page, party.id, select.value || null);
     select.disabled = submit.disabled = false;
     document.getElementById(select.id)?.focus();
   });
@@ -101,25 +122,70 @@ export function tablePicker(party, tables, { client, cred, lang, load }) {
 
 function init(page) {
   document.getElementById('addTable').append(tableForm(page));
+  document.getElementById('printSeating').addEventListener('click', () => window.print());
 }
 
-function show({ tables }, page) {
+// The party's name with its accepted seats, its decline or its missing reply, as the printed plan lists it.
+function partyLine(party, lang) {
+  const words = UI[lang].seating;
+  const answer = party.reply
+    ? party.reply.attending
+      ? words.partySeats(party.reply.partySize)
+      : words.declined
+    : UI[lang].guestList.noReply;
+  return `${party.name} · ${answer}`;
+}
+
+function show({ tables, parties }, page) {
   const words = UI[page.lang].seating;
   const rows = tables.map((table) => {
     const row = document.createElement('li');
     row.className = 'reply';
+    const name = document.createElement('h3');
+    name.textContent = table.name;
     const seats = document.createElement('p');
     seats.textContent = words.seats(table.filled, table.free);
-    row.append(seats);
+    const seated = document.createElement('ul');
+    seated.className = 'seated-parties';
+    for (const party of parties.filter((party) => party.tableId === table.id)) {
+      const item = document.createElement('li');
+      item.textContent = partyLine(party, page.lang);
+      seated.append(item);
+    }
+    row.append(name, seats, seated);
     if (table.over) {
       const over = document.createElement('strong');
       over.textContent = words.over(table.over);
       row.append(over);
     }
     row.append(tableForm(page, table));
+    dropTarget(row, table, page);
     return row;
   });
   document.getElementById('seatingTables').replaceChildren(...rows);
+}
+
+// Accepts dropped parties on the table row. After the save, the reloaded row plays a short landing animation.
+function dropTarget(row, table, page) {
+  row.dataset.tableId = table.id;
+  const carriesParty = (event) => event.dataTransfer.types.includes(PARTY_TYPE);
+  row.addEventListener('dragover', (event) => {
+    if (!carriesParty(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    row.classList.add('drop-target');
+  });
+  row.addEventListener('dragleave', (event) => {
+    if (!row.contains(/** @type {Node} */ (event.relatedTarget))) row.classList.remove('drop-target');
+  });
+  row.addEventListener('drop', async (event) => {
+    if (!carriesParty(event)) return;
+    event.preventDefault();
+    row.classList.remove('drop-target');
+    if (!(await assign(page, event.dataTransfer.getData(PARTY_TYPE), table.id))) return;
+    const landed = document.querySelector(`#seatingTables > [data-table-id="${table.id}"]`);
+    if (landed) animate([landed], LANDING, { duration: 240, easing: 'ease-out' });
+  });
 }
 
 export const section = { id: 'seatingPlan', modes: ['guestList'], init, show };
