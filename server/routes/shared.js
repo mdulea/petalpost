@@ -60,13 +60,21 @@ export async function readBody(request) {
   return body;
 }
 
+// True when the retention job deleted this guest-list invitation after its event.
+export async function isEnded(db, id) {
+  return (await db.query('select 1 from ended_events where id = $1', [id])).rows.length > 0;
+}
+
 // The event row after checking the credential: the management secret or, with token, an access token of a passkey
 // sign-in for this event. An expired token gets a 401. With lock, the row stays locked until the transaction ends.
 export async function ownedEvent(tx, id, credential, { lock = true, token = true } = {}) {
   const event = (
     await tx.query(`select secret_hash, version, t, d from events where id = $1${lock ? ' for update' : ''}`, [id])
   ).rows[0];
-  if (!event) throw new Refusal(404, 'eventMissing');
+  if (!event) {
+    const ended = await isEnded(tx, id);
+    throw new Refusal(ended ? 410 : 404, ended ? 'eventEnded' : 'eventMissing');
+  }
   if (matches(credential, event.secret_hash)) return event;
   if (token) {
     const access = (

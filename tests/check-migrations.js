@@ -19,6 +19,7 @@ import { makeInviteData } from '../public/js/invite.js';
 import { createClient, newId, newSecret } from '../public/js/rsvp.js';
 import { createApi } from '../server/api.js';
 import { migrate } from '../server/migrate.js';
+import { hash } from '../server/routes/shared.js';
 
 const MIGRATIONS = new URL('../server/migrations/', import.meta.url);
 const GUEST_LISTS = '005_guest_lists.sql';
@@ -77,7 +78,14 @@ test('all migrations apply to an empty database, and a second run applies nothin
 
 test('the guest-list migration keeps an earlier invitation and reply and their reads', async (t) => {
   const db = await earlierSchema(t);
-  const cred = await publish(db);
+  const cred = { id: newId(), secret: newSecret(), version: null };
+  const { mode, photoY, ...d } = record.d;
+  await db.query('insert into events (id, secret_hash, t, d) values ($1, $2, $3, $4::text::jsonb)', [
+    cred.id,
+    hash(cred.secret),
+    record.t,
+    JSON.stringify(d),
+  ]);
   const edit = { id: newId(), secret: newSecret(), version: null };
   assert.equal((await client(db).saveReply(cred.id, edit, reply)).status, 201);
   const reads = async () => ({
@@ -86,7 +94,7 @@ test('the guest-list migration keeps an earlier invitation and reply and their r
     reply: (await client(db).loadReply(cred.id, edit)).data,
   });
   const before = await reads();
-  assert.deepEqual(await migrate(db), [GUEST_LISTS, '006_party_link_generation.sql']);
+  assert.deepEqual(await migrate(db), [GUEST_LISTS, '006_party_link_generation.sql', '007_ended_events.sql']);
   assert.deepEqual(await reads(), before);
   assert.deepEqual(before.reply, { ...reply, version: 1 });
 });

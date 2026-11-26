@@ -14,12 +14,25 @@ const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
 const copy = UI[lang].manage;
 
-const client = createClient(fetch, { lang });
 const signedIn = readCredential(location.hash, 't=');
 const cred = readCredential(location.hash, '') ?? signedIn;
 const content = document.getElementById('manageContent');
 const statusEl = document.getElementById('manageStatus');
 let latestLoad = 0;
+let ended = false;
+
+// A 410 from any tracker action ends the view, even if another request is still in flight.
+const client = createClient(
+  async (path, options) => {
+    const response = await fetch(path, options);
+    if (response.status === 410) {
+      ended = true;
+      showOnly(copy.endedHeading, `${copy.endedHeading}.`);
+    }
+    return response;
+  },
+  { lang },
+);
 
 // A heading and message for a page that cannot show the event, such as after a failed load or a deletion.
 function showOnly(heading, message) {
@@ -30,7 +43,7 @@ function showOnly(heading, message) {
 }
 
 const setStatus = (text) => {
-  statusEl.textContent = text;
+  if (!ended) statusEl.textContent = text;
 };
 
 const formatTime = (iso) =>
@@ -61,13 +74,14 @@ async function showEvent(data) {
 }
 
 async function load() {
+  if (ended) return;
   const request = ++latestLoad;
   statusEl.textContent = copy.loading;
   const result = await client.loadResponses(cred);
-  if (request !== latestLoad) return;
+  if (ended || request !== latestLoad) return;
   if (result.ok) {
     await showEvent(result.data);
-    if (request === latestLoad) statusEl.textContent = '';
+    if (request === latestLoad && !ended) statusEl.textContent = '';
   } else if (result.status === 404) {
     showOnly(copy.missingHeading, result.message);
   } else if (content.hidden) {

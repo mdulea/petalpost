@@ -1,7 +1,8 @@
 // Fails when the invitation modes break in the RSVP API, in English and Romanian. Checks: a guest-list invitation
 // opens from another browser with its mode, and an open one with the open mode; the invitation link of a
 // guest-list invitation refuses a new reply and a reply update with the message of the request language and stores
-// nothing, while an open invitation takes the reply; a publish without a mode, as from a page loaded before
+// nothing, while an open invitation takes the reply; a guest-list invitation refuses a publish or update without an
+// event date while an open invitation allows none; a publish without a mode, as from a page loaded before
 // invitations had modes, makes an open invitation that takes replies; an update keeps the stored mode whatever mode
 // it sends or when it sends none; a publish with an unknown mode is refused; the management read of a guest-list
 // invitation gives its mode and no replies; 300 maximum-length names fit across requests and the API refuses more.
@@ -125,6 +126,11 @@ test('an update keeps the stored mode whatever mode it sends or when it sends no
   });
 });
 
+const DATE_REQUIRED = {
+  en: 'Add an event date before publishing a guest-list invitation.',
+  ro: 'Adaugă data evenimentului înainte de a publica o invitație cu listă de invitați.',
+};
+
 test('a publish with an unknown mode is refused and stores nothing', async () => {
   const { raw, client } = await setup();
   const cred = host();
@@ -148,3 +154,44 @@ test('300 maximum-length names fit across requests and a full guest list refuses
     [true, true, 429, 'The guest list can have up to 300 parties.', entries.map(({ name }) => [name, 3])],
   );
 });
+
+for (const lang of ['en', 'ro']) {
+  test(`in ${lang}, a guest-list invitation refuses a publish or update without a date`, async () => {
+    const { client } = await setup();
+    const hostClient = client(newId(), lang);
+    const missingDate = host();
+    const refusedCreate = await hostClient.publish(missingDate, {
+      t: 'birthday',
+      d: makeInviteData(getTemplate('birthday'), { title: 'No date', mode: 'guestList', date: '' }),
+    });
+    const stored = await hostClient.loadEvent(missingDate.id);
+
+    const live = host();
+    const created = await hostClient.publish(live, invitation('guestList'));
+    const refusedUpdate = await hostClient.publish(
+      { ...live, version: created.data.version },
+      { t: 'birthday', d: makeInviteData(getTemplate('birthday'), { title: 'Cleared', mode: 'guestList', date: '' }) },
+    );
+
+    const openNoDate = host();
+    const openCreated = await hostClient.publish(openNoDate, {
+      t: 'birthday',
+      d: makeInviteData(getTemplate('birthday'), { title: 'Open no date', mode: 'open', date: '' }),
+    });
+
+    assert.deepEqual(
+      {
+        refusedCreate: [refusedCreate.status, refusedCreate.message],
+        stored: stored.status,
+        refusedUpdate: [refusedUpdate.status, refusedUpdate.message],
+        openCreated: openCreated.status,
+      },
+      {
+        refusedCreate: [400, DATE_REQUIRED[lang]],
+        stored: 404,
+        refusedUpdate: [400, DATE_REQUIRED[lang]],
+        openCreated: 201,
+      },
+    );
+  });
+}
