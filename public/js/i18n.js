@@ -702,11 +702,11 @@ export const UI = {
     // An option appears under its name, or as option n, counted from 1, when it has none. A count argument and a totals
     // argument are {name, count} of one option, and counts joins the count texts of every option.
     menu: {
-      untitled: (n) => `Opțiunea ${n}`,
+      untitled: (n) => `Felul ${n}`,
       option: (n) => ({
-        name: `Opțiunea de meniu ${n}`,
+        name: `Felul de meniu ${n}`,
         remove: 'Șterge',
-        removeLabel: `Șterge opțiunea de meniu ${n}`,
+        removeLabel: `Șterge felul de meniu ${n}`,
       }),
       legend: 'Meniu',
       hint: 'Scrie numărul de persoane pentru fiecare fel de meniu. Totalul este egal cu numărul de persoane care vin.',

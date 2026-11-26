@@ -59,7 +59,7 @@ test('the editor adds, renames and removes menu options, keeps their ids and sto
   assert.equal(new Set(repaired).size, 3);
   assert.deepEqual(menuLabels(wedding([standard, child]).d, 'ro'), [
     { id: 'standard', name: 'Standard' },
-    { id: 'child', name: 'Opțiunea 2' },
+    { id: 'child', name: 'Felul 2' },
   ]);
 });
 
@@ -295,7 +295,7 @@ test('the replies CSV and the guest-list CSV add a meal column for each option a
     { name: 'Ion', defaultSeats: 1, reply: null },
   ];
   assert.deepEqual(lines(guestListCsv(parties, 'ro', subEventLabels(d, 'ro'), menuLabels(d, 'ro'))).slice(0, 4), [
-    'Nume;Stare;Locuri;Participă;Civil: participă;Civil: persoane;Standard: meniuri;Opțiunea 2: meniuri;Notă',
+    'Nume;Stare;Locuri;Participă;Civil: participă;Civil: persoane;Standard: meniuri;Felul 2: meniuri;Notă',
     'Familia Popescu;A răspuns;3;Da;Da;3;1;2;Fără nuci',
     'Ion;Fără răspuns;1;;;;;;',
     'Total;;;;1;3;1;2;',
