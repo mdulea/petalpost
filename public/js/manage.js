@@ -93,5 +93,8 @@ async function load() {
 
 SECTIONS.forEach((section) => section.init?.(page));
 
+// Pasting a full management link after signing in can change only the fragment of this page.
+window.addEventListener('hashchange', () => location.reload());
+
 if (cred) load();
 else showOnly(copy.incompleteHeading, copy.incompleteMessage);
