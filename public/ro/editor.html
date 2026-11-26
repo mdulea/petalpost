@@ -152,6 +152,20 @@
           </div>
         </section>
 
+        <section class="panel" id="sub-events-panel" aria-labelledby="h-sub-events">
+          <h2 id="h-sub-events">
+            <svg class="icon"><use href="#i-calendar" /></svg>Programul
+          </h2>
+          <p class="hint">
+            Adaugă momentele evenimentului, precum cununia și petrecerea. Invitații văd fiecare moment, iar fișierul de
+            calendar primește câte o intrare pentru fiecare moment cu dată.
+          </p>
+          <ol class="sub-events" id="subEvents"></ol>
+          <button class="btn btn-ghost btn-small" type="button" id="addSubEvent">
+            <svg class="icon"><use href="#i-plus" /></svg>Adaugă un moment
+          </button>
+        </section>
+
         <section class="panel" aria-labelledby="h-note">
           <h2 id="h-note">
             <svg class="icon"><use href="#i-heart" /></svg>Mesaj și confirmare
@@ -218,6 +232,12 @@
             ><svg class="icon"><use href="#i-pin" /></svg>Deschide harta</a
           >
         </div>
+        <section class="panel schedule" id="schedule" aria-labelledby="h-schedule" hidden>
+          <h2 id="h-schedule">
+            <svg class="icon"><use href="#i-calendar" /></svg>Programul
+          </h2>
+          <ol class="schedule-list" id="scheduleList"></ol>
+        </section>
         <p class="hint share-note owner-only">
           Publicarea salvează textul, modelul și culoarea, iar invitații răspund direct din linkul invitației.
           Fotografia rămâne în acest browser. Pentru a o trimite, descarcă PNG. După orice modificare, publică din nou

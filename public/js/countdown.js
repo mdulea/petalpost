@@ -105,15 +105,24 @@ export const deletionStart = (date) => (isValidDate(date) ? bucharestEndOfDay(da
 
 const inLastDays = (left, days) => left.unit === 'hours' || left.count <= days;
 
-// What the tracker of a guest-list invitation shows as due. deadline and date: the invitation's RSVP deadline and
-// event date; pending: the parties without a reply. Returns {deadline, deletion}. deadline is null or {left, nudge},
+// The event date of data, a record from makeInviteData: the latest date of its sub-events, or data.date when no
+// sub-event has one. server/routes/retention.js computes the same date in SQL.
+export const eventDate = (data) =>
+  (data.subEvents ?? [])
+    .map((s) => s.date)
+    .filter(Boolean)
+    .sort()
+    .at(-1) || data.date;
+
+// What the tracker of a guest-list invitation shows as due. d: the invitation record, whose RSVP deadline and
+// eventDate count; pending: the parties without a reply. Returns {deadline, deletion}. deadline is null or {left, nudge},
 // where left is a countdown() result and nudge is true in the last DEADLINE_NUDGE_DAYS days while a party has not
 // replied. deletion is null without a date, otherwise {left, nudge} with nudge true in the last DELETION_NUDGE_DAYS
 // days. Once the deletion has started, left is null and nudge true until the next daily retention run deletes the
 // invitation.
-export function trackerDue({ deadline, date }, pending, now) {
-  const deadlineLeft = countdown(deadlineEnd(deadline), now);
-  const start = deletionStart(date);
+export function trackerDue(d, pending, now) {
+  const deadlineLeft = countdown(deadlineEnd(d.deadline), now);
+  const start = deletionStart(eventDate(d));
   const deletionLeft = countdown(start, now);
   return {
     deadline: deadlineLeft && {

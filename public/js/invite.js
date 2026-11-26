@@ -3,7 +3,7 @@
 import { eventFields } from './countdown.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
 import { ID_PATTERN, SECRET_PATTERN, partyLinkSecret, personalLink, viewLink, viewLinkSecret } from './rsvp.js';
-import { ACCENTS, formatDate, formatTime, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
+import { ACCENTS, formatWhen, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
 export const FIELD_LIMITS = {
@@ -34,6 +34,26 @@ const FIELD_FORMATS = {
   date: (v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00Z`).toJSON()?.startsWith(v)),
   time: (v) => /^(([01]\d|2[0-3]):[0-5]\d)?$/.test(v),
 };
+// A string within its limit and format, for a field of the invitation or of a sub-event.
+const fits = (v, limit, format) => typeof v === 'string' && (!limit || v.length <= limit) && (!format || format(v));
+
+// A sub-event is one part of the event, such as the civil ceremony, with its own name, date, time and venue. Date
+// and time take the formats of the invitation's date and time. A record without sub-events has no subEvents key, so
+// it keeps the shape of a record from before sub-events existed.
+export const SUB_EVENT_LIMITS = { name: 40, date: null, time: null, venue: 60 };
+export const SUB_EVENT_FIELDS = Object.keys(SUB_EVENT_LIMITS);
+export const MAX_SUB_EVENTS = 8;
+
+// Untrusted source becomes a sub-event: each valid field cut to its limit, and an empty string for any other.
+function makeSubEvent(source) {
+  const s = source && typeof source === 'object' ? source : {};
+  return Object.fromEntries(
+    SUB_EVENT_FIELDS.map((f) => [
+      f,
+      fits(s[f], null, FIELD_FORMATS[f]) ? s[f].slice(0, SUB_EVENT_LIMITS[f] ?? undefined) : '',
+    ]),
+  );
+}
 
 // The only constructor for invite data: template sample text, then valid fields from source, cut to their limits.
 export function makeInviteData(template, source, lang = 'en') {
@@ -47,6 +67,8 @@ export function makeInviteData(template, source, lang = 'en') {
   d.photoY = s.photoY != null && Number.isFinite(Number(s.photoY)) ? Math.min(100, Math.max(0, Number(s.photoY))) : 50;
   d.accent = ACCENTS.some((a) => a.hex === s.accent) ? s.accent : null;
   d.mode = modeOf(s);
+  const subEvents = Array.isArray(s.subEvents) ? s.subEvents.slice(0, MAX_SUB_EVENTS).map(makeSubEvent) : [];
+  if (subEvents.length) d.subEvents = subEvents;
   return d;
 }
 
@@ -57,7 +79,49 @@ export function updateInvite(state, name, value, lang = 'en') {
   return true;
 }
 
+// The editor actions on the sub-events, each through makeInviteData. index counts from 0. Each returns false and
+// changes nothing for an index or name outside the list, a move past either end, or an add at MAX_SUB_EVENTS.
+const subEventsOf = (state) => state.d.subEvents ?? [];
+function setSubEvents(state, subEvents, lang) {
+  state.d = makeInviteData(getTemplate(state.t, lang), { ...state.d, subEvents }, lang);
+}
+
+export function addSubEvent(state, lang = 'en') {
+  const list = subEventsOf(state);
+  if (list.length >= MAX_SUB_EVENTS) return false;
+  setSubEvents(state, [...list, {}], lang);
+  return true;
+}
+
+export function updateSubEvent(state, index, name, value, lang = 'en') {
+  const list = subEventsOf(state);
+  if (!list[index] || !SUB_EVENT_FIELDS.includes(name)) return false;
+  setSubEvents(state, list.with(index, { ...list[index], [name]: value }), lang);
+  return true;
+}
+
+// offset -1 moves the sub-event one place earlier, and 1 one place later.
+export function moveSubEvent(state, index, offset, lang = 'en') {
+  const list = subEventsOf(state);
+  const to = index + offset;
+  if (!list[index] || !list[to]) return false;
+  setSubEvents(state, list.with(index, list[to]).with(to, list[index]), lang);
+  return true;
+}
+
+export function removeSubEvent(state, index, lang = 'en') {
+  const list = subEventsOf(state);
+  if (!list[index]) return false;
+  setSubEvents(
+    state,
+    list.filter((_, i) => i !== index),
+    lang,
+  );
+  return true;
+}
+
 // Text goes back to the template sample, the accent to the template default; the photo position and mode stay.
+// Sub-events are text, so a reset removes them.
 export function resetInvite(state, lang = 'en') {
   state.d = makeInviteData(getTemplate(state.t, lang), { photoY: state.d.photoY, mode: state.d.mode }, lang);
 }
@@ -84,26 +148,32 @@ function restoreInvite(value, lang = 'en') {
 // Untrusted {t, d} for a published event becomes {t, d}, or null. Unlike makeInviteData it repairs nothing:
 // t names a template, d has exactly the text fields, the accent and an optional mode, each text within its limit and
 // format, the accent is null or one of ACCENTS, and the mode is one of MODES. A d without a mode, which a page loaded
-// before invitations had modes sends, gets the open mode. The photo position stays with the owner's draft, so d has
-// no photoY.
+// before invitations had modes sends, gets the open mode. d may also hold subEvents: up to MAX_SUB_EVENTS objects
+// with exactly the sub-event fields, each within its limit and format. An empty list leaves the key out of the
+// result, and a page loaded before sub-events existed sends none. The photo position stays with the owner's draft, so
+// d has no photoY.
 export function readPublished(value) {
   if (!value || typeof value !== 'object' || !TEMPLATES.some((t) => t.id === value.t)) return null;
   const s = value.d;
   if (!s || typeof s !== 'object') return null;
   const hasMode = Object.hasOwn(s, 'mode');
-  if (Object.keys(s).length !== FIELDS.length + (hasMode ? 2 : 1) || (hasMode && !MODES.includes(s.mode))) return null;
-  const valid = FIELDS.every(
-    (f) =>
-      typeof s[f] === 'string' &&
-      (!FIELD_LIMITS[f] || s[f].length <= FIELD_LIMITS[f]) &&
-      (!FIELD_FORMATS[f] || FIELD_FORMATS[f](s[f])),
-  );
+  const keys = FIELDS.length + 1 + (hasMode ? 1 : 0) + (Object.hasOwn(s, 'subEvents') ? 1 : 0);
+  if (Object.keys(s).length !== keys || (hasMode && !MODES.includes(s.mode))) return null;
+  const valid = FIELDS.every((f) => fits(s[f], FIELD_LIMITS[f], FIELD_FORMATS[f]));
   if (!valid || !(s.accent === null || ACCENTS.some((a) => a.hex === s.accent))) return null;
+  const subEvents = s.subEvents ?? [];
+  const validSubEvent = (e) =>
+    e &&
+    typeof e === 'object' &&
+    Object.keys(e).length === SUB_EVENT_FIELDS.length &&
+    SUB_EVENT_FIELDS.every((f) => fits(e[f], SUB_EVENT_LIMITS[f], FIELD_FORMATS[f]));
+  if (!Array.isArray(subEvents) || subEvents.length > MAX_SUB_EVENTS || !subEvents.every(validSubEvent)) return null;
   const d = {};
   [...FIELDS, 'accent'].forEach((f) => {
     d[f] = s[f];
   });
   d.mode = modeOf(s);
+  if (subEvents.length) d.subEvents = subEvents.map((e) => Object.fromEntries(SUB_EVENT_FIELDS.map((f) => [f, e[f]])));
   return { t: value.t, d };
 }
 
@@ -126,11 +196,7 @@ export async function partyInviteLinks(origin, cred, party) {
 export function eventPreviewMeta(data, locale = 'en-US') {
   const isRo = typeof locale === 'string' && locale.toLowerCase().startsWith('ro');
   const title = (data.title || '').trim() || (isRo ? 'Ești invitat' : 'You are invited');
-  const dateText = formatDate(data.date, locale);
-  const timeText = formatTime(data.time, locale);
-  const when = isRo
-    ? [dateText, timeText ? `ora ${timeText}` : ''].filter(Boolean).join(', ')
-    : [dateText, timeText].filter(Boolean).join(' at ');
+  const when = formatWhen(data.date, data.time, locale);
   const where = (data.venue || '').trim() || (data.address || '').trim();
   const details = [when, where].filter(Boolean).join(' · ');
   return {
@@ -442,45 +508,58 @@ function foldIcs(line) {
   return folded;
 }
 
-// A calendar app shows an alarm one day and two hours before the event.
+// A calendar app shows an alarm one day and two hours before each entry.
 const ALARMS = ['-P1D', '-PT2H'];
 
-// data: a record from makeInviteData. Events last three hours in floating local time and carry ALARMS. now sets
-// DTSTAMP. Returns null when the date is empty.
+// data: a record from makeInviteData. The file has one entry for each sub-event with a date, or one entry for the
+// invitation when no sub-event has a date. A sub-event entry joins the invitation title and the sub-event name, and
+// takes the invitation's venue and address when it has no venue. Entries last three hours in floating local time and
+// carry ALARMS. now sets DTSTAMP. Returns null when no entry has a date.
 export function buildIcs(data, now) {
-  const fields = eventFields(data);
-  if (!fields) return null;
-  // The UTC clock holds the floating local time, so no time zone shifts it.
-  const start = new Date(Date.UTC(...fields));
-  const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+  const place = [data.venue, data.address].filter(Boolean).join(', ');
+  // A sub-event entry's UID ends in its place in the list, so two sub-events on one day get different UIDs.
+  const subEvents = (data.subEvents ?? []).map((s, i) => ({
+    date: s.date,
+    time: s.time,
+    summary: [data.title, s.name].filter(Boolean).join(': '),
+    location: s.venue || place,
+    uidEnd: `-${i + 1}`,
+  }));
+  const invitation = { date: data.date, time: data.time, summary: data.title, location: place, uidEnd: '' };
+  const dated = subEvents.filter((e) => e.date);
+  const entries = (dated.length ? dated : [invitation]).filter((e) => e.date);
+  if (!entries.length) return null;
   const local = (date) =>
     date
       .toISOString()
       .replace(/[-:]/g, '')
       .replace(/\.\d+Z$/, '');
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-  return [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Petalpost//Invite//EN',
-    'BEGIN:VEVENT',
-    `UID:${data.date.replace(/-/g, '')}-${slug(data.title)}@petalpost`,
-    `DTSTAMP:${stamp}`,
-    `DTSTART:${local(start)}`,
-    `DTEND:${local(end)}`,
-    `SUMMARY:${icsEscape(data.title)}`,
-    `LOCATION:${icsEscape([data.venue, data.address].filter(Boolean).join(', '))}`,
-    `DESCRIPTION:${icsEscape([data.hosts, data.message, data.rsvp].filter(Boolean).join('\n'))}`,
-    ...ALARMS.flatMap((trigger) => [
-      'BEGIN:VALARM',
-      'ACTION:DISPLAY',
-      `TRIGGER:${trigger}`,
-      `DESCRIPTION:${icsEscape(data.title)}`,
-      'END:VALARM',
-    ]),
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ]
+  const description = icsEscape([data.hosts, data.message, data.rsvp].filter(Boolean).join('\n'));
+  const events = entries.flatMap((e) => {
+    // The UTC clock holds the floating local time, so no time zone shifts it.
+    const start = new Date(Date.UTC(...eventFields(e)));
+    const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+    return [
+      'BEGIN:VEVENT',
+      `UID:${e.date.replace(/-/g, '')}-${slug(data.title)}${e.uidEnd}@petalpost`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART:${local(start)}`,
+      `DTEND:${local(end)}`,
+      `SUMMARY:${icsEscape(e.summary)}`,
+      `LOCATION:${icsEscape(e.location)}`,
+      `DESCRIPTION:${description}`,
+      ...ALARMS.flatMap((trigger) => [
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `TRIGGER:${trigger}`,
+        `DESCRIPTION:${icsEscape(e.summary)}`,
+        'END:VALARM',
+      ]),
+      'END:VEVENT',
+    ];
+  });
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Petalpost//Invite//EN', ...events, 'END:VCALENDAR']
     .map(foldIcs)
     .join('\r\n');
 }

@@ -1,6 +1,7 @@
 // Fails when guest-list retention breaks in the RSVP API or dynamic /e/{id} route. Checks: a guest-list invitation
 // is deleted after 23:59 Europe/Bucharest time on the day after the event and not before, across both the spring
-// and autumn daylight saving changes and even when updated on the day after the event; the deletion removes its
+// and autumn daylight saving changes and even when updated on the day after the event; with sub-events, the day
+// after the latest sub-event date counts; the deletion removes its
 // parties and their replies; afterwards the public invitation API, the tracker API, the personal link API, the view
 // link API and the /e/{id} and /ro/e/{id} pages return 410 with "This invitation has ended" (and its Romanian wording) without event
 // details; a retried publish cannot restore an ended link; open invitations keep the 90-day rule, including one
@@ -88,6 +89,17 @@ for (const { label, date, before, at } of [
     );
   });
 }
+
+test('the retention job counts a guest-list invitation from its latest sub-event date', async (t) => {
+  const { client, raw, clock } = await withClock(t, '2026-06-16T20:59:00Z');
+  const cred = host();
+  const browser = client();
+  const subEvents = [{ name: 'Party', date: '2026-06-18' }, { name: 'Civil ceremony', date: '2026-06-15' }];
+  await browser.publish(cred, invite({ mode: 'guestList', date: '2026-06-15', subEvents }));
+  assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 0 });
+  clock.now = new Date('2026-06-19T20:59:00Z');
+  assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 1 });
+});
 
 for (const lang of ['en', 'ro']) {
   test(`in ${lang}, every link and the tracker show "This invitation has ended" without event details after deletion`, async (t) => {

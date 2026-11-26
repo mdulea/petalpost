@@ -1733,6 +1733,31 @@ export function formatTime(hhmm, locale) {
   );
 }
 
+// The date and time as one line, such as "Saturday, June 12, 2027 at 4:00 PM", or empty without either.
+export function formatWhen(date, time, locale) {
+  const dateText = formatDate(date, locale);
+  const timeText = formatTime(time, locale);
+  const isRo = typeof locale === 'string' && locale.toLowerCase().startsWith('ro');
+  return isRo
+    ? [dateText, timeText ? `ora ${timeText}` : ''].filter(Boolean).join(', ')
+    : [dateText, timeText].filter(Boolean).join(' at ');
+}
+
+// The guest view's list items for the sub-events of a record from makeInviteData, in order: each name, its date and
+// time, and its venue, leaving out empty lines. Empty without sub-events. locale formats as in renderInvite.
+export function renderSchedule(d, locale) {
+  return (d.subEvents ?? [])
+    .map((s) => {
+      const when = formatWhen(s.date, s.time, locale);
+      return `<li class="schedule-item">
+        ${s.name ? `<h3 class="schedule-name">${escapeHtml(s.name)}</h3>` : ''}
+        ${when ? `<p class="schedule-when">${escapeHtml(when)}</p>` : ''}
+        ${s.venue ? `<p class="schedule-venue">${escapeHtml(s.venue)}</p>` : ''}
+      </li>`;
+    })
+    .join('');
+}
+
 // The card colors as rendered: a known accent swatch replaces the template accent.
 export function inviteColors(template, accentHex) {
   const c = template.colors;
@@ -1762,11 +1787,7 @@ export function renderInvite(template, d, { href, label, inline, decorative, loc
   const art = PHOTO_URL.test(d.photo)
     ? `<div class="invite-photo" role="img" aria-label="${UI[isRo ? 'ro' : 'en'].invite.photoAlt}" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY)}%"></div>`
     : template.art;
-  const dateText = formatDate(d.date, locale);
-  const timeText = formatTime(d.time, locale);
-  const when = isRo
-    ? [dateText, timeText ? `ora ${timeText}` : ''].filter(Boolean).join(', ')
-    : [dateText, timeText].filter(Boolean).join(' at ');
+  const when = formatWhen(d.date, d.time, locale);
   const tag = href ? 'a' : inline ? 'span' : 'div';
   const attrs =
     (href ? ` href="${escapeHtml(href)}"` : '') +
