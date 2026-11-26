@@ -1,9 +1,10 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
 // Romanian with empty lines left out, invite records and their mode, published records with an optional mode, the
-// characters left in a limited field, storage writes, the stored published event identity, template switching, template ids, Romanian localization coverage, the same UI string and
-// API message keys in English and Romanian, the Romanian occasion order, Romanian-only occasions kept out of the
-// English catalog, 24-hour time formatting, the calendar file with its alarms, the report link or the choice of when the Romanian
+// characters left in a limited field, storage writes, the stored published event identity, template switching,
+// template ids, Romanian localization coverage, the same UI string and API message keys in English and Romanian, the
+// Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
+// calendar file with its alarms, the report link or the choice of when the Romanian
 // language banner shows and where it links break.
 // Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';

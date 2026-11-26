@@ -1,4 +1,6 @@
 // The tracker section that deletes the invitation with every reply after the host confirms.
+import { MODES } from '../invite.js';
+
 function init({ copy, client, cred, setStatus, showOnly }) {
   document.getElementById('deleteEvent').addEventListener('click', async (e) => {
     if (!window.confirm(copy.deleteConfirm)) return;
@@ -11,4 +13,4 @@ function init({ copy, client, cred, setStatus, showOnly }) {
   });
 }
 
-export const section = { id: 'deleteInvitation', modes: ['open', 'guestList'], init };
+export const section = { id: 'deleteInvitation', modes: MODES, init };

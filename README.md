@@ -81,7 +81,7 @@ A host can:
 - choose a template, add a photo, names, a date, a time, a venue, an address and a note, and pick one of six accent colors;
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
-- choose the mode on the first publish: in the open mode, the default, any guest with the invitation link replies, and in the guest-list mode the invitation link shows the invitation without a reply form and the tracker shows the guest list;
+- choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies.
 
