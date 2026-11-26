@@ -84,6 +84,20 @@
             </p>
           </section>
 
+          <section class="panel" id="passkeyPanel" aria-labelledby="h-passkey" hidden>
+            <h2 id="h-passkey">
+              <svg class="icon"><use href="#i-key" /></svg>Passkey
+            </h2>
+            <p class="hint">
+              Save a passkey with Face ID, a fingerprint or Windows Hello. On another device with the same Apple, Google
+              or Microsoft account, "Find my invitations" on the home page opens this page with it.
+            </p>
+            <button class="btn btn-ghost btn-small" type="button" id="savePasskey">
+              <svg class="icon"><use href="#i-key" /></svg>Save a passkey
+            </button>
+            <p class="status" id="passkeyStatus" role="status"></p>
+          </section>
+
           <section class="panel" id="deleteInvitation" aria-labelledby="h-delete">
             <h2 id="h-delete">
               <svg class="icon"><use href="#i-trash" /></svg>Delete

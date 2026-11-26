@@ -1835,3 +1835,8 @@ textarea.input {
 .occasion-guide {
   padding-top: 0;
 }
+
+.hero-copy .status {
+  min-height: 0;
+  text-align: left;
+}

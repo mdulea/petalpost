@@ -82,6 +82,15 @@
         poziția ei rămân în browserul gazdei.
       </p>
       <p>
+        Din pagina de administrare, gazda poate salva o cheie de acces pentru invitație. Dispozitivul gazdei păstrează
+        cheia privată și o deblochează cu Face ID, amprenta sau Windows Hello. Petalpost stochează doar identificatorul
+        cheii de acces, cheia ei publică și un contor de semnături, împreună cu invitația. Petalpost nu primește date
+        despre față sau amprentă, niciun nume și nicio adresă de email. „Găsește invitațiile mele” de pe pagina
+        principală se conectează cu cheia de acces și îi dă paginii un token de acces valabil o oră. Petalpost stochează
+        doar un hash al tokenului, iar pagina îl păstrează în adresa ei, după <code>#</code>. Nu se setează niciun
+        cookie.
+      </p>
+      <p>
         Când un invitat răspunde, Petalpost stochează numele introdus de invitat, răspunsul, numărul de persoane și
         nota, dacă invitatul scrie una. Un răspuns poate include o notă de cel mult 300 de caractere, pe care gazda o
         vede împreună cu răspunsul. Nota este opțională, așa că un invitat care scrie în ea o informație despre
@@ -137,9 +146,11 @@
       <p>
         Gazda poate șterge invitația din pagina de administrare, eliminând invitația și toate răspunsurile. Petalpost
         șterge automat o invitație și toate răspunsurile ei la 90 de zile după data evenimentului. O invitație fără dată
-        este ștearsă la 90 de zile de la ultima modificare, iar modificarea după data evenimentului amână ștergerea. Un
-        invitat își poate schimba răspunsul, dar nu îl poate șterge singur; dacă dorești ștergerea mai devreme, roagă
-        gazda să șteargă invitația sau scrie la contact@petalpost.ro.
+        este ștearsă la 90 de zile de la ultima modificare, iar modificarea după data evenimentului amână ștergerea.
+        Ștergerea unei invitații șterge și cheile ei de acces și tokenurile de acces. O cheie de acces a unei invitații
+        șterse rămâne pe dispozitivul gazdei până când gazda o elimină, dar nu mai deschide nimic. Un invitat își poate
+        schimba răspunsul, dar nu îl poate șterge singur; dacă dorești ștergerea mai devreme, roagă gazda să șteargă
+        invitația sau scrie la contact@petalpost.ro.
       </p>
 
       <h2>Drepturile tale</h2>

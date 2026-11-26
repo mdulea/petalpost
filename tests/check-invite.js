@@ -865,7 +865,14 @@ const keyPaths = (value, path = '') => {
   if (value && typeof value === 'object') return Object.entries(value).flatMap(([k, v]) => keyPaths(v, `${path}.${k}`));
   return [path];
 };
-const apiLimits = { replyNameLimit: 1, partySizeLimit: 1, replyNoteLimit: 1, dailyEvents: 1, eventResponses: 1 };
+const apiLimits = {
+  replyNameLimit: 1,
+  partySizeLimit: 1,
+  replyNoteLimit: 1,
+  dailyEvents: 1,
+  eventResponses: 1,
+  eventPasskeys: 1,
+};
 const parityGaps = (groups) => {
   const [en, ro] = [keyPaths(groups.en), keyPaths(groups.ro)];
   return [

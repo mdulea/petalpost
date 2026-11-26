@@ -245,6 +245,13 @@ export const UI = {
       incompleteHeading: 'This management link is incomplete',
       incompleteMessage: 'This management link is incomplete. Open the whole link from where you saved it.',
     },
+    passkey: {
+      saved:
+        'Passkey saved. On another device with the same Apple, Google or Microsoft account, use "Find my invitations" on the home page.',
+      cancelled: 'The passkey request was cancelled or timed out.',
+      failed: 'This browser could not use a passkey. Try another browser or device.',
+      opening: 'Opening your invitation.',
+    },
     // Excel in English uses a comma between values.
     csv: {
       separator: ',',
@@ -366,6 +373,13 @@ export const UI = {
       incompleteHeading: 'Acest link de administrare este incomplet',
       incompleteMessage: 'Acest link de administrare este incomplet. Deschide linkul întreg de unde l-ai salvat.',
     },
+    passkey: {
+      saved:
+        'Cheia de acces a fost salvată. Pe alt dispozitiv cu același cont Apple, Google sau Microsoft, folosește „Găsește invitațiile mele” de pe pagina principală.',
+      cancelled: 'Cererea pentru cheia de acces a fost anulată sau a expirat.',
+      failed: 'Acest browser nu a putut folosi o cheie de acces. Încearcă alt browser sau alt dispozitiv.',
+      opening: 'Se deschide invitația.',
+    },
     // Excel in Romanian uses the comma as the decimal mark and a semicolon between values.
     csv: {
       separator: ';',
@@ -399,9 +413,12 @@ export const UI = {
 /**
  * Localized API error strings for server/api.js.
  * @param {string} lang
- * @param {{ replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number, eventResponses: number }} limits
+ * @param {{ replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number, eventResponses: number, eventPasskeys: number }} limits
  */
-export function apiMessages(lang, { replyNameLimit, partySizeLimit, replyNoteLimit, dailyEvents, eventResponses }) {
+export function apiMessages(
+  lang,
+  { replyNameLimit, partySizeLimit, replyNoteLimit, dailyEvents, eventResponses, eventPasskeys },
+) {
   if (normalizeLang(lang) === 'ro') {
     return {
       storage: 'Stocarea nu este disponibilă acum. Nimic nu a fost modificat. Încearcă din nou peste un minut.',
@@ -424,6 +441,12 @@ export function apiMessages(lang, { replyNameLimit, partySizeLimit, replyNoteLim
       dailyEvents: `Această conexiune a publicat deja ${dailyEvents} invitații azi. Încearcă din nou mâine.`,
       eventFull: `Această invitație are deja ${eventResponses} răspunsuri, limita maximă acceptată.`,
       guestListReply: 'Această invitație primește confirmări doar prin linkurile personale trimise de gazdă.',
+      signInExpired:
+        'Conectarea cu cheia de acces a expirat. Apasă din nou „Găsește invitațiile mele” pe pagina principală.',
+      passkey: 'Cheia de acces nu a putut fi verificată. Încearcă din nou.',
+      passkeyMissing:
+        'Această cheie de acces nu mai deschide nicio invitație. Este posibil ca invitația să fi fost ștearsă.',
+      eventPasskeys: `Această invitație are deja ${eventPasskeys} chei de acces, limita maximă acceptată.`,
     };
   }
   return {
@@ -447,5 +470,9 @@ export function apiMessages(lang, { replyNameLimit, partySizeLimit, replyNoteLim
     dailyEvents: `This connection has published ${dailyEvents} invitations today. Try again tomorrow.`,
     eventFull: `This invitation already has ${eventResponses} replies, the most it can take.`,
     guestListReply: 'This invitation takes replies only through the personal links the host sends.',
+    signInExpired: 'The passkey sign-in has expired. Use "Find my invitations" on the home page again.',
+    passkey: 'The passkey could not be checked. Try again.',
+    passkeyMissing: 'This passkey no longer opens an invitation. The invitation may have been deleted.',
+    eventPasskeys: `This invitation already has ${eventPasskeys} passkeys, the most it can take.`,
   };
 }
