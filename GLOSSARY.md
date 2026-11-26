@@ -63,8 +63,12 @@ _Avoid_ `response` when naming this concept in the domain model.
 
 **Note**
 
-Optional free text of up to 300 characters that a guest adds to a reply for the host, such as a dietary need or a message. A reply has at most one note, and an empty note means the guest wrote none. The note belongs to the reply, so the guest changes it through the reply edit link or the personal link, and withdrawing the reply removes it.
+Optional free text of up to 300 characters that a guest adds to a reply for the host, such as a dietary need or a message. A reply has at most one note, and an empty note means the guest wrote none. The note belongs to the reply, so the guest changes it through the reply edit link or the personal link, the host can edit it in the tracker in the guest-list mode, and withdrawing the reply removes it.
 _Avoid_ `comment`, and `note` for the invitation's own short text, which the editor labels Short note and the domain model calls the message.
+
+**RSVP deadline**
+
+An optional calendar date set by the host in the tracker of a guest-list invitation, checked at 23:59 Europe/Bucharest time. After the deadline passes, guest replies, changes and withdrawals are refused and the personal link shows the reply read-only. Without a deadline, replies stay open until the invitation ends. The host can still edit a party's reply in the tracker after the deadline.
 
 **Withdraw**
 
@@ -109,12 +113,12 @@ _Avoid_ `account`, `login` and `password` for this concept.
 
 **Tracker**
 
-The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply.
+The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply, lets the host set an optional RSVP deadline, and lets the host edit a party's reply.
 _Avoid_ `dashboard`, `admin page` and `management page`.
 
 **Personal link**
 
-The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
+The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. After an RSVP deadline passes, the personal link shows the reply read-only. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
 _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 **View link**

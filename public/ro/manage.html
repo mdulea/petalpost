@@ -106,6 +106,28 @@
             <ul class="reply-list" id="partyList"></ul>
           </section>
 
+          <section class="panel" id="rsvpDeadline" aria-labelledby="h-deadline" hidden>
+            <h2 id="h-deadline">Termen de confirmare</h2>
+            <p class="hint" id="deadlineSummary">
+              Nu este setat niciun termen de confirmare. Confirmările rămân deschise până la încheierea invitației.
+            </p>
+            <form id="deadlineForm">
+              <div class="field">
+                <label for="deadlineDate">Închide confirmările după această dată</label>
+                <input class="input" id="deadlineDate" name="deadline" type="date" />
+                <span class="hint">Verificat la 23:59, ora Europe/Bucharest.</span>
+              </div>
+              <div class="reply-actions">
+                <button class="btn btn-primary btn-small" type="submit">Salvează termenul</button>
+                <button class="btn btn-ghost btn-small" type="button" id="clearDeadline" hidden>Șterge termenul</button>
+              </div>
+            </form>
+            <p class="hint" id="deadlineManagementLinkRequired" hidden>
+              Deschide linkul de administrare ca să modifici termenul de confirmare.
+            </p>
+            <p class="status" role="status" id="deadlineStatus"></p>
+          </section>
+
           <section class="panel" id="invitationLink" aria-labelledby="h-share">
             <h2 id="h-share">
               <svg class="icon"><use href="#i-link" /></svg>Linkul invitației

@@ -273,6 +273,23 @@ export const UI = {
       revoked: 'Personal link revoked.',
       regenerated: 'Personal link regenerated.',
       preview: 'Preview as this guest',
+      editReply: 'Edit reply',
+      saveReply: 'Save reply',
+      cancel: 'Cancel',
+      replySaved: 'Reply saved.',
+      attending: 'Will they come?',
+      yes: 'Yes',
+      no: 'No',
+      seats: 'People attending',
+      note: 'Note',
+    },
+    deadline: {
+      none: 'No RSVP deadline is set. Replies stay open until the invitation ends.',
+      open: (date) => `Replies close on ${date} at 23:59 Europe/Bucharest time.`,
+      closed: (date) => `Replies are closed. The RSVP deadline passed on ${date}.`,
+      guestOpen: (date) => `Please reply by ${date}.`,
+      saved: 'RSVP deadline saved.',
+      cleared: 'RSVP deadline cleared. Replies are open.',
     },
     invite: {
       photoAlt: 'Event photo',
@@ -461,6 +478,23 @@ export const UI = {
       revoked: 'Linkul personal a fost revocat.',
       regenerated: 'Noul link personal a fost generat.',
       preview: 'Previzualizează ca acest invitat',
+      editReply: 'Modifică răspunsul',
+      saveReply: 'Salvează răspunsul',
+      cancel: 'Anulează',
+      replySaved: 'Răspunsul a fost salvat.',
+      attending: 'Participă?',
+      yes: 'Da',
+      no: 'Nu',
+      seats: 'Număr de persoane',
+      note: 'Notă',
+    },
+    deadline: {
+      none: 'Nu este setat niciun termen de confirmare. Confirmările rămân deschise până la încheierea invitației.',
+      open: (date) => `Confirmările se închid pe ${date} la 23:59, ora Europe/Bucharest.`,
+      closed: (date) => `Confirmările sunt închise. Termenul de confirmare a trecut pe ${date}.`,
+      guestOpen: (date) => `Te rugăm să confirmi până pe ${date}.`,
+      saved: 'Termenul de confirmare a fost salvat.',
+      cleared: 'Termenul de confirmare a fost șters. Confirmările sunt deschise.',
     },
     invite: {
       photoAlt: 'Fotografia evenimentului',
@@ -589,6 +623,9 @@ export function apiMessages(
       partyLinkChanged: 'Linkul personal s-a schimbat. Verifică linkul actual.',
       partyReply: `Alege un răspuns și între 1 și ${partySeatsLimit} de locuri dacă participi. Nota poate avea cel mult ${replyNoteLimit} de caractere.`,
       partySeats: `Introdu un număr de locuri între 0 și ${partySeatsLimit}.`,
+      deadline: 'Alege o dată calendaristică validă pentru termenul de confirmare.',
+      deadlineMode: 'Doar invitațiile cu listă de invitați pot avea un termen de confirmare.',
+      deadlinePassed: 'Confirmările sunt închise deoarece termenul de confirmare a trecut.',
     };
   }
   return {
@@ -626,5 +663,8 @@ export function apiMessages(
     partyLinkChanged: 'The personal link changed. Check the current link.',
     partyReply: `Choose an answer and between 1 and ${partySeatsLimit} seats when attending. A note can have up to ${replyNoteLimit} characters.`,
     partySeats: `Enter a number of seats from 0 to ${partySeatsLimit}.`,
+    deadline: 'Choose a valid calendar date for the RSVP deadline.',
+    deadlineMode: 'Only guest-list invitations can have an RSVP deadline.',
+    deadlinePassed: 'Replies are closed because the RSVP deadline has passed.',
   };
 }

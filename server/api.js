@@ -31,8 +31,8 @@ const MESSAGES = {
 
 const requestMessages = (request) => MESSAGES[normalizeLang(request.headers.get('accept-language') ?? 'en')];
 
-// Each action gets {db, request, ids, dailyEvents}, where ids are the path captures, and returns the Response.
-export function createApi(db, { dailyEvents = DAILY_EVENTS } = {}) {
+// Each action gets {db, request, ids, dailyEvents, now}, where ids are the path captures, and returns the Response.
+export function createApi(db, { dailyEvents = DAILY_EVENTS, now = () => new Date() } = {}) {
   return async function handle(request) {
     const { pathname } = new URL(request.url);
     const messages = requestMessages(request);
@@ -43,7 +43,7 @@ export function createApi(db, { dailyEvents = DAILY_EVENTS } = {}) {
       if (!action) throw new Refusal(405, 'method');
       const ids = pathname.match(route.pattern).slice(1);
       if (!ids.every((id) => ID_PATTERN.test(id))) throw new Refusal(400, 'id');
-      return await action({ db, request, ids, dailyEvents });
+      return await action({ db, request, ids, dailyEvents, now });
     } catch (error) {
       if (error instanceof Refusal) return json(error.status, { error: messages[error.code], ...error.extra });
       console.error('rsvp storage error', error?.code ?? 'unknown');
