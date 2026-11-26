@@ -1,6 +1,6 @@
 // Checks the countdowns to the RSVP deadline and to the deletion in English and Romanian: the tracker shows the
 // deadline nudge with the parties without a reply in the last 7 days before the deadline, hides the deadline countdown
-// once it passes, and shows the deletion nudge in the last 3 days before the deletion; the personal link counts down
+// once it passes, and shows the deletion nudge in the last 3 days before the deletion and until the deletion runs; the personal link counts down
 // to the deadline until it passes. The tracker and guest pages run on a Europe/Bucharest clock that the test moves.
 // Run: pnpm test:browser tests/countdowns.spec.js
 import { expect, test } from '@playwright/test';
@@ -16,6 +16,7 @@ const COPY = {
     deadlineNudge: 'Replies close in 5 days. 1 party has not replied.',
     deletion: 'The guest list and its replies are deleted in 16 days.',
     deletionNudge: 'The guest list and its replies are deleted in 2 days. Download the guest-list CSV to keep a copy.',
+    deletionDue: 'The guest list and its replies are deleted within a day. Download the guest-list CSV to keep a copy.',
     guest: 'Replies close in 5 days.',
   },
   ro: {
@@ -26,6 +27,8 @@ const COPY = {
     deletion: 'Lista de invitați și răspunsurile ei se șterg peste 16 zile.',
     deletionNudge:
       'Lista de invitați și răspunsurile ei se șterg peste 2 zile. Descarcă lista de invitați în format CSV ca să păstrezi o copie.',
+    deletionDue:
+      'Lista de invitați și răspunsurile ei se șterg în cel mult o zi. Descarcă lista de invitați în format CSV ca să păstrezi o copie.',
     guest: 'Confirmările se închid peste 5 zile.',
   },
 };
@@ -71,6 +74,12 @@ for (const lang of ['en', 'ro']) {
     await tracker.page.clock.fastForward(14 * 24 * HOUR);
     await expect(deadline).toBeHidden();
     await expect(deletion).toHaveText(copy.deletionNudge);
+    await expect(deletion).toHaveClass('warning');
+
+    // After 23:59 on the day after the event, the nudge stays until the daily retention run deletes the list.
+    await tracker.page.reload();
+    await tracker.page.clock.fastForward(3 * 24 * HOUR);
+    await expect(deletion).toHaveText(copy.deletionDue);
     await expect(deletion).toHaveClass('warning');
 
     const guest = await newBrowser(browser, { timezoneId: 'Europe/Bucharest' });

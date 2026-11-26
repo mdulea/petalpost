@@ -335,6 +335,7 @@ export const UI = {
       deadline: (left) => `Replies close in ${enLeft(left)}.`,
       pending: (n) => `${n} ${n === 1 ? 'party has' : 'parties have'} not replied.`,
       deletion: (left) => `The guest list and its replies are deleted in ${enLeft(left)}.`,
+      deletionDue: 'The guest list and its replies are deleted within a day.',
       download: 'Download the guest-list CSV to keep a copy.',
     },
     invite: {
@@ -584,6 +585,7 @@ export const UI = {
       deadline: (left) => `Confirmările se închid peste ${roLeft(left)}.`,
       pending: (n) => `Încă nu ${n === 1 ? 'a' : 'au'} răspuns ${roCount(n, ['un grup', 'grupuri'])}.`,
       deletion: (left) => `Lista de invitați și răspunsurile ei se șterg peste ${roLeft(left)}.`,
+      deletionDue: 'Lista de invitați și răspunsurile ei se șterg în cel mult o zi.',
       download: 'Descarcă lista de invitați în format CSV ca să păstrezi o copie.',
     },
     invite: {

@@ -103,17 +103,23 @@ export const deadlineEnd = (deadline) => (isValidDate(deadline) ? bucharestEndOf
 // Europe/Bucharest time on the day after its YYYY-MM-DD event date. Returns null without a valid date.
 export const deletionStart = (date) => (isValidDate(date) ? bucharestEndOfDay(date, 1) : null);
 
-const within = (left, days) => Boolean(left) && (left.unit === 'hours' || left.count <= days);
+const inLastDays = (left, days) => left.unit === 'hours' || left.count <= days;
 
-// What the tracker of a guest-list invitation shows as due. d: the invitation data; pending: the parties without a
-// reply. Returns {deadline, deletion}, each null or {left, nudge}, where left is a countdown() result and nudge is true
-// in the last DEADLINE_NUDGE_DAYS days before the deadline while a party has not replied, and in the last
-// DELETION_NUDGE_DAYS days before the deletion.
-export function trackerDue(d, pending, now) {
-  const deadlineLeft = countdown(deadlineEnd(d.deadline), now);
-  const deletionLeft = countdown(deletionStart(d.date), now);
+// What the tracker of a guest-list invitation shows as due. deadline and date: the invitation's RSVP deadline and
+// event date; pending: the parties without a reply. Returns {deadline, deletion}. deadline is null or {left, nudge},
+// where left is a countdown() result and nudge is true in the last DEADLINE_NUDGE_DAYS days while a party has not
+// replied. deletion is null without a date, otherwise {left, nudge} with nudge true in the last DELETION_NUDGE_DAYS
+// days. Once the deletion has started, left is null and nudge true until the next daily retention run deletes the
+// invitation.
+export function trackerDue({ deadline, date }, pending, now) {
+  const deadlineLeft = countdown(deadlineEnd(deadline), now);
+  const start = deletionStart(date);
+  const deletionLeft = countdown(start, now);
   return {
-    deadline: deadlineLeft && { left: deadlineLeft, nudge: pending > 0 && within(deadlineLeft, DEADLINE_NUDGE_DAYS) },
-    deletion: deletionLeft && { left: deletionLeft, nudge: within(deletionLeft, DELETION_NUDGE_DAYS) },
+    deadline: deadlineLeft && {
+      left: deadlineLeft,
+      nudge: pending > 0 && inLastDays(deadlineLeft, DEADLINE_NUDGE_DAYS),
+    },
+    deletion: start && { left: deletionLeft, nudge: !deletionLeft || inLastDays(deletionLeft, DELETION_NUDGE_DAYS) },
   };
 }

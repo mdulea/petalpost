@@ -5,7 +5,7 @@
 // Europe/Bucharest midnight checks across winter and summer time; the last minute of the RSVP deadline and the start of
 // the deletion at 23:59 Europe/Bucharest time in winter and summer, whatever the runtime's time zone; the tracker's
 // deadline countdown until the deadline passes, and its nudge in the last 7 days while a party has not replied; the
-// deletion countdown, and its nudge in the last 3 days; the English and Romanian countdown and nudge text.
+// deletion countdown, and its nudge in the last 3 days and until the retention run deletes the list; the English and Romanian countdown and nudge text.
 // The checks run in the Europe/Bucharest time zone, which changes to summer time on 29 March 2026 at 03:00 and back
 // on 25 October 2026 at 04:00.
 // Run: pnpm exec node tests/check-countdown.js
@@ -162,8 +162,12 @@ test('the tracker counts down to the deletion and nudges in the last 3 days', ()
   assert.equal(due(d, 0, '2026-12-17T10:00:00Z').deletion.nudge, false);
   assert.deepEqual(due(d, 0, '2026-12-18T10:00:00Z').deletion, { left: { unit: 'days', count: 3 }, nudge: true });
   assert.deepEqual(due(d, 5, '2026-12-21T21:00:00Z').deletion, { left: { unit: 'hours', count: 1 }, nudge: true });
-  assert.equal(due(d, 0, '2026-12-21T21:59:00Z').deletion, null);
   assert.equal(due({ date: '' }, 0, '2026-11-26T10:00:00Z').deletion, null);
+});
+
+test('after 23:59 on the day after the event, the deletion nudge stays until the retention run deletes the list', () => {
+  assert.deepEqual(due({ date: '2026-12-20' }, 0, '2026-12-21T21:59:00Z').deletion, { left: null, nudge: true });
+  assert.deepEqual(due({ date: '2026-12-20' }, 0, '2026-12-22T15:00:00Z').deletion, { left: null, nudge: true });
 });
 
 test('the countdown and nudge text is English', () => {
@@ -173,6 +177,7 @@ test('the countdown and nudge text is English', () => {
   assert.equal(words.pending(1), '1 party has not replied.');
   assert.equal(words.pending(12), '12 parties have not replied.');
   assert.equal(words.deletion({ unit: 'days', count: 2 }), 'The guest list and its replies are deleted in 2 days.');
+  assert.equal(words.deletionDue, 'The guest list and its replies are deleted within a day.');
   assert.equal(words.download, 'Download the guest-list CSV to keep a copy.');
 });
 
@@ -187,5 +192,6 @@ test('the countdown and nudge text is Romanian, with "de" from 20', () => {
     words.deletion({ unit: 'days', count: 2 }),
     'Lista de invitați și răspunsurile ei se șterg peste 2 zile.',
   );
+  assert.equal(words.deletionDue, 'Lista de invitați și răspunsurile ei se șterg în cel mult o zi.');
   assert.equal(words.download, 'Descarcă lista de invitați în format CSV ca să păstrezi o copie.');
 });

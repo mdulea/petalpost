@@ -18,11 +18,12 @@ function showLine(el, due, text, action) {
 function show({ d, parties }, { lang }) {
   const words = UI[lang].countdowns;
   const { pending } = partyTotals(parties);
+  const deletionText = (left) => (left ? words.deletion(left) : words.deletionDue);
   const refresh = () => {
     const due = trackerDue(d, pending, new Date());
     showLine(document.getElementById('deadlineCountdown'), due.deadline, words.deadline, words.pending(pending));
-    showLine(document.getElementById('deletionCountdown'), due.deletion, words.deletion, words.download);
-    return Boolean(due.deadline || due.deletion);
+    showLine(document.getElementById('deletionCountdown'), due.deletion, deletionText, words.download);
+    return Boolean(due.deadline || due.deletion?.left);
   };
   clearInterval(timer);
   if (refresh()) {
