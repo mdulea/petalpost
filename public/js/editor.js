@@ -44,7 +44,8 @@ import {
 
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
-const copy = UI[lang].editor;
+const editorCopy = UI[lang].editor;
+const guestCopy = UI[lang].guest;
 const catalog = templatesFor(lang);
 const categories = categoriesFor(lang);
 
@@ -153,7 +154,7 @@ function addCounter(input, limit, { codePoints = false } = {}) {
   input.addEventListener('input', () => {
     const before = entry.count;
     showCounts();
-    if (entry.count >= limit && before < limit) limitAlert.textContent = copy.charsLeft(0);
+    if (entry.count >= limit && before < limit) limitAlert.textContent = editorCopy.charsLeft(0);
   });
 }
 
@@ -164,7 +165,7 @@ function showCounts() {
     entry.count = entry.length(input.value);
     const left = charsLeft(entry.count, entry.limit);
     entry.counter.hidden = left === null;
-    entry.counter.textContent = left === null ? '' : copy.charsLeft(left);
+    entry.counter.textContent = left === null ? '' : editorCopy.charsLeft(left);
   });
 }
 
@@ -215,7 +216,7 @@ pickerTabs.addEventListener('click', (e) => {
 // Accent swatches.
 
 document.getElementById('swatches').innerHTML =
-  `<label class="swatch swatch-default" title="${copy.defaultSwatch}"><input type="radio" name="accent" value="" aria-label="${copy.defaultSwatch}"></label>` +
+  `<label class="swatch swatch-default" title="${editorCopy.defaultSwatch}"><input type="radio" name="accent" value="" aria-label="${editorCopy.defaultSwatch}"></label>` +
   ACCENTS.map((a) => {
     const label = accentLabel(a.hex, lang);
     return `
@@ -270,19 +271,19 @@ async function decodePhoto(file) {
 
 async function loadPhoto(file) {
   if (file !== null && (!file || !file.type.startsWith('image/'))) {
-    setStatus(copy.chooseImage);
+    setStatus(editorCopy.chooseImage);
     return;
   }
   const result = await changePhoto(state, file === null ? null : decodePhoto(file), storage, lang);
   if (result === 'superseded') return;
   if (result === 'refused') {
-    setStatus(copy.imageRefused);
+    setStatus(editorCopy.imageRefused);
     return;
   }
   commit();
   if (file === null) setStatus('');
-  else if (result === 'saved') setStatus(copy.photoAdded, { keep: true });
-  else setStatus(copy.photoTooLarge, { keep: true });
+  else if (result === 'saved') setStatus(editorCopy.photoAdded, { keep: true });
+  else setStatus(editorCopy.photoTooLarge, { keep: true });
 }
 
 const dropzone = document.getElementById('dropzone');
@@ -309,11 +310,11 @@ dropzone.addEventListener('drop', (e) => {
 document.getElementById('removePhoto').addEventListener('click', () => loadPhoto(null));
 
 document.getElementById('reset').addEventListener('click', () => {
-  if (!window.confirm(copy.resetConfirm)) return;
+  if (!window.confirm(editorCopy.resetConfirm)) return;
   resetInvite(state, lang);
   fillForm();
   commit();
-  setStatus(copy.resetDone);
+  setStatus(editorCopy.resetDone);
 });
 
 // Copies the link and then calls done, or shows the link in a prompt where the clipboard is blocked.
@@ -322,7 +323,7 @@ async function copyLink(url, done) {
     await navigator.clipboard.writeText(url);
     done();
   } catch {
-    window.prompt(copy.copyPrompt, url);
+    window.prompt(editorCopy.copyPrompt, url);
   }
 }
 
@@ -372,17 +373,17 @@ async function renderPng() {
 document.getElementById('downloadPng').addEventListener('click', async (e) => {
   const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
   if (typeof htmlToImage !== 'object') {
-    setStatus(copy.imageToolLoading);
+    setStatus(editorCopy.imageToolLoading);
     return;
   }
   button.disabled = true;
-  setStatus(copy.preparingImage, { keep: true });
+  setStatus(editorCopy.preparingImage, { keep: true });
   try {
     downloadDataUrl(await renderPng(), `${slug(state.d.title)}.png`);
     countAction('png_download');
-    setStatus(copy.downloaded);
+    setStatus(editorCopy.downloaded);
   } catch {
-    setStatus(copy.downloadFailed);
+    setStatus(editorCopy.downloadFailed);
   } finally {
     button.disabled = false;
   }
@@ -392,16 +393,16 @@ const sharePngButton = /** @type {HTMLButtonElement} */ (document.getElementById
 sharePngButton.hidden = !canShareFile;
 sharePngButton.addEventListener('click', async () => {
   if (typeof htmlToImage !== 'object') {
-    setStatus(copy.imageToolLoading);
+    setStatus(editorCopy.imageToolLoading);
     return;
   }
   sharePngButton.disabled = true;
-  setStatus(copy.preparingImage, { keep: true });
+  setStatus(editorCopy.preparingImage, { keep: true });
   let dataUrl;
   try {
     dataUrl = await renderPng();
   } catch {
-    setStatus(copy.downloadFailed);
+    setStatus(editorCopy.downloadFailed);
     sharePngButton.disabled = false;
     return;
   }
@@ -410,14 +411,14 @@ sharePngButton.addEventListener('click', async () => {
     const file = dataUrlToFile(dataUrl, filename);
     await navigator.share({ files: [file], title: eventPreviewMeta(state.d, localeOf(lang)).title });
     countAction('png_share');
-    setStatus(copy.inviteShared);
+    setStatus(editorCopy.inviteShared);
   } catch (error) {
     if (error?.name === 'AbortError') {
       setStatus('');
     } else {
       downloadDataUrl(dataUrl, filename);
       countAction('png_download');
-      setStatus(copy.downloaded);
+      setStatus(editorCopy.downloaded);
     }
   } finally {
     sharePngButton.disabled = false;
@@ -428,7 +429,7 @@ sharePngButton.addEventListener('click', async () => {
 document.getElementById('addCalendar').addEventListener('click', () => {
   const ics = buildIcs(state.d, new Date());
   if (!ics) {
-    setStatus(copy.noDate);
+    setStatus(editorCopy.noDate);
     return;
   }
   const link = document.createElement('a');
@@ -477,7 +478,7 @@ function showPublished() {
   const live = Boolean(cred && cred.version !== null);
   publishedPanel.hidden = !live;
   if (!live) setOutcome(publishedPanel, null);
-  publishButton.lastChild.textContent = live ? copy.publishChanges : copy.publish;
+  publishButton.lastChild.textContent = live ? editorCopy.publishChanges : editorCopy.publish;
   eventLinkInput.value = live ? eventLink(location.origin, cred.id, lang) : '';
   whatsappEventLink.href = live ? whatsappLink(state.d, localeOf(lang), eventLinkInput.value) : '#';
   manageLinkInput.value = live ? manageLink(location.origin, cred.id, cred.secret, lang) : '';
@@ -496,18 +497,23 @@ publishButton.addEventListener('click', async () => {
   if (!state.publishedEvent) rememberEvent({ id: newId(), secret: newSecret(), version: null });
   const cred = state.publishedEvent;
   publishButton.disabled = true;
-  publishStatus.textContent = copy.publishing;
+  publishStatus.textContent = editorCopy.publishing;
   setOutcome(publishedPanel, null);
   const result = await client.publish(cred, state);
   publishButton.disabled = false;
   if (result.ok || result.status === 409) {
     const kept = rememberEvent({ ...cred, version: result.data.version });
-    publishStatus.textContent = [result.ok ? '' : result.message, kept ? '' : copy.storageRefused].join(' ').trim();
+    publishStatus.textContent = [result.ok ? '' : result.message, kept ? '' : editorCopy.storageRefused]
+      .join(' ')
+      .trim();
     if (result.ok)
-      showOutcome(publishedPanel, cred.version === null ? copy.publishedHeading : copy.changesPublishedHeading);
+      showOutcome(
+        publishedPanel,
+        cred.version === null ? editorCopy.publishedHeading : editorCopy.changesPublishedHeading,
+      );
   } else if (result.status === 404 && cred.version !== null) {
     rememberEvent(null);
-    publishStatus.textContent = copy.deletedOnServer;
+    publishStatus.textContent = editorCopy.deletedOnServer;
   } else {
     publishStatus.textContent = result.message;
   }
@@ -516,7 +522,7 @@ publishButton.addEventListener('click', async () => {
 document.getElementById('copyEventLink').addEventListener('click', () =>
   copyLink(eventLinkInput.value, () => {
     countAction('invitation_link_copy');
-    publishStatus.textContent = copy.eventLinkCopied;
+    publishStatus.textContent = editorCopy.eventLinkCopied;
   }),
 );
 const shareEventLinkButton = /** @type {HTMLButtonElement} */ (document.getElementById('shareEventLink'));
@@ -526,17 +532,17 @@ shareEventLinkButton.addEventListener('click', () =>
     eventLinkInput.value,
     () => {
       countAction('invitation_link_share');
-      publishStatus.textContent = copy.eventLinkShared;
+      publishStatus.textContent = editorCopy.eventLinkShared;
     },
     () => {
       countAction('invitation_link_copy');
-      publishStatus.textContent = copy.eventLinkCopied;
+      publishStatus.textContent = editorCopy.eventLinkCopied;
     },
   ),
 );
 document.getElementById('copyManageLink').addEventListener('click', () =>
   copyLink(manageLinkInput.value, () => {
-    publishStatus.textContent = copy.manageLinkCopied;
+    publishStatus.textContent = editorCopy.manageLinkCopied;
   }),
 );
 
@@ -570,7 +576,7 @@ function attendingChecked() {
 
 // Each reply field shows its own error in a message below it, which joins the field's description after any hint and
 // counter. The answer's field is its radio group, and focus goes to the group's first choice.
-const replyErrors = copy.replyErrors(REPLY_LIMITS);
+const replyErrors = guestCopy.replyErrors(REPLY_LIMITS);
 /** @type {Record<string, {field: Element, focusTarget: HTMLElement}>} */
 const replyControls = {
   name: { field: nameInput, focusTarget: nameInput },
@@ -649,13 +655,13 @@ rsvpForm.addEventListener('submit', async (e) => {
     return;
   }
   if (state.sample) {
-    rsvpStatus.textContent = copy.sampleReply;
+    rsvpStatus.textContent = guestCopy.sampleReply;
     return;
   }
   // The edit link replaces the address before the request, so a reload or bookmark opens the reply if it was saved.
   history.replaceState(null, '', replyLink());
   sendReply.disabled = true;
-  rsvpStatus.textContent = copy.sendingReply;
+  rsvpStatus.textContent = guestCopy.sendingReply;
   const created = replyCred.version === null;
   const result = await client.saveReply(state.event, replyCred, reply);
   sendReply.disabled = false;
@@ -663,7 +669,7 @@ rsvpForm.addEventListener('submit', async (e) => {
     replyCred.version = result.data.version;
     showReplyLink();
     rsvpStatus.textContent = '';
-    showOutcome(replySavedPanel, created ? copy.replySent : copy.replyUpdated);
+    showOutcome(replySavedPanel, created ? guestCopy.replySent : guestCopy.replyUpdated);
     return;
   }
   if (result.status === 409) {
@@ -675,10 +681,10 @@ rsvpForm.addEventListener('submit', async (e) => {
 
 // The withdraw button sits in the saved-reply panel, so it shows only once the server has confirmed a version.
 withdrawButton.addEventListener('click', async () => {
-  if (!window.confirm(copy.withdrawConfirm)) return;
+  if (!window.confirm(guestCopy.withdrawConfirm)) return;
   withdrawButton.disabled = true;
   setOutcome(replySavedPanel, null);
-  rsvpStatus.textContent = copy.withdrawingReply;
+  rsvpStatus.textContent = guestCopy.withdrawingReply;
   const result = await client.withdrawReply(state.event, replyCred);
   withdrawButton.disabled = false;
   if (result.ok) {
@@ -708,7 +714,7 @@ document.getElementById('replyAgain').addEventListener('click', () => {
 
 document.getElementById('copyReplyLink').addEventListener('click', () =>
   copyLink(replyLinkInput.value, () => {
-    rsvpStatus.textContent = copy.replyLinkCopied;
+    rsvpStatus.textContent = guestCopy.replyLinkCopied;
   }),
 );
 
@@ -722,14 +728,14 @@ function setHeading(heading) {
 async function openEvent() {
   const result = await client.loadEvent(state.event);
   if (!result.ok) {
-    setHeading(result.status === 404 ? copy.missingHeading : copy.loadFailedHeading);
+    setHeading(result.status === 404 ? guestCopy.missingHeading : guestCopy.loadFailedHeading);
     setStatus(result.message, { keep: true });
     return;
   }
   const template = getTemplate(result.data.t, lang);
   state.t = template.id;
   state.d = makeInviteData(template, result.data.d, lang);
-  setHeading(state.d.title || copy.defaultGuestHeading);
+  setHeading(state.d.title || guestCopy.defaultGuestHeading);
   document.body.classList.remove('invite-hidden');
   render();
   revealInvite();
@@ -744,7 +750,7 @@ async function openEvent() {
   const saved = await client.loadReply(state.event, replyCred);
   // The event exists, so the reply was never saved or was withdrawn. The empty form sends it as a new reply.
   if (saved.status === 404) {
-    rsvpStatus.textContent = copy.noSavedReply;
+    rsvpStatus.textContent = guestCopy.noSavedReply;
     return;
   }
   if (!saved.ok) {
@@ -754,7 +760,7 @@ async function openEvent() {
   replyCred.version = saved.data.version;
   fillReply(saved.data);
   showReplyLink();
-  rsvpStatus.textContent = copy.savedReplyShown;
+  rsvpStatus.textContent = guestCopy.savedReplyShown;
 }
 
 // A broken link shows only the message and the link to make an invite; an invite without a title gets a generic one.
@@ -762,20 +768,20 @@ if (state.guest) {
   document.body.classList.add('view-mode');
   document.body.classList.toggle('invite-hidden', state.broken || Boolean(state.event));
   if (state.broken) {
-    setHeading(copy.brokenHeading);
-    setStatus(copy.brokenMessage, { keep: true });
+    setHeading(guestCopy.brokenHeading);
+    setStatus(guestCopy.brokenMessage, { keep: true });
   } else if (state.event) {
-    setHeading(copy.openingHeading);
+    setHeading(guestCopy.openingHeading);
     openEvent();
   } else if (state.sample) {
-    setHeading(state.d.title || copy.defaultGuestHeading);
+    setHeading(state.d.title || guestCopy.defaultGuestHeading);
     const sampleNotice = document.getElementById('sampleNotice');
-    sampleNotice.textContent = copy.sampleNotice;
+    sampleNotice.textContent = guestCopy.sampleNotice;
     sampleNotice.hidden = false;
     rsvpForm.hidden = false;
     revealInvite();
   } else {
-    setHeading(state.d.title || copy.defaultGuestHeading);
+    setHeading(state.d.title || guestCopy.defaultGuestHeading);
     revealInvite();
   }
 }

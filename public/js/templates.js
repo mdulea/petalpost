@@ -1760,7 +1760,7 @@ export function renderInvite(template, d, { href, label, inline, decorative, loc
   const isRo = typeof locale === 'string' && locale.toLowerCase().startsWith('ro');
   const style = `--i-bg:${c.bg};--i-ink:${c.ink};--i-accent:${c.accent};--i-soft:${c.soft}`;
   const art = PHOTO_URL.test(d.photo)
-    ? `<div class="invite-photo" role="img" aria-label="${UI[isRo ? 'ro' : 'en'].photoAlt}" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY)}%"></div>`
+    ? `<div class="invite-photo" role="img" aria-label="${UI[isRo ? 'ro' : 'en'].invite.photoAlt}" style="background-image:url('${d.photo}');background-position:50% ${Number(d.photoY)}%"></div>`
     : template.art;
   const dateText = formatDate(d.date, locale);
   const timeText = formatTime(d.time, locale);

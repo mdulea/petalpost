@@ -208,6 +208,15 @@ The tests fail when a page breaks the Content-Security-Policy.
 `alternatesFor` in the same file builds the hreflang alternate links from those pairs, and the language switch links come from `languageSwitchHref`.
 `pnpm pages` writes the alternate links into every page.
 
+### UI strings
+
+`UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
+The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, and `manage` has the management page.
+A script reads its group once, such as `UI[lang].guest`.
+A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
+`apiMessages` in the same file holds the API error messages for both languages.
+`check-invite.js` fails when a group or the API messages have a key in one language that the other lacks.
+
 ### Add an occasion
 
 1. Add the occasion's first template as [Add a template](#add-a-template) describes, with the new category name in `category`.
