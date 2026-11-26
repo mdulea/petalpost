@@ -72,7 +72,7 @@ async function readResponses(tx, id, secret) {
     updatedAt: new Date(r.updated_at).toISOString(),
   }));
   const managementSecret = matches(secret, event.secret_hash) ? secret : undefined;
-  const parties = hasGuestList ? await listParties(tx, id, managementSecret) : undefined;
+  const parties = hasGuestList ? await listParties(tx, id, event.d, managementSecret) : undefined;
   const tables = hasGuestList ? tableSeats(await listTables(tx, id), parties) : undefined;
   return json(200, {
     ...presentationOf(event, true),

@@ -3,10 +3,19 @@
 // adds the answers, and the host edits the seats of each sub-event through the reply form in place of the seat editor.
 // With menu options, each reply lists its meal counts, the totals add the meals of each option, the CSV adds the
 // counts, and the seat editor and the reply form take the meal counts with the seats.
+// The host picks the sub-events of each party in its row, or of every party the search and filter show at once. A
+// party's row, reply form and answer lines show only its sub-events.
 import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
 import { menuLabels, partyInviteLinks, personalMessage, subEventLabels, whatsappUrl } from '../invite.js';
-import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
+import {
+  normalizePartySearch,
+  parsePartyNames,
+  partyMatches,
+  partySubEventTally,
+  partyTotals,
+  validPartyName,
+} from '../guest-list.js';
 import { mealFields, mealLine, mealTotals } from '../meal-choices.js';
 import { newId, PARTY_LIMITS, partyStatus } from '../rsvp.js';
 import { answerFields, answerList, answerTotals } from '../sub-event-answers.js';
@@ -120,6 +129,45 @@ function button(label, click) {
   element.textContent = label;
   element.addEventListener('click', () => click(element));
   return element;
+}
+
+// A form with one checkbox for each sub-event of labels, checked for the ids in checked, and a submit button. On
+// submit, save gets the checked ids, and a form without a checked box shows chooseOne without saving.
+function subEventChoice(labels, checked, { legend, submit, load, lang }, save) {
+  const copy = UI[lang].subEventReplies;
+  const form = document.createElement('form');
+  form.noValidate = true;
+  const fieldset = document.createElement('fieldset');
+  fieldset.className = 'sub-event-answer';
+  const title = document.createElement('legend');
+  title.className = 'field-label';
+  title.textContent = legend;
+  const choices = document.createElement('div');
+  choices.className = 'choices';
+  const boxes = labels.map(({ id, name }) => {
+    const label = document.createElement('label');
+    label.className = 'choice';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.value = id;
+    box.checked = checked.includes(id);
+    label.append(box, name);
+    choices.append(label);
+    return box;
+  });
+  const button = document.createElement('button');
+  button.type = 'submit';
+  button.className = 'btn btn-ghost btn-small';
+  button.textContent = submit;
+  fieldset.append(title, choices, button);
+  form.append(fieldset);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const ids = boxes.filter((box) => box.checked).map((box) => box.value);
+    if (!ids.length) return setStatus(copy.chooseOne);
+    return writeAndReload(load, form.elements, () => save(ids));
+  });
+  return form;
 }
 
 // With menu options, the meal counts come before the seats, and they are disabled while the seats are 0.
@@ -263,7 +311,8 @@ function buildHostReplyForm(party, { client, cred, load, lang }, labels, menu, w
 
 async function renderParty(party, tables, page, invite, words) {
   const { client, cred, load, lang, signedIn, formatTime } = page;
-  const labels = subEventLabels(invite, lang);
+  const allLabels = subEventLabels(invite, lang);
+  const labels = allLabels.filter(({ id }) => party.subEvents.includes(id));
   const menu = menuLabels(invite, lang);
   const row = document.createElement('li');
   row.className = 'reply';
@@ -308,10 +357,20 @@ async function renderParty(party, tables, page, invite, words) {
     row.append(revoked);
   }
   if (labels.length) {
+    const copy = UI[lang].subEventReplies;
     const hint = document.createElement('p');
     hint.className = 'hint';
-    hint.textContent = UI[lang].subEventReplies.seatsBySubEvent;
-    row.append(hint, tablePicker(party, tables, page));
+    hint.textContent = copy.seatsBySubEvent;
+    const choice = subEventChoice(
+      allLabels,
+      party.subEvents,
+      { legend: `${copy.invitedTo} · ${party.name}`, submit: copy.saveInvited, load, lang },
+      async (ids) => {
+        const result = await client.setPartySubEvents(cred, [party.id], ids);
+        return result.ok ? { ...result, message: copy.invitedSaved } : result;
+      },
+    );
+    row.append(choice, hint, tablePicker(party, tables, page));
   } else {
     row.append(seatEditor(party, { client, cred, load, lang }, menu, words), tablePicker(party, tables, page));
   }
@@ -460,6 +519,7 @@ async function show({ parties, tables, invite, responses }, page) {
   const rendered = await Promise.all(parties.map((party) => renderParty(party, tables, page, invite, words)));
   if (loadedParties !== parties) return;
   rows = rendered;
+  renderBulkChoice(labels, page);
   const { accepted, declined, pending } = partyTotals(parties, responses);
   renderTotals(document.getElementById('partyTotals'), [
     [accepted, words.acceptedSeats(accepted)],
@@ -467,9 +527,14 @@ async function show({ parties, tables, invite, responses }, page) {
     [pending, words.pendingParties(pending)],
   ]);
   const replies = [...parties.map((party) => party.reply).filter(Boolean), ...responses];
+  const tallies = partySubEventTally(
+    labels.map(({ id }) => id),
+    parties,
+    responses,
+  );
   document
     .getElementById('partyTotals')
-    .append(...answerTotals(labels, replies, page.lang), ...mealTotals(menu, replies, page.lang));
+    .append(...answerTotals(labels, tallies, page.lang), ...mealTotals(menu, replies, page.lang));
   const available = parties.filter((party) => !party.reply);
   document.getElementById('unattachedReplies').hidden = responses.length === 0;
   document
@@ -477,6 +542,24 @@ async function show({ parties, tables, invite, responses }, page) {
     .replaceChildren(...responses.map((reply) => unattachedRow(reply, available, labels, menu, page, words)));
   document.getElementById('partyList').replaceChildren(...rows.map(({ row }) => row));
   filterRows();
+}
+
+// The picker that invites every party the search and filter show to the checked sub-events. It is hidden without
+// sub-events or parties.
+function renderBulkChoice(labels, { client, cred, load, lang }) {
+  const container = document.getElementById('bulkSubEvents');
+  container.hidden = !labels.length || !rows.length;
+  if (container.hidden) return container.replaceChildren();
+  const copy = UI[lang].subEventReplies;
+  const all = labels.map(({ id }) => id);
+  container.replaceChildren(
+    subEventChoice(labels, all, { legend: copy.bulkInvitedTo, submit: copy.bulkSave, load, lang }, async (ids) => {
+      const shown = rows.filter(({ row }) => !row.hidden).map(({ party }) => party.id);
+      if (!shown.length) return { message: copy.bulkNone };
+      const result = await client.setPartySubEvents(cred, shown, ids);
+      return result.ok ? { ...result, message: copy.bulkSaved(shown.length) } : result;
+    }),
+  );
 }
 
 export const section = { id: 'guestList', modes: ['guestList'], init, show };

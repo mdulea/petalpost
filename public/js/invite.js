@@ -50,6 +50,23 @@ export const SUB_EVENT_ID = /^[A-Za-z0-9_-]{1,22}$/;
 const idOf = (subEvent, index) => subEvent.id ?? String(index + 1);
 // The ids of the sub-events of d, a published d as readPublished returns it or as the database stores it, in order.
 export const subEventIds = (d) => (d?.subEvents ?? []).map(idOf);
+// The ids of the sub-events of d that a party is invited to, in d's order. invited is the party's stored list of
+// sub-event ids. The empty list, which is the default, invites the party to every sub-event, including one the host
+// adds later. A list that names none of d's sub-events, such as after the host removed them, also invites the party
+// to every sub-event.
+export function partySubEventIds(d, invited = []) {
+  const ids = subEventIds(d);
+  const chosen = ids.filter((id) => invited.includes(id));
+  return chosen.length ? chosen : ids;
+}
+// d as the personal link and the view link of a party show it: only the sub-events of partySubEventIds, each with its
+// id. A d without sub-events is unchanged.
+export function partyInvite(d, invited = []) {
+  if (!d?.subEvents?.length) return d;
+  const ids = partySubEventIds(d, invited);
+  const subEvents = d.subEvents.map((e, i) => ({ ...e, id: idOf(e, i) })).filter((e) => ids.includes(e.id));
+  return { ...d, subEvents };
+}
 // The {id, name} of each sub-event of d for the reply answers, where a sub-event without a name is part n.
 export const subEventLabels = (d, lang = 'en') =>
   (d?.subEvents ?? []).map((e, i) => ({

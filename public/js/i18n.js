@@ -365,7 +365,7 @@ export const UI = {
     },
     // The answers of a reply to each sub-event in the reply forms, the tracker and the CSV files. A sub-event appears
     // under its name, or as part n, counted from 1, when it has none. An answer argument is {attending, partySize},
-    // and a totals argument is a result of subEventTally in rsvp.js.
+    // and a totals argument is a result of subEventTally in rsvp.js, with pending from partySubEventTally in guest-list.js.
     subEventReplies: {
       untitled: (n) => `Part ${n}`,
       yes: 'Yes',
@@ -375,12 +375,20 @@ export const UI = {
       noAnswer: 'No answer',
       answer: ({ attending, partySize: n }) => (attending ? `Yes, ${n} ${n === 1 ? 'person' : 'people'}` : 'No'),
       line: (name, answer) => `${name}: ${answer}`,
-      totals: ({ name, yes, no, attending, unanswered }) =>
-        `${name}: ${attending} ${attending === 1 ? 'person' : 'people'} attending, ${yes} yes, ${no} no${unanswered ? `, ${unanswered} without an answer` : ''}`,
+      totals: ({ name, yes, no, attending, unanswered, pending = 0 }) =>
+        `${name}: ${attending} ${attending === 1 ? 'person' : 'people'} attending, ${yes} yes, ${no} no${unanswered ? `, ${unanswered} without an answer` : ''}${pending ? `, ${pending} ${pending === 1 ? 'party' : 'parties'} without a reply` : ''}`,
       csvAnswer: (name) => `${name}: attending`,
       csvPeople: (name) => `${name}: people`,
       csvTotal: 'Total',
       seatsBySubEvent: 'Use Edit reply to change the people at each part.',
+      invitedTo: 'Invited to',
+      saveInvited: 'Save parts',
+      invitedSaved: 'Parts saved.',
+      chooseOne: 'Choose at least one part.',
+      bulkInvitedTo: 'Invite the shown parties to',
+      bulkSave: 'Apply to the shown parties',
+      bulkNone: 'No parties match the search and filter.',
+      bulkSaved: (n) => `Parts saved for ${n} ${n === 1 ? 'party' : 'parties'}.`,
     },
     // The menu options in the editor, and the meal counts of a reply in the reply forms, the tracker and the CSV files.
     // An option appears under its name, or as option n, counted from 1, when it has none. A count argument and a totals
@@ -681,7 +689,7 @@ export const UI = {
     },
     // The answers of a reply to each sub-event in the reply forms, the tracker and the CSV files. A sub-event appears
     // under its name, or as part n, counted from 1, when it has none. An answer argument is {attending, partySize},
-    // and a totals argument is a result of subEventTally in rsvp.js.
+    // and a totals argument is a result of subEventTally in rsvp.js, with pending from partySubEventTally in guest-list.js.
     subEventReplies: {
       untitled: (n) => `Momentul ${n}`,
       yes: 'Da',
@@ -691,12 +699,20 @@ export const UI = {
       noAnswer: 'Fără răspuns',
       answer: ({ attending, partySize: n }) => (attending ? `Da, ${roCount(n, ['o persoană', 'persoane'])}` : 'Nu'),
       line: (name, answer) => `${name}: ${answer}`,
-      totals: ({ name, yes, no, attending, unanswered }) =>
-        `${name}: ${roCount(attending, ['o persoană confirmată', 'persoane confirmate'])}, ${yes} da, ${no} nu${unanswered ? `, ${unanswered} fără răspuns` : ''}`,
+      totals: ({ name, yes, no, attending, unanswered, pending = 0 }) =>
+        `${name}: ${roCount(attending, ['o persoană confirmată', 'persoane confirmate'])}, ${yes} da, ${no} nu${unanswered ? `, ${unanswered} fără răspuns` : ''}${pending ? `, ${roCount(pending, ['un grup care nu a răspuns', 'grupuri care nu au răspuns'])}` : ''}`,
       csvAnswer: (name) => `${name}: participă`,
       csvPeople: (name) => `${name}: persoane`,
       csvTotal: 'Total',
       seatsBySubEvent: 'Folosește „Modifică răspunsul” ca să schimbi numărul de persoane la fiecare moment.',
+      invitedTo: 'Invitați la',
+      saveInvited: 'Salvează momentele',
+      invitedSaved: 'Momentele au fost salvate.',
+      chooseOne: 'Alege cel puțin un moment.',
+      bulkInvitedTo: 'Invită grupurile afișate la',
+      bulkSave: 'Aplică grupurilor afișate',
+      bulkNone: 'Niciun grup nu corespunde căutării și filtrului.',
+      bulkSaved: (n) => `Momentele au fost salvate pentru ${roCount(n, ['un grup', 'grupuri'])}.`,
     },
     // The menu options in the editor, and the meal counts of a reply in the reply forms, the tracker and the CSV files.
     // An option appears under its name, or as option n, counted from 1, when it has none. A count argument and a totals
@@ -864,6 +880,7 @@ export function apiMessages(
       partySeats: `Introdu un număr de locuri între 0 și ${partySeatsLimit}.`,
       partyMeals: 'Introdu numărul de persoane pentru fiecare fel de meniu, cu un total egal cu numărul de locuri.',
       partySeatsBySubEvent: UI.ro.subEventReplies.seatsBySubEvent,
+      partySubEvents: 'Alege cel puțin un moment al acestei invitații pentru fiecare grup.',
       deadline: 'Alege o dată calendaristică validă pentru termenul de confirmare.',
       deadlineMode: 'Doar invitațiile cu listă de invitați pot avea un termen de confirmare.',
       deadlinePassed: 'Confirmările sunt închise deoarece termenul de confirmare a trecut.',
@@ -918,6 +935,7 @@ export function apiMessages(
     partySeats: `Enter a number of seats from 0 to ${partySeatsLimit}.`,
     partyMeals: 'Enter the number of people for each menu option, adding up to the seats.',
     partySeatsBySubEvent: UI.en.subEventReplies.seatsBySubEvent,
+    partySubEvents: 'Choose at least one part of this invitation for each party.',
     deadline: 'Choose a valid calendar date for the RSVP deadline.',
     deadlineMode: 'Only guest-list invitations can have an RSVP deadline.',
     deadlinePassed: 'Replies are closed because the RSVP deadline has passed.',

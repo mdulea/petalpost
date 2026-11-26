@@ -1,7 +1,7 @@
 // Fails when guest-list retention breaks in the RSVP API or dynamic /e/{id} route. Checks: a guest-list invitation
 // is deleted after 23:59 Europe/Bucharest time on the day after the event and not before, across both the spring
 // and autumn daylight saving changes and even when updated on the day after the event; with sub-events, the day
-// after the latest sub-event date counts; the deletion removes its
+// after the latest sub-event date counts, also for a party invited only to an earlier sub-event; the deletion removes its
 // parties and their replies; afterwards the public invitation API, the tracker API, the personal link API, the view
 // link API and the /e/{id} and /ro/e/{id} pages return 410 with "This invitation has ended" (and its Romanian wording) without event
 // details; a retried publish cannot restore an ended link; open invitations keep the 90-day rule, including one
@@ -95,11 +95,17 @@ test('the retention job counts a guest-list invitation from its latest sub-event
   const cred = host();
   const browser = client();
   const subEvents = [
-    { name: 'Party', date: '2026-06-18' },
-    { name: 'Civil ceremony', date: '2026-06-15' },
+    { id: 'party', name: 'Party', date: '2026-06-18' },
+    { id: 'civil', name: 'Civil ceremony', date: '2026-06-15' },
   ];
   await browser.publish(cred, invite({ mode: 'guestList', date: '2026-06-15', subEvents }));
+  // A party invited only to the earlier civil ceremony keeps its personal link until the latest sub-event ends.
+  const partyId = newId();
+  await browser.addParty(cred, partyId, { name: 'Familia Radu', defaultSeats: 2 });
+  assert.equal((await browser.setPartySubEvents(cred, [partyId], ['civil'])).status, 204);
+  const personal = { id: partyId, secret: await partyLinkSecret(cred.secret, partyId, 'personal') };
   assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 0 });
+  assert.equal((await browser.loadParty(cred.id, personal)).status, 200);
   clock.now = new Date('2026-06-19T20:59:00Z');
   assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 1 });
 });
