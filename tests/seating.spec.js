@@ -133,8 +133,9 @@ async function trackerWithTable(browser, options = {}) {
   return { page, plan, problems: [...host.problems, ...guest.problems] };
 }
 
-// Headless Chromium does not scroll during a drag, so the viewport fits the party list and the seating plan.
-const DESKTOP = { viewport: { width: 1280, height: 2400 } };
+// Headless Chromium does not scroll during a drag, so the viewport fits the party list and the seating plan. The
+// reminder and deadline sections sit between them, which puts the table row below 2400 pixels.
+const DESKTOP = { viewport: { width: 1280, height: 3600 } };
 
 test('the host drags a party onto a table to seat it there', async ({ browser }) => {
   const { page, plan, problems } = await trackerWithTable(browser, DESKTOP);
