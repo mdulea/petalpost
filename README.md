@@ -93,9 +93,11 @@ A host can:
 - write, change or remove one update of up to 500 characters for a guest-list invitation, such as "The party starts at 19:00". Every personal link and view link shows it at the top. With the management link, the tracker lists one WhatsApp message per party with the update and the party's personal link, in the party's language;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
-- save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
+- save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour;
+- share the full management link with a co-host, who can save their own passkey with it;
+- see on the management page when each passkey was saved, and remove a passkey with the full management link.
 
-For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies or the guest list, rename and delete parties, save or remove the update, and delete the invitation. It cannot add parties, manage personal links, list the WhatsApp update messages or save another passkey.
+For a passkey, the server stores the credential id, the public key, the save date and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Removing a passkey stops new sign-ins with it. Deleting the invitation deletes all its passkeys. A passkey sign-in can view saved passkey dates, view and download the replies or the guest list, rename and delete parties, save or remove the update, and delete the invitation. It cannot add parties, manage personal links, list the WhatsApp update messages, share the management link, or save or remove passkeys.
 
 A host cannot:
 

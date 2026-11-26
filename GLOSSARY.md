@@ -45,6 +45,10 @@ _Avoid_ `occasion` for the design itself.
 
 The person who prepares an invitation or manages its published copy and replies.
 
+**Co-host**
+
+A second host who received the management link from the host and saves their own passkey for the same invitation.
+
 **Guest**
 
 A person who receives or opens an invitation. A guest can reply on behalf of a party.
@@ -108,7 +112,7 @@ The private link that opens the tracker of a published invitation. It gives its 
 
 **Passkey**
 
-A credential that a host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. Signing in opens the tracker for a limited time, with some actions reserved for the management link.
+A credential that a host or co-host saves on their device for one published invitation, unlocked with Face ID, a fingerprint or Windows Hello. Signing in opens the tracker for a limited time, Saving and removing passkeys, sharing the management link and some other actions need the management link.
 _Avoid_ `account`, `login` and `password` for this concept.
 
 **Tracker**

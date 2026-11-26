@@ -367,6 +367,7 @@ export const UI = {
       endedHeading: 'This invitation has ended',
       loadFailedHeading: 'The invitation could not be loaded',
       eventLinkCopied: 'Invitation link copied. Paste it into a message to your guests.',
+      managementLinkCopied: 'Management link copied. Paste it into a private message.',
       copyPrompt: 'Copy this link:',
       deleteConfirm: 'Delete this invitation and all its replies? This cannot be undone.',
       deletedHeading: 'Invitation deleted',
@@ -380,6 +381,11 @@ export const UI = {
       cancelled: 'The passkey request was cancelled or timed out.',
       failed: 'This browser could not use a passkey. Try another browser or device.',
       opening: 'Opening your invitation.',
+      savedOn: (date) => `Saved ${date}`,
+      remove: 'Remove',
+      removeLabel: (number) => `Remove passkey ${number}`,
+      removeConfirm: 'Remove this passkey? It will no longer open this invitation.',
+      removed: 'Passkey removed.',
     },
     // Excel in English uses a comma between values.
     csv: {
@@ -622,6 +628,7 @@ export const UI = {
       endedHeading: 'Această invitație s-a încheiat',
       loadFailedHeading: 'Invitația nu a putut fi încărcată',
       eventLinkCopied: 'Linkul invitației a fost copiat. Trimite-l într-un mesaj invitaților.',
+      managementLinkCopied: 'Linkul de administrare a fost copiat. Trimite-l într-un mesaj privat.',
       copyPrompt: 'Copiază acest link:',
       deleteConfirm: 'Ștergi această invitație și toate răspunsurile ei? Acțiunea nu poate fi anulată.',
       deletedHeading: 'Invitație ștearsă',
@@ -635,6 +642,11 @@ export const UI = {
       cancelled: 'Cererea pentru cheia de acces a fost anulată sau a expirat.',
       failed: 'Acest browser nu a putut folosi o cheie de acces. Încearcă alt browser sau alt dispozitiv.',
       opening: 'Se deschide invitația.',
+      savedOn: (date) => `Salvată pe ${date}`,
+      remove: 'Elimină',
+      removeLabel: (number) => `Elimină cheia de acces ${number}`,
+      removeConfirm: 'Elimini această cheie de acces? Ea nu va mai deschide invitația.',
+      removed: 'Cheia de acces a fost eliminată.',
     },
     // Excel in Romanian uses the comma as the decimal mark and a semicolon between values.
     csv: {

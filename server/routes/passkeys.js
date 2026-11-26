@@ -3,6 +3,8 @@
 // POST /api/events/{id}/passkeys/challenge  management secret, no access token; {} gives {challenge}
 // POST /api/events/{id}/passkeys            management secret, no access token; {clientDataJSON, attestationObject}
 //                                           saves the passkey; 201 {}
+// GET  /api/events/{id}/passkeys            management secret or access token; {passkeys: [{id, createdAt}]}
+// DELETE /api/events/{id}/passkeys          management secret; {id} removes the passkey if present; 204
 // POST /api/passkeys/challenge              public; {} gives {challenge}
 // POST /api/passkeys/sign-in                public; {id, clientDataJSON, authenticatorData, signature} gives
 //                                           {eventId, token, expiresAt}
@@ -24,7 +26,10 @@ export const EVENT_PASSKEYS = 20;
 
 export const routes = [
   { pattern: /^\/api\/events\/([^/]+)\/passkeys\/challenge$/, methods: { POST: registrationChallenge } },
-  { pattern: /^\/api\/events\/([^/]+)\/passkeys$/, methods: { POST: savePasskey } },
+  {
+    pattern: /^\/api\/events\/([^/]+)\/passkeys$/,
+    methods: { GET: listPasskeys, POST: savePasskey, DELETE: removePasskey },
+  },
   { pattern: /^\/api\/passkeys\/challenge$/, methods: { POST: signInChallenge } },
   { pattern: /^\/api\/passkeys\/sign-in$/, methods: { POST: signIn } },
 ];
@@ -98,6 +103,33 @@ async function savePasskey({ db, request, ids: [id] }) {
       [passkey.credentialId, id, passkey.publicKey, passkey.signCount],
     );
     return json(201, {});
+  });
+}
+
+// Returns only the credential IDs and save dates, in save order, to a host with management access.
+async function listPasskeys({ db, request, ids: [id] }) {
+  const secret = bearer(request);
+  return db.transaction(async (tx) => {
+    await ownedEvent(tx, id, secret, { lock: 'key share' });
+    const { rows } = await tx.query('select id, created_at from passkeys where event_id = $1 order by created_at, id', [
+      id,
+    ]);
+    return json(200, {
+      passkeys: rows.map((row) => ({ id: row.id, createdAt: new Date(row.created_at).toISOString() })),
+    });
+  });
+}
+
+// Removes the credential only from this invitation and only with its management secret.
+async function removePasskey({ db, request, ids: [id] }) {
+  const secret = bearer(request);
+  const { id: credentialId } = await readBody(request);
+  if (typeof credentialId !== 'string' || !BASE64URL.test(credentialId)) throw new Refusal(400, 'passkey');
+  return db.transaction(async (tx) => {
+    // Sign-in also needs a key-share lock on the invitation when it writes the access token.
+    await ownedEvent(tx, id, secret, { lock: 'key share', token: false });
+    await tx.query('delete from passkeys where event_id = $1 and id = $2', [id, credentialId]);
+    return json(204, null);
   });
 }
 
