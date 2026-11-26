@@ -45,8 +45,6 @@ const church = { name: 'Church', date: '2027-06-12', time: '14:00', venue: 'St. 
 const dinner = { name: 'Dinner', date: '2027-06-13', time: '19:30', venue: 'Lake House' };
 
 for (const { lang, editor, locale } of LANGS) {
-  const copy = UI[lang].editor;
-
   test(`in ${lang}, a host adds, changes, reorders and removes sub-events, and guests see each one and get one calendar entry for each`, async ({
     browser,
   }) => {
@@ -58,10 +56,10 @@ for (const { lang, editor, locale } of LANGS) {
     await addSubEvent(page, church);
     await addSubEvent(page, dinner);
     await page.locator('#sub0-name').fill(civil.name);
-    await page.getByRole('button', { name: copy.subEvent(3).upLabel }).click();
-    await expect(page.getByRole('button', { name: copy.subEvent(2).upLabel })).toBeFocused();
+    await page.getByRole('button', { name: UI[lang].subEvents.part(3).upLabel }).click();
+    await expect(page.getByRole('button', { name: UI[lang].subEvents.part(2).upLabel })).toBeFocused();
     expect(await subEventNames(page)).toEqual(['Civil', 'Dinner', 'Church']);
-    await page.getByRole('button', { name: copy.subEvent(2).removeLabel }).click();
+    await page.getByRole('button', { name: UI[lang].subEvents.part(2).removeLabel }).click();
     await expect(page.locator('#sub1-name')).toBeFocused();
     expect(await subEventNames(page)).toEqual(['Civil', 'Church']);
     await expect(page.locator('#scheduleList .schedule-name')).toHaveText(['Civil', 'Church']);

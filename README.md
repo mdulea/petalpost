@@ -237,6 +237,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
 The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, `countdowns` has the tracker's deadline and deletion countdowns with their nudges and the personal link's deadline countdown, `partyUpdate` has the tracker strings of the update for every party, and `personal` has the party greeting, update heading, reply form and view link sharing strings.
+The `subEvents` group has the editor fields and buttons of each sub-event.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.
