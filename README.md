@@ -89,7 +89,7 @@ A host can:
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
 
-For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies and delete the invitation, and cannot save another passkey.
+For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies or the guest list, rename and delete parties, and delete the invitation. It cannot add parties, manage personal links or save another passkey.
 
 A host cannot:
 

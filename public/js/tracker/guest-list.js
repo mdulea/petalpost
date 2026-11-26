@@ -2,7 +2,7 @@
 import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
 import { eventLink } from '../invite.js';
-import { parsePartyNames, validPartyName } from '../party-names.js';
+import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, personalLink } from '../rsvp.js';
 import { downloadCsv } from './download.js';
 
@@ -15,7 +15,7 @@ function setStatus(message) {
 }
 
 // Serializes tracker writes in this tab and refreshes the list before the next write.
-async function change(load, controls, write) {
+async function writeAndReload(load, controls, write) {
   if (writing) return;
   writing = true;
   for (const control of controls) control.setAttribute('disabled', '');
@@ -33,13 +33,10 @@ async function change(load, controls, write) {
 function filterRows() {
   const search = /** @type {HTMLInputElement} */ (document.getElementById('partySearch'));
   const filter = /** @type {HTMLSelectElement} */ (document.getElementById('partyFilter'));
-  const query = search.value.trim().toLocaleLowerCase().normalize();
+  const query = normalizePartySearch(search.value);
   let matches = 0;
   for (const { party, row } of rows) {
-    const status = party.reply ? 'replied' : 'pending';
-    row.hidden =
-      !party.name.toLocaleLowerCase().normalize().includes(query) ||
-      (filter.value !== 'all' && status !== filter.value);
+    row.hidden = !partyMatches(party, query, filter.value);
     if (!row.hidden) matches++;
   }
   document.getElementById('noParties').hidden = rows.length > 0;
@@ -80,7 +77,7 @@ function init({ client, cred, lang, load, signedIn }) {
       }
       addition = { entries: names.map((name) => ({ name, id: newId() })), defaultSeats: seats.valueAsNumber };
     }
-    await change(load, form.elements, async () => {
+    await writeAndReload(load, form.elements, async () => {
       const { entries, defaultSeats } = addition;
       const result = await client.addParties(cred, entries, defaultSeats);
       const remaining = entries.slice(result.added);
@@ -100,14 +97,7 @@ function init({ client, cred, lang, load, signedIn }) {
 }
 
 function renderTotals(parties, words) {
-  let accepted = 0;
-  let declined = 0;
-  let pending = 0;
-  for (const { reply } of parties) {
-    if (!reply) pending++;
-    else if (reply.attending) accepted += reply.partySize;
-    else declined++;
-  }
+  const { accepted, declined, pending } = partyTotals(parties);
   const totals = [
     [accepted, words.acceptedSeats(accepted)],
     [declined, words.declinedParties(declined)],
@@ -163,7 +153,7 @@ async function renderParty(party, { client, cred, copy, load, signedIn }, words)
     const linkAction = (action, { label, confirm, done }) => {
       const element = button(label, () => {
         if (writing || !window.confirm(confirm)) return;
-        return change(load, linkControls, async () => {
+        return writeAndReload(load, linkControls, async () => {
           const result = await client.changePartyLink(cred, party.id, action, party.linkGeneration);
           return result.ok ? { ...result, message: done } : result;
         });
@@ -186,11 +176,11 @@ async function renderParty(party, { client, cred, copy, load, signedIn }, words)
         setStatus(words.renameInvalid(PARTY_LIMITS.name));
         return;
       }
-      return change(load, [element], () => client.renameParty(cred, party.id, value));
+      return writeAndReload(load, [element], () => client.renameParty(cred, party.id, value));
     }),
     button(words.delete, (element) => {
       if (!writing && window.confirm(words.confirmDelete(party.name))) {
-        return change(load, [element], () => client.deleteParty(cred, party.id));
+        return writeAndReload(load, [element], () => client.deleteParty(cred, party.id));
       }
     }),
   );

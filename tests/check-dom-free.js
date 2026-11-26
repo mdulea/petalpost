@@ -9,9 +9,9 @@ import { Linter } from 'eslint';
 const DOM_FREE = [
   'public/js/countdown.js',
   'public/js/csv.js',
+  'public/js/guest-list.js',
   'public/js/i18n.js',
   'public/js/invite.js',
-  'public/js/party-names.js',
   'public/js/passkey.js',
   'public/js/rsvp.js',
   'public/js/templates.js',

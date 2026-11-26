@@ -8,9 +8,9 @@
 // Action 'revoke' disables the link. Action 'regenerate' replaces both secrets and enables the new links.
 // Both preserve the reply and return 204. A request for an older link generation returns 409.
 // On /{id}/manage, PATCH {name} renames a party and DELETE removes it and its reply. Both accept a host credential.
+import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
-import { validPartyName } from '../../public/js/party-names.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
