@@ -64,16 +64,16 @@ export async function readBody(request) {
 
 // The event row after checking the credential: the management secret or, with token, an access token of a passkey
 // sign-in for this event. An expired token gets a 401. With lock, the row stays locked until the transaction ends.
-export async function ownedEvent(tx, id, secret, { lock = true, token = true } = {}) {
+export async function ownedEvent(tx, id, credential, { lock = true, token = true } = {}) {
   const event = (
     await tx.query(`select secret_hash, version, t, d from events where id = $1${lock ? ' for update' : ''}`, [id])
   ).rows[0];
   if (!event) throw new Refusal(404, 'eventMissing');
-  if (matches(secret, event.secret_hash)) return event;
+  if (matches(credential, event.secret_hash)) return event;
   if (token) {
     const access = (
       await tx.query('select expires_at > now() as live from access_tokens where token_hash = $1 and event_id = $2', [
-        hash(secret),
+        hash(credential),
         id,
       ])
     ).rows[0];

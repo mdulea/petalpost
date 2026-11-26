@@ -37,15 +37,16 @@ function relyingParty(request) {
   return { id: url.hostname, origins: [url.origin, `https://${url.host}`] };
 }
 
-// The result of check over the named base64url body fields as Buffers, or the 400 passkey Refusal.
-function checked(body, names, check) {
+// The result of verify over the named base64url body fields as Buffers, or the 400 passkey Refusal for a field
+// that is not base64url and for every failed WebAuthn check.
+function verifyFields(body, names, verify) {
   try {
     const fields = {};
     for (const name of names) {
       if (!BASE64URL.test(body[name])) throw new Error(name);
       fields[name] = Buffer.from(body[name], 'base64url');
     }
-    return check(fields);
+    return verify(fields);
   } catch {
     throw new Refusal(400, 'passkey');
   }
@@ -84,7 +85,7 @@ async function savePasskey({ db, request, ids: [id] }) {
   const body = await readBody(request);
   return db.transaction(async (tx) => {
     await ownedEvent(tx, id, secret, { token: false });
-    const passkey = checked(body, ['clientDataJSON', 'attestationObject'], (fields) =>
+    const passkey = verifyFields(body, ['clientDataJSON', 'attestationObject'], (fields) =>
       verifyRegistration(fields, relyingParty(request)),
     );
     await consumeChallenge(tx, passkey.challenge, id);
@@ -113,8 +114,10 @@ async function signIn({ db, request }) {
       await tx.query('select event_id, public_key, sign_count from passkeys where id = $1 for update', [body.id])
     ).rows[0];
     if (!passkey) throw new Refusal(404, 'passkeyMissing');
-    const { challenge, signCount } = checked(body, ['clientDataJSON', 'authenticatorData', 'signature'], (fields) =>
-      verifySignIn(fields, passkey.public_key, relyingParty(request)),
+    const { challenge, signCount } = verifyFields(
+      body,
+      ['clientDataJSON', 'authenticatorData', 'signature'],
+      (fields) => verifySignIn(fields, passkey.public_key, relyingParty(request)),
     );
     await consumeChallenge(tx, challenge, null);
     // A synced passkey always reports 0. A counter that stops rising otherwise means a copied authenticator.
