@@ -113,7 +113,7 @@ _Avoid_ `account`, `login` and `password` for this concept.
 
 **Tracker**
 
-The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply, shows the reminder queue, lets the host set an optional RSVP deadline, and lets the host edit a party's reply.
+The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply, shows the reminder queue, lets the host set an optional RSVP deadline, lets the host edit a party's reply, and lets the host arrange and publish the seating plan.
 _Avoid_ `dashboard`, `admin page` and `management page`.
 
 **Update**
@@ -123,7 +123,7 @@ _Avoid_ `note`, which is a guest's reply text, and `announcement`.
 
 **Personal link**
 
-The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. After an RSVP deadline passes, the personal link shows the reply read-only. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
+The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. After an RSVP deadline passes, the personal link shows the reply read-only. While the seating plan is published, the personal link shows the party's table. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.
 _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 **View link**

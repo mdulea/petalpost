@@ -11,14 +11,15 @@
 // A PUT without version creates the event: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
 // or 409 with the error and the current {version, t, d} when the version is stale. The mode in d is set when the
-// event is created, and an update keeps the stored mode and deadline whatever the body sends, so a page loaded
-// before invitations had modes cannot open a guest-list invitation to replies or clear its deadline.
+// event is created, and an update keeps the stored mode, deadline and published seating plan whatever the body sends,
+// so a page loaded before invitations had modes cannot open a guest-list invitation to replies or clear its settings.
 // A new event counts invitation_publish under the body's lang normalized to en or ro; updates, replays and refusals
 // count nothing. Each client IP may create dailyEvents events per UTC day, DAILY_EVENTS unless createApi sets
 // another number; the 429 stores nothing.
 import { isValidDate } from '../../public/js/countdown.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { MODES, modeOf, readPublished, UPDATE_NOTICE_LIMIT } from '../../public/js/invite.js';
+import { isSeatingPublished } from '../../public/js/seating.js';
 import { addCount, bearer, hash, isEnded, json, ownedEvent, readBody, Refusal, today } from './shared.js';
 
 export const DAILY_EVENTS = 20;
@@ -68,6 +69,7 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
         mode,
         ...(isValidDate(event.d?.deadline) ? { deadline: event.d.deadline } : {}),
         updateNotice: event.d.updateNotice,
+        ...(isSeatingPublished(event.d) ? { seatingPublished: true } : {}),
       };
       await tx.query(
         'update events set t = $2, d = $3::text::jsonb, version = version + 1, updated_at = now() where id = $1',

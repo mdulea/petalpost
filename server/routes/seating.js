@@ -4,6 +4,8 @@
 // DELETE /api/events/{eventId}/tables/{id} takes {version}, unassigns its parties and returns 204.
 // A stale table version gets 409. PATCH /api/events/{eventId}/parties/{id}/table takes {tableId} (null to unassign)
 // and returns 204. The invitation must own both the party and the destination table.
+// PATCH /api/events/{eventId}/seating takes {published} as a boolean, stores it as d.seatingPublished and returns
+// {published}. While the plan is published, each party's personal link shows its table name.
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN } from '../../public/js/rsvp.js';
 import { TABLE_LIMITS } from '../../public/js/seating.js';
@@ -12,6 +14,7 @@ import { bearer, json, ownedEvent, readBody, Refusal } from './shared.js';
 export const routes = [
   { pattern: /^\/api\/events\/([^/]+)\/tables\/([^/]+)$/, methods: { PUT: saveTable, DELETE: removeTable } },
   { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/table$/, methods: { PATCH: assignParty } },
+  { pattern: /^\/api\/events\/([^/]+)\/seating$/, methods: { PATCH: publishPlan } },
 ];
 
 // Reads the invitation's tables in creation order without taking write locks.
@@ -27,6 +30,7 @@ export async function listTables(db, eventId) {
 async function ownedPlan(tx, eventId, secret) {
   const event = await ownedEvent(tx, eventId, secret);
   if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'tableMode');
+  return event;
 }
 
 async function requireTable(tx, eventId, id) {
@@ -106,5 +110,22 @@ async function assignParty({ db, request, ids: [eventId, id] }) {
     ]);
     if (!rows.length) throw new Refusal(404, 'personalLink');
     return json(204, null);
+  });
+}
+
+async function publishPlan({ db, request, ids: [eventId] }) {
+  const secret = bearer(request);
+  const { published } = await readBody(request);
+  if (typeof published !== 'boolean') throw new Refusal(400, 'body');
+  return db.transaction(async (tx) => {
+    const { d } = await ownedPlan(tx, eventId, secret);
+    const next = { ...d };
+    if (published) next.seatingPublished = true;
+    else delete next.seatingPublished;
+    await tx.query('update events set d = $2::text::jsonb, updated_at = now() where id = $1', [
+      eventId,
+      JSON.stringify(next),
+    ]);
+    return json(200, { published });
   });
 }

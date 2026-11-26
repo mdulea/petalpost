@@ -1,6 +1,7 @@
 // Under /api/events/{eventId}/parties, POST with the management secret adds a batch from
 // {entries: [{id, name}], defaultSeats, lang}. PUT /{id} adds one from {name, defaultSeats, lang}.
-// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply, deadlineClosed}.
+// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply, deadlineClosed, table}.
+// table is the party's table name while the seating plan is published, and null otherwise.
 // GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
 // Both reads also return updateNotice when the host has saved one.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
@@ -18,6 +19,7 @@ import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
+import { isSeatingPublished } from '../../public/js/seating.js';
 import { presentationOf } from './events.js';
 import { addCount, bearer, hash, isEnded, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
@@ -240,9 +242,9 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
   const {
     rows: [party],
   } = await db.query(
-    `select p.name, p.default_seats, p.secret_hash, p.revoked, e.t, e.d, ${replyColumns}
+    `select p.name, p.default_seats, p.secret_hash, p.revoked, e.t, e.d, ${replyColumns}, t.name as table_name
      from parties p join events e on e.id = p.event_id left join responses r on r.party_id = p.id
-     where p.id = $1 and p.event_id = $2`,
+     left join seating_tables t on t.id = p.table_id where p.id = $1 and p.event_id = $2`,
     [id, eventId],
   );
   if (!party && (await isEnded(db, eventId))) throw new Refusal(410, 'eventEnded');
@@ -263,6 +265,7 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
     defaultSeats: party.default_seats,
     reply: replyOf(party),
     deadlineClosed: isDeadlinePassed(party.d?.deadline, now()),
+    table: isSeatingPublished(party.d) ? (party.table_name ?? null) : null,
   });
 }
 

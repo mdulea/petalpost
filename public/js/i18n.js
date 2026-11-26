@@ -256,6 +256,11 @@ export const UI = {
       over: (seats) => `Over capacity by ${seats}`,
       partySeats: (seats) => `${seats} ${seats === 1 ? 'seat' : 'seats'}`,
       declined: 'Declined',
+      publish: 'Publish seating plan',
+      unpublish: 'Unpublish seating plan',
+      unpublished: 'Guests do not see their table yet.',
+      published: 'Guests see their table on their personal link.',
+      guestHeading: 'Your table',
     },
     guestList: {
       invalidName: (max) => `Enter a name of up to ${max} characters on each line.`,
@@ -505,6 +510,11 @@ export const UI = {
       over: (seats) => `Peste capacitate cu ${roCount(seats, ['1 loc', 'locuri'])}`,
       partySeats: (seats) => roCount(seats, ['1 loc', 'locuri']),
       declined: 'A refuzat',
+      publish: 'Publică planul meselor',
+      unpublish: 'Retrage planul meselor',
+      unpublished: 'Invitații nu își văd încă masa.',
+      published: 'Invitații își văd masa pe linkul personal.',
+      guestHeading: 'Masa ta',
     },
     guestList: {
       invalidName: (max) => `Introdu un nume de cel mult ${max} de caractere pe fiecare rând.`,
