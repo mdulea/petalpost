@@ -17,16 +17,7 @@ import { ROUTE_PAIRS, canonicalPath } from '../public/js/i18n.js';
 import { HERO_TEMPLATES, RO_HERO_TEMPLATES, inviteColors, templatesFor } from '../public/js/templates.js';
 import { OCCASIONS } from '../scripts/occasions.js';
 import { OCCASIONS_RO } from '../scripts/occasions-ro.js';
-
-// Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
-function watch(page) {
-  const problems = [];
-  page.on('console', (message) => {
-    if (/Content Security Policy/i.test(message.text())) problems.push(message.text());
-  });
-  page.on('pageerror', (error) => problems.push(error.message));
-  return problems;
-}
+import { watch } from './browser-setup.js';
 
 // A 1x1 PNG, the smallest photo the editor accepts.
 const PIXEL = Buffer.from(

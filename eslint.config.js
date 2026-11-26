@@ -29,7 +29,7 @@ export default [
   },
   // Each worktree runs the browser checks on its own port, so a test opens a path that the base address resolves.
   {
-    files: ['tests/*.spec.js'],
+    files: ['tests/*.spec.js', 'tests/browser-setup.js'],
     rules: {
       'no-restricted-syntax': [
         'error',
