@@ -1,18 +1,26 @@
 // The time left before an event. No DOM access, so tests/check-countdown.js runs it in Node.
-// Event dates and times are floating local time: they read the same wall-clock time in every time zone, so the
+// Event dates and times are floating local time. They read the same wall-clock time in every time zone, so the
 // countdown and the calendar file use the time zone of the browser that shows them.
 
 // The start time of an event without a time.
-export const DEFAULT_TIME = '12:00';
+const DEFAULT_TIME = '12:00';
 
 const HOUR = 60 * 60 * 1000;
 
-// data: a record from makeInviteData. Returns the start in the runtime's local time, or null without a date.
-export function eventStart(data) {
+// data: a record from makeInviteData. Returns the start as [year, month index, day, hour, minute] in the argument
+// order of Date and Date.UTC, or null without a date.
+/** @returns {[number, number, number, number, number] | null} */
+export function eventFields(data) {
   if (!data.date) return null;
   const [y, mo, day] = data.date.split('-').map(Number);
   const [h, m] = (data.time || DEFAULT_TIME).split(':').map(Number);
-  return new Date(y, mo - 1, day, h, m);
+  return [y, mo - 1, day, h, m];
+}
+
+// data: a record from makeInviteData. Returns the start in the runtime's local time, or null without a date.
+export function eventStart(data) {
+  const fields = eventFields(data);
+  return fields && new Date(...fields);
 }
 
 // Local calendar days from the day of now to the day of start. A daylight saving change makes a day 23 or 25 hours

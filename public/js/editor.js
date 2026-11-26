@@ -137,6 +137,7 @@ function showCountdown() {
     if (left) countdownEl.textContent = guestCopy.countdown(left);
     else clearInterval(countdownTimer);
   };
+  clearInterval(countdownTimer);
   refresh();
   if (!countdownEl.hidden) countdownTimer = setInterval(refresh, 60 * 1000);
 }

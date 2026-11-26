@@ -96,7 +96,8 @@ A host cannot:
 
 A guest can:
 
-- open the invitation link in any browser, add the event to a calendar and open the address on a map;
+- open the invitation link in any browser, add the event to a calendar with reminders one day and two hours before it, and open the address on a map;
+- see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw that reply through the reply edit link.
 

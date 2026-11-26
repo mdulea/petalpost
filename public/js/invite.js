@@ -1,6 +1,6 @@
 // Invite records, share links and the calendar file. No DOM access, so tests/check-invite.js runs it in Node.
 
-import { DEFAULT_TIME } from './countdown.js';
+import { eventFields } from './countdown.js';
 import { UI, normalizeLang } from './i18n.js';
 import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
 import { ACCENTS, formatDate, formatTime, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
@@ -401,10 +401,10 @@ const ALARMS = ['-P1D', '-PT2H'];
 // data: a record from makeInviteData. Events last three hours in floating local time and carry ALARMS. now sets
 // DTSTAMP. Returns null when the date is empty.
 export function buildIcs(data, now) {
-  if (!data.date) return null;
-  const [y, mo, day] = data.date.split('-').map(Number);
-  const [h, m] = (data.time || DEFAULT_TIME).split(':').map(Number);
-  const start = new Date(Date.UTC(y, mo - 1, day, h, m));
+  const fields = eventFields(data);
+  if (!fields) return null;
+  // The UTC clock holds the floating local time, so no time zone shifts it.
+  const start = new Date(Date.UTC(...fields));
   const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
   const local = (date) =>
     date
