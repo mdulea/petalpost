@@ -499,7 +499,7 @@ function setOutcome(panel, heading) {
 }
 
 // The links show once the server has confirmed the event; until then the stored identity waits for a retry. The
-// server keeps the mode of the first publish, so the mode choice locks once the event is live.
+// tracker changes the stored mode, so the editor's mode choice locks once the event is live.
 function showPublished() {
   const cred = state.publishedEvent;
   const live = Boolean(cred && cred.version !== null);
