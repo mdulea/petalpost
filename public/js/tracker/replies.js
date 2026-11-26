@@ -24,7 +24,7 @@ function init({ lang, load }) {
   });
 }
 
-function show({ responses, totals }, { lang, locale, copy }) {
+function show({ responses, totals }, { copy, formatTime }) {
   const total = (n, one, many) => item('total', ['strong', String(n)], ['span', n === 1 ? one : many]);
   document
     .getElementById('totals')
@@ -34,12 +34,6 @@ function show({ responses, totals }, { lang, locale, copy }) {
       total(totals.no, copy.noOne, copy.noMany),
       total(totals.attending, copy.attendingOne, copy.attendingMany),
     );
-  const when = (iso) =>
-    new Date(iso).toLocaleString(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      ...(lang === 'ro' ? { hour12: false } : {}),
-    });
   document
     .getElementById('responseList')
     .replaceChildren(
@@ -49,7 +43,7 @@ function show({ responses, totals }, { lang, locale, copy }) {
           ['strong', r.name],
           ['span', r.attending ? copy.yesCount(r.partySize) : copy.no],
           ...(r.note ? [['p', r.note]] : []),
-          ['span', `${r.updatedAt === r.createdAt ? copy.replied : copy.changed} ${when(r.updatedAt)}`],
+          ['span', `${r.updatedAt === r.createdAt ? copy.replied : copy.changed} ${formatTime(r.updatedAt)}`],
         ),
       ),
     );

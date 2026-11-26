@@ -119,7 +119,7 @@ _Avoid_ `guest link`, `invitation link` and `magic link` for this concept.
 
 **View link**
 
-The link a guest shares with someone else to show their party's invitation with its greeting. It shows no reply form and no reply.
+The link a guest shares with someone else to show their party's invitation with its greeting, and the link the tracker opens to preview a party's page. It shows no reply form and no reply, and records no opened time.
 _Avoid_ `share link` and `friend link`.
 
 **Reply edit link**
