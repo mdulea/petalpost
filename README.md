@@ -83,6 +83,7 @@ A host can:
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
+- switch a published open invitation to the guest-list mode from its tracker. The invitation keeps its link and earlier replies. The public link stops taking replies. The tracker shows earlier replies under "Replies without a personal link" and counts them in the totals. The host can attach an earlier reply to a party without a reply;
 - add up to 300 parties to the guest list, one name at a time or one name per pasted line, and rename or delete parties from the tracker. The host can search names, filter by party status, see totals for the whole guest list and download it as a CSV;
 - use the management link to add a party with a name, default seats and language, share its personal link message by copying it or opening WhatsApp, and preview the party's page without recording an opened time. The host can revoke the link or generate a new one without changing the party's reply. The tracker shows each party's status, when its personal link was first and last opened, its reply, note and any seats over its default after opening the management link or after a passkey sign-in. The host can edit each party's reply seats;
 - set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
@@ -97,7 +98,7 @@ A host cannot:
 
 - put the photo on the published invitation, which shows the template art instead;
 - recover a lost management link, although a saved passkey still opens the management page;
-- change the mode after the first publish;
+- switch back to the open mode once the guest list has a party;
 - delete a single reply or edit an open-mode reply;
 - publish changes from another browser, because only the publishing browser keeps the management secret;
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;

@@ -216,6 +216,8 @@ export const UI = {
       brokenMessage: 'This invite link is incomplete. Ask the host to send the whole link again.',
       openingHeading: 'Opening the invitation',
       sampleNotice: 'Sample invitation. Replies submitted here are not saved.',
+      replyLinkUnavailable:
+        'This link no longer works. Use the personal link the host sent you to view or change your reply.',
     },
     personal: {
       greeting: (name) => `Hello, ${name}!`,
@@ -297,6 +299,12 @@ export const UI = {
       no: 'No',
       seats: 'People attending',
       note: 'Note',
+      switchConfirm:
+        'Switch this invitation to the guest-list mode? Your invitation link and earlier replies stay, and the public link stops taking new replies.',
+      attachTo: 'Attach to party',
+      attach: 'Attach',
+      attached: 'Reply attached to party.',
+      noPartyToAttach: 'Add a party without a reply to attach this reply.',
     },
     deadline: {
       none: 'No RSVP deadline is set. Replies stay open until the invitation ends.',
@@ -436,6 +444,8 @@ export const UI = {
       brokenMessage: 'Acest link de invitație este incomplet. Roagă gazda să trimită din nou linkul întreg.',
       openingHeading: 'Se deschide invitația',
       sampleNotice: 'Invitație demonstrativă. Răspunsurile trimise aici nu se salvează.',
+      replyLinkUnavailable:
+        'Acest link nu mai funcționează. Folosește linkul personal trimis de gazdă pentru a vedea sau modifica răspunsul.',
     },
     personal: {
       greeting: (name) => `Bună, ${name}!`,
@@ -518,6 +528,12 @@ export const UI = {
       no: 'Nu',
       seats: 'Număr de persoane',
       note: 'Notă',
+      switchConfirm:
+        'Treci această invitație la modul listă de invitați? Linkul invitației și răspunsurile anterioare rămân, iar linkul public nu va mai primi răspunsuri noi.',
+      attachTo: 'Asociază unui grup',
+      attach: 'Asociază',
+      attached: 'Răspunsul a fost asociat grupului.',
+      noPartyToAttach: 'Adaugă un grup fără răspuns ca să asociezi acest răspuns.',
     },
     deadline: {
       none: 'Nu este setat niciun termen de confirmare. Confirmările rămân deschise până la încheierea invitației.',
@@ -641,6 +657,8 @@ export function apiMessages(
       dailyEvents: `Această conexiune a publicat deja ${dailyEvents} invitații azi. Încearcă din nou mâine.`,
       eventFull: `Această invitație are deja ${eventResponses} răspunsuri, limita maximă acceptată.`,
       guestListReply: 'Această invitație primește confirmări doar prin linkurile personale trimise de gazdă.',
+      replyLinkUnavailable: UI.ro.guest.replyLinkUnavailable,
+      modeHasParties: 'Nu poți reveni la modul deschis după ce ai adăugat grupuri pe lista de invitați.',
       signInExpired:
         'Conectarea cu cheia de acces a expirat. Apasă din nou „Găsește invitațiile mele” pe pagina principală.',
       passkey: 'Cheia de acces nu a putut fi verificată. Încearcă din nou.',
@@ -653,6 +671,8 @@ export function apiMessages(
       partyMode: 'Doar invitațiile cu listă de invitați pot avea linkuri personale.',
       partyLimit: UI.ro.guestList.limit(eventParties),
       partyId: 'Grupul nu a putut fi adăugat. Încearcă din nou.',
+      partyHasReply: 'Acest grup are deja un răspuns.',
+      replyAttached: 'Acest răspuns este deja asociat unui alt grup.',
       personalLink: UI.ro.personal.unavailable,
       partyLinkChanged: 'Linkul personal s-a schimbat. Verifică linkul actual.',
       partyReply: `Alege un răspuns și între 1 și ${partySeatsLimit} de locuri dacă participi. Nota poate avea cel mult ${replyNoteLimit} de caractere.`,
@@ -689,6 +709,8 @@ export function apiMessages(
     dailyEvents: `This connection has published ${dailyEvents} invitations today. Try again tomorrow.`,
     eventFull: `This invitation already has ${eventResponses} replies, the most it can take.`,
     guestListReply: 'This invitation takes replies only through the personal links the host sends.',
+    replyLinkUnavailable: UI.en.guest.replyLinkUnavailable,
+    modeHasParties: 'You cannot switch back to the open mode once parties exist on the guest list.',
     signInExpired: 'The passkey sign-in has expired. Use "Find my invitations" on the home page again.',
     passkey: 'The passkey could not be checked. Try again.',
     passkeyMissing: 'This passkey no longer opens an invitation. The invitation may have been deleted.',
@@ -699,6 +721,8 @@ export function apiMessages(
     partyMode: 'Only guest-list invitations can have personal links.',
     partyLimit: UI.en.guestList.limit(eventParties),
     partyId: 'The party could not be added. Try again.',
+    partyHasReply: 'This party already has a reply.',
+    replyAttached: 'This reply is already attached to another party.',
     personalLink: UI.en.personal.unavailable,
     partyLinkChanged: 'The personal link changed. Check the current link.',
     partyReply: `Choose an answer and between 1 and ${partySeatsLimit} seats when attending. A note can have up to ${replyNoteLimit} characters.`,

@@ -5,14 +5,21 @@
 // event date while an open invitation allows none; a publish without a mode, as from a page loaded before
 // invitations had modes, makes an open invitation that takes replies; an update keeps the stored mode whatever mode
 // it sends or when it sends none; a publish with an unknown mode is refused; the management read of a guest-list
-// invitation gives its mode and no replies; 300 maximum-length names fit across requests and the API refuses more.
+// invitation gives its mode and no replies; 300 maximum-length names fit across requests and the API refuses more;
+// switching a published open invitation to the guest-list mode keeps its link and earlier replies, stops taking
+// new replies and makes old reply edit links unavailable; switching an open invitation without a date is refused;
+// switching back to the open mode works without parties and is refused once a party exists; attaching an earlier
+// reply to a party without a reply moves it to that party, keeps the guest-list totals across unattached and party
+// replies, shows it on the party's personal link, lets the guest update it, and refuses attaching to a party with a
+// reply or attaching an attached reply to another party.
 // Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
 // tests/api-setup.js.
 // Run: pnpm exec node tests/check-guest-list.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { partyTotals } from '../public/js/guest-list.js';
 import { makeInviteData } from '../public/js/invite.js';
-import { newId } from '../public/js/rsvp.js';
+import { newId, partyLinkSecret } from '../public/js/rsvp.js';
 import { getTemplate } from '../public/js/templates.js';
 import { guest, host, setup } from './api-setup.js';
 
@@ -193,5 +200,117 @@ for (const lang of ['en', 'ro']) {
         openCreated: 201,
       },
     );
+  });
+}
+
+const EDIT_LINK_ENDED = {
+  en: 'This link no longer works. Use the personal link the host sent you to view or change your reply.',
+  ro: 'Acest link nu mai funcționează. Folosește linkul personal trimis de gazdă pentru a vedea sau modifica răspunsul.',
+};
+
+for (const lang of ['en', 'ro']) {
+  test(`in ${lang}, switching an open invitation to guest-list mode keeps replies, blocks public replies and refuses switching back once parties exist`, async () => {
+    const { client, cred, guests } = await published('open', lang);
+    const owner = client(newId(), lang);
+    const edit = guest();
+    const saved = await guests.saveReply(cred.id, edit, sam);
+    assert.equal(saved.status, 201);
+    edit.version = saved.data.version;
+
+    const switched = await owner.switchMode(cred, 'guestList');
+    assert.equal(switched.status, 200);
+    assert.equal(switched.data.mode, 'guestList');
+
+    // Public link keeps the invitation but refuses new replies, edits and withdrawals.
+    assert.equal((await guests.loadEvent(cred.id)).data.d.mode, 'guestList');
+    assert.equal((await guests.saveReply(cred.id, guest(), sam)).status, 403);
+    assert.equal((await guests.withdrawReply(cred.id, edit)).status, 403);
+    const oldEdit = await guests.loadReply(cred.id, edit);
+    assert.deepEqual([oldEdit.status, oldEdit.message], [404, EDIT_LINK_ENDED[lang]]);
+
+    // Earlier replies stay and count in totals.
+    const list = await owner.loadResponses(cred);
+    assert.equal(list.data.responses.length, 1);
+    assert.equal(list.data.responses[0].name, 'Sam');
+    assert.deepEqual(list.data.totals, { responses: 1, yes: 1, no: 0, attending: 2 });
+
+    // Switching back works while no parties exist, then switching to guestList again works.
+    assert.equal((await owner.switchMode(cred, 'open')).status, 200);
+    assert.equal((await owner.switchMode(cred, 'guestList')).status, 200);
+
+    // An open invitation without a date cannot switch, because a guest-list invitation needs one.
+    const noDate = host();
+    await owner.publish(noDate, {
+      t: 'birthday',
+      d: makeInviteData(getTemplate('birthday'), { title: 'Open no date', mode: 'open', date: '' }),
+    });
+    const undated = await owner.switchMode(noDate, 'guestList');
+    assert.deepEqual([undated.status, undated.message], [400, DATE_REQUIRED[lang]]);
+    assert.equal((await guests.loadEvent(noDate.id)).data.d.mode, 'open');
+
+    // Once a party exists, switching back is refused.
+    assert.equal((await owner.addParty(cred, newId(), { name: 'Familia Sam', defaultSeats: 2 })).status, 201);
+    const blocked = await owner.switchMode(cred, 'open');
+    assert.equal(blocked.status, 409);
+    assert.equal((await guests.loadEvent(cred.id)).data.d.mode, 'guestList');
+  });
+
+  test(`in ${lang}, attaching an earlier reply moves it to a party, keeps totals and shows it on the personal link`, async () => {
+    const { client, cred, guests } = await published('open', lang);
+    const owner = client(newId(), lang);
+    const editA = guest();
+    const editB = guest();
+    assert.equal(
+      (await guests.saveReply(cred.id, editA, { name: 'Sam', attending: true, partySize: 3, note: 'Vegan' })).status,
+      201,
+    );
+    assert.equal(
+      (await guests.saveReply(cred.id, editB, { name: 'Lee', attending: false, partySize: 0, note: '' })).status,
+      201,
+    );
+    assert.equal((await owner.switchMode(cred, 'guestList')).status, 200);
+
+    const partyA = newId();
+    const partyB = newId();
+    assert.equal((await owner.addParty(cred, partyA, { name: 'Familia Sam', defaultSeats: 2 })).status, 201);
+    assert.equal((await owner.addParty(cred, partyB, { name: 'Familia Lee', defaultSeats: 2 })).status, 201);
+
+    const before = (await owner.loadResponses(cred)).data;
+    assert.deepEqual(before.totals, { responses: 2, yes: 1, no: 1, attending: 3 });
+    const replyA = before.responses.find((r) => r.name === 'Sam');
+    const replyB = before.responses.find((r) => r.name === 'Lee');
+    assert.ok(replyA.id && replyB.id);
+
+    // Attach replyA to partyA.
+    assert.equal((await owner.attachReply(cred, replyA.id, partyA)).status, 204);
+    // Idempotent retry to same party succeeds.
+    assert.equal((await owner.attachReply(cred, replyA.id, partyA)).status, 204);
+    // Refuses attaching another reply to a party that already has a reply.
+    assert.equal((await owner.attachReply(cred, replyB.id, partyA)).status, 409);
+    // Refuses attaching an already-attached reply to another party.
+    assert.equal((await owner.attachReply(cred, replyA.id, partyB)).status, 409);
+
+    // The guest-list totals count both the attached party reply and the remaining unattached reply.
+    const after = (await owner.loadResponses(cred)).data;
+    assert.deepEqual(
+      after.responses.map((r) => r.name),
+      ['Lee'],
+    );
+    assert.deepEqual(partyTotals(after.parties, after.responses), { accepted: 3, declined: 1, pending: 1 });
+    const attachedParty = after.parties.find((p) => p.id === partyA);
+    assert.deepEqual(attachedParty.reply, { attending: true, partySize: 3, note: 'Vegan', version: 2 });
+
+    // The party's personal link shows the attached reply, and the old reply edit link no longer works.
+    const personal = { id: partyA, secret: await partyLinkSecret(cred.secret, partyA, 'personal') };
+    const loaded = await guests.loadParty(cred.id, personal);
+    assert.equal(loaded.status, 200);
+    assert.deepEqual(loaded.data.reply, { attending: true, partySize: 3, note: 'Vegan', version: 2 });
+    const oldEdit = await guests.loadReply(cred.id, editA);
+    assert.deepEqual([oldEdit.status, oldEdit.message], [404, EDIT_LINK_ENDED[lang]]);
+
+    const current = { ...personal, version: loaded.data.reply.version };
+    const edit = { attending: true, partySize: 3, note: 'No nuts' };
+    assert.equal((await guests.savePartyReply(cred.id, current, edit)).status, 200);
+    assert.equal((await guests.loadParty(cred.id, personal)).data.reply.note, 'No nuts');
   });
 }

@@ -4,6 +4,8 @@
 // GET /api/events/{id}                     public; {t, d}
 // DELETE /api/events/{id}                  management secret; removes the event and its responses; 204
 // PATCH /api/events/{id}/deadline          management secret; {deadline} sets, changes or clears (null) the RSVP deadline
+// PATCH /api/events/{id}/mode              management secret; {mode} switches mode; 400 without a date for the
+//                                          guest-list mode; 409 when parties block the open mode
 //
 // A PUT without version creates the event: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
@@ -15,7 +17,7 @@
 // another number; the 429 stores nothing.
 import { isValidDate } from '../../public/js/countdown.js';
 import { normalizeLang } from '../../public/js/i18n.js';
-import { modeOf, readPublished } from '../../public/js/invite.js';
+import { MODES, modeOf, readPublished } from '../../public/js/invite.js';
 import { addCount, bearer, hash, isEnded, json, ownedEvent, readBody, Refusal, today } from './shared.js';
 
 export const DAILY_EVENTS = 20;
@@ -23,6 +25,7 @@ export const DAILY_EVENTS = 20;
 export const routes = [
   { pattern: /^\/api\/events\/([^/]+)$/, methods: { GET: getEvent, PUT: putEvent, DELETE: deleteEvent } },
   { pattern: /^\/api\/events\/([^/]+)\/deadline$/, methods: { PATCH: setDeadline } },
+  { pattern: /^\/api\/events\/([^/]+)\/mode$/, methods: { PATCH: switchMode } },
 ];
 
 async function getEvent({ db, ids: [id] }) {
@@ -113,5 +116,26 @@ async function setDeadline({ db, request, ids: [id] }) {
       JSON.stringify(next),
     ]);
     return json(200, { deadline: normalized });
+  });
+}
+
+async function switchMode({ db, request, ids: [id] }) {
+  const secret = bearer(request);
+  const { mode } = await readBody(request);
+  if (!MODES.includes(mode)) throw new Refusal(400, 'body');
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, id, secret, { token: false });
+    const current = modeOf(event.d);
+    if (current === mode) return json(200, { mode, version: event.version });
+    if (mode === 'guestList' && !event.d.date) throw new Refusal(400, 'guestListDate');
+    if (mode === 'open') {
+      const hasParty = (await tx.query('select 1 from parties where event_id = $1 limit 1', [id])).rows.length > 0;
+      if (hasParty) throw new Refusal(409, 'modeHasParties');
+    }
+    await tx.query('update events set d = $2::text::jsonb, version = version + 1, updated_at = now() where id = $1', [
+      id,
+      JSON.stringify({ ...event.d, mode }),
+    ]);
+    return json(200, { mode, version: event.version + 1 });
   });
 }
