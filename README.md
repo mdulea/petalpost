@@ -328,8 +328,10 @@ Read the totals in the Neon console SQL editor:
 select day, action, lang, count from action_counts order by day desc, action, lang;
 ```
 
-Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features. The passkey routes read and write `passkeys`, `passkey_challenges` and `access_tokens`, and no code reads the other new tables yet.
+Migration `005_guest_lists.sql` adds the tables and columns of the guest-list features.
 It adds the `parties`, `seating_tables`, `passkeys`, `passkey_challenges` and `access_tokens` tables, which an invitation's deletion deletes with it.
+The passkey routes read and write `passkeys`, `passkey_challenges` and `access_tokens`.
+The personal link API uses `parties`, and the tracker reads it alongside the party replies.
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
 `d.mode` is `open` or `guestList`, and a `d` without a mode, stored before invitations had modes, is open.

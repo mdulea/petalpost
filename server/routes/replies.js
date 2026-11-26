@@ -33,9 +33,10 @@ export const routes = [
 async function listResponses({ db, request, ids: [id] }) {
   const secret = bearer(request);
   const event = await ownedEvent(db, id, secret, { lock: false });
+  const hasGuestList = modeOf(event.d) === 'guestList';
   const { rows } = await db.query(
     `select name, attending, party_size, note, created_at, updated_at from responses
-     where event_id = $1 and party_id is null order by created_at, updated_at`,
+     where event_id = $1${hasGuestList ? ' and party_id is null' : ''} order by created_at, updated_at`,
     [id],
   );
   const responses = rows.map((r) => ({
@@ -46,7 +47,7 @@ async function listResponses({ db, request, ids: [id] }) {
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   }));
-  const parties = modeOf(event.d) === 'guestList' ? await listParties(db, id) : undefined;
+  const parties = hasGuestList ? await listParties(db, id) : undefined;
   return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses), parties });
 }
 
@@ -55,7 +56,7 @@ async function listResponses({ db, request, ids: [id] }) {
 async function ownedReply(tx, eventId, id, secret) {
   const reply = (
     await tx.query(
-      'select event_id, secret_hash, name, attending, party_size, note, version from responses where id = $1 and party_id is null for update',
+      'select event_id, secret_hash, name, attending, party_size, note, version from responses where id = $1 and secret_hash is not null for update',
       [id],
     )
   ).rows[0];
