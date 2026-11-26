@@ -2,7 +2,7 @@
 
 import { eventFields } from './countdown.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
-import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
+import { ID_PATTERN, SECRET_PATTERN, partyLinkSecret, personalLink, viewLink, viewLinkSecret } from './rsvp.js';
 import { ACCENTS, formatDate, formatTime, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
@@ -109,6 +109,16 @@ export function readPublished(value) {
 // The invitation link of a published event opens the guest view at /e/<id> (or /ro/e/<id>), serving dynamic link metadata.
 export const eventLink = (origin, id, lang = 'en') => `${origin}${normalizeLang(lang) === 'ro' ? '/ro' : ''}/e/${id}`;
 
+// Builds the party's current links in its language from the management credential. Derives the preview only on demand.
+export async function partyInviteLinks(origin, cred, party) {
+  const base = eventLink(origin, cred.id, party.lang);
+  const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
+  return {
+    personal: personalLink(base, party.id, secret),
+    preview: async () => viewLink(base, party.id, await viewLinkSecret(secret, party.id)),
+  };
+}
+
 // Link preview and native share metadata built from an invite's title, date, time and venue. details is the date and
 // venue line, empty when the invite has neither; description falls back to generic copy then.
 // locale fixes date and time formatting on the server so link previews stay consistent across regions.
@@ -152,6 +162,12 @@ export function personalMessage(party, data, url) {
   const greeting = name ? UI[code].personal.greeting(name) : '';
   const { title, details } = eventPreviewMeta(data, localeOf(code));
   return [greeting, title, details, url].filter(Boolean).join('\n');
+}
+
+// A reminder in the party's language that asks it to reply through its personal link.
+export function reminderMessage(party, url) {
+  const { greeting, reminder } = UI[normalizeLang(party.lang)].personal;
+  return [greeting(party.name), reminder, url].join('\n');
 }
 
 // The single contact address of the site, for users and authorities. scripts/pages.js puts it in every footer.

@@ -221,6 +221,7 @@ export const UI = {
     },
     personal: {
       greeting: (name) => `Hello, ${name}!`,
+      reminder: 'Please let us know if you can come.',
       unavailable: 'This link no longer works. Ask the host for a new one.',
       noReply: 'No reply yet',
       showFriend: 'Show a friend',
@@ -283,6 +284,8 @@ export const UI = {
       copied: 'Message copied.',
       copyPrompt: 'Copy this message:',
       whatsapp: 'Send on WhatsApp',
+      remind: 'Remind on WhatsApp',
+      reminderUsed: 'WhatsApp opened',
       revoke: 'Revoke personal link',
       regenerate: 'Regenerate personal link',
       revokeConfirm: 'Revoke this personal link? It will stop working.',
@@ -449,6 +452,7 @@ export const UI = {
     },
     personal: {
       greeting: (name) => `Bună, ${name}!`,
+      reminder: 'Te rugăm să ne spui dacă poți veni.',
       unavailable: 'Acest link nu mai funcționează. Cere-i gazdei un link nou.',
       noReply: 'Fără răspuns',
       showFriend: 'Arată invitația unui prieten',
@@ -512,6 +516,8 @@ export const UI = {
       copied: 'Mesajul a fost copiat.',
       copyPrompt: 'Copiază acest mesaj:',
       whatsapp: 'Trimite pe WhatsApp',
+      remind: 'Trimite un memento pe WhatsApp',
+      reminderUsed: 'WhatsApp a fost deschis',
       revoke: 'Revocă linkul personal',
       regenerate: 'Generează un link personal nou',
       revokeConfirm: 'Revoci linkul personal? Nu va mai funcționa.',

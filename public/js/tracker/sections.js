@@ -11,6 +11,7 @@ import { section as deleteInvitation } from './delete.js';
 import { section as guestList } from './guest-list.js';
 import { section as invitationLink } from './invitation-link.js';
 import { section as passkey } from './passkey.js';
+import { section as reminders } from './reminders.js';
 import { section as replies } from './replies.js';
 import { section as seating } from './seating.js';
 import { section as switchMode } from './switch-mode.js';
@@ -20,6 +21,7 @@ export const SECTIONS = [
   replies,
   switchMode,
   guestList,
+  reminders,
   rsvpDeadline,
   seating,
   invitationLink,

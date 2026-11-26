@@ -1,9 +1,9 @@
 // Fails when share links, sample guest mode, invitation links and /e/<id> or /ro/e/<id> paths of published events,
 // link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
 // Romanian with empty lines left out, the personal link message with its greeting, invitation details and personal
-// link in English and Romanian, invite records and their mode, published records with an optional mode, the
-// characters left in a limited field, storage writes, the stored published event identity, template switching,
-// template ids, Romanian localization coverage, the same UI string and API message keys in English and Romanian, the
+// link in English and Romanian, the reminder message with its greeting and personal link in English and Romanian,
+// invite records and their mode, published records with an optional mode, the characters left in a limited field,
+// storage writes, the stored published event identity, template switching, template ids, Romanian localization coverage, the same UI string and API message keys in English and Romanian, the
 // Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
 // calendar file with its alarms, the report link or the choice of when the Romanian
 // language banner shows and where it links break.
@@ -537,6 +537,21 @@ check(
 );
 const PERSONAL_EN = `${INVITATION}#p=BBBBBBBBBBBBBBBBBBBBBB.secret`;
 const PERSONAL_RO = 'https://www.petalpost.ro/ro/e/AAAAAAAAAAAAAAAAAAAAAA#p=BBBBBBBBBBBBBBBBBBBBBB.secret';
+check(
+  'reminderMessage asks the party to reply through its personal link in English and Romanian',
+  [
+    ctx.reminderMessage({ name: 'Anna & Tom', lang: 'en' }, PERSONAL_EN),
+    ctx.reminderMessage({ name: 'Familia Radu', lang: 'ro' }, PERSONAL_RO),
+  ],
+  [
+    `Hello, Anna & Tom!
+Please let us know if you can come.
+${PERSONAL_EN}`,
+    `Bună, Familia Radu!
+Te rugăm să ne spui dacă poți veni.
+${PERSONAL_RO}`,
+  ],
+);
 check(
   'personalMessage builds a greeting, details and personal link in English and Romanian',
   [

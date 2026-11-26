@@ -1,9 +1,9 @@
 // Edits the guest list and renders its parties, replies, earlier unattached replies, totals and personal links.
 import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
-import { eventLink, personalMessage, whatsappUrl } from '../invite.js';
+import { partyInviteLinks, personalMessage, whatsappUrl } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
-import { newId, PARTY_LIMITS, partyLinkSecret, partyStatus, personalLink, viewLink, viewLinkSecret } from '../rsvp.js';
+import { newId, PARTY_LIMITS, partyStatus } from '../rsvp.js';
 import { downloadCsv } from './download.js';
 import { tablePicker } from './seating.js';
 import { renderTotals } from './totals.js';
@@ -295,9 +295,7 @@ async function renderParty(party, tables, page, invite, words) {
 }
 
 async function personalLinkControls(party, cred, invite, words, linkControls) {
-  const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
-  const base = eventLink(location.origin, cred.id, party.lang);
-  const link = personalLink(base, party.id, secret);
+  const { personal: link, preview: previewUrl } = await partyInviteLinks(location.origin, cred, party);
   const message = personalMessage(party, invite, link);
   const copyMessage = button(words.copy, async () => {
     try {
@@ -317,7 +315,7 @@ async function personalLinkControls(party, cred, invite, words, linkControls) {
   controls.className = 'copy-row';
   const preview = document.createElement('a');
   preview.className = 'btn btn-ghost btn-small';
-  preview.href = viewLink(base, party.id, await viewLinkSecret(secret, party.id));
+  preview.href = await previewUrl();
   preview.target = '_blank';
   preview.rel = 'noopener';
   preview.textContent = words.preview;
