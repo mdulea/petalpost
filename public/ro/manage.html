@@ -165,6 +165,28 @@
             </div>
           </section>
 
+          <section class="panel" id="partyUpdate" aria-labelledby="h-party-update" hidden>
+            <h2 id="h-party-update">
+              <svg class="icon"><use href="#i-send" /></svg>Mesaj pentru toate grupurile
+            </h2>
+            <form id="updateForm" novalidate>
+              <div class="field">
+                <label for="updateText">Cel mai nou mesaj, de exemplu „Petrecerea începe la 19:00”</label>
+                <textarea class="input" id="updateText" name="updateNotice" rows="3"></textarea>
+                <span class="hint">Fiecare link personal și link de vizualizare îl arată sus.</span>
+              </div>
+              <div class="reply-actions">
+                <button class="btn btn-primary btn-small" type="submit">Salvează mesajul</button>
+                <button class="btn btn-rose btn-small" type="button" id="removeUpdate" hidden>Șterge mesajul</button>
+              </div>
+            </form>
+            <p class="status" role="status" id="updateStatus"></p>
+            <p class="hint" id="updateQueueLinkRequired" hidden>
+              Deschide linkul de administrare ca să trimiți mesajul fiecărui grup pe WhatsApp.
+            </p>
+            <ul class="reply-list" id="updateQueue"></ul>
+          </section>
+
           <section class="panel" id="invitationLink" aria-labelledby="h-share">
             <h2 id="h-share">
               <svg class="icon"><use href="#i-link" /></svg>Linkul invitației

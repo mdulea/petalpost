@@ -116,6 +116,11 @@ _Avoid_ `account`, `login` and `password` for this concept.
 The host's page for one published invitation, opened through the management link. It lists the replies, and in the guest-list mode it lists every party with its personal link, status, seats and reply, shows the reminder queue, lets the host set an optional RSVP deadline, and lets the host edit a party's reply.
 _Avoid_ `dashboard`, `admin page` and `management page`.
 
+**Update**
+
+The latest message the host writes in the tracker of a guest-list invitation for every party, such as "The party starts at 19:00". Every personal link and view link shows it at the top. An invitation has at most one update. The code calls it `updateNotice`.
+_Avoid_ `note`, which is a guest's reply text, and `announcement`.
+
 **Personal link**
 
 The private link of one party in the guest-list mode. It greets the party by name and is the only link through which the party views, changes or withdraws its reply. After an RSVP deadline passes, the personal link shows the reply read-only. When the host revokes or regenerates it, the old personal link and the old view link stop working, and the reply stays with the party.

@@ -2,9 +2,10 @@
 // link preview metadata, the WhatsApp message with its title, date and venue line and invitation link in English and
 // Romanian with empty lines left out, the personal link message with its greeting, invitation details and personal
 // link in English and Romanian, the reminder message with its greeting and personal link in English and Romanian,
-// invite records and their mode, published records with an optional mode, the characters left in a limited field,
-// storage writes, the stored published event identity, template switching, template ids, Romanian localization
-// coverage, the same UI string and API message keys in English and Romanian, the
+// the party update message with its greeting, update and personal link in English and Romanian, invite records and
+// their mode, published records with an optional mode, the characters left in a limited field, storage writes, the
+// stored published event identity, template switching, template ids, Romanian localization coverage, the same UI
+// string and API message keys in English and Romanian, the
 // Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
 // calendar file with its alarms, the report link or the choice of when the Romanian
 // language banner shows and where it links break.
@@ -16,6 +17,22 @@ import * as invite from '../public/js/invite.js';
 import { UI, apiMessages, romanianBannerHref } from '../public/js/i18n.js';
 
 const ctx = { ...templates, ...invite };
+
+test('the party update message greets each party in its language and includes the update and personal link', () => {
+  const text = 'The party starts at 19:00.';
+  const en = 'https://petalpost.example/e/event#p=party.secret';
+  const ro = 'https://petalpost.example/ro/e/event#p=party.secret';
+  assert.deepEqual(
+    [
+      invite.updateMessage({ name: 'Sam', lang: 'en' }, text, en),
+      invite.updateMessage({ name: 'Ana', lang: 'ro' }, text, ro),
+    ],
+    [
+      `Hello, Sam!\nUpdate from the host\nThe party starts at 19:00.\n${en}`,
+      `Bună, Ana!\nMesaj nou de la gazdă\nThe party starts at 19:00.\n${ro}`,
+    ],
+  );
+});
 
 // Compares JSON at call time, because later steps change the records under test.
 const check = (name, actual, expected) => {
@@ -928,6 +945,7 @@ const apiLimits = {
   partyNameLimit: 1,
   partySeatsLimit: 1,
   eventParties: 1,
+  updateNoticeLimit: 1,
 };
 const parityGaps = (groups) => {
   const [en, ro] = [keyPaths(groups.en), keyPaths(groups.ro)];

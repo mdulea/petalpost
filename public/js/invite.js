@@ -18,6 +18,7 @@ export const FIELD_LIMITS = {
   rsvp: 40,
 };
 export const FIELDS = Object.keys(FIELD_LIMITS);
+export const UPDATE_NOTICE_LIMIT = 500;
 // The characters left in a field whose text has the length, once it passes 80% of the limit, or null at or below
 // 80%. Text past the limit leaves 0.
 export const charsLeft = (length, limit) => (length > limit * 0.8 ? Math.max(0, limit - length) : null);
@@ -168,6 +169,12 @@ export function personalMessage(party, data, url) {
 export function reminderMessage(party, url) {
   const { greeting, reminder } = UI[normalizeLang(party.lang)].personal;
   return [greeting(party.name), reminder, url].join('\n');
+}
+
+// The WhatsApp text for the latest update, with the party's greeting and personal link.
+export function updateMessage(party, update, url) {
+  const copy = UI[normalizeLang(party.lang)].personal;
+  return [copy.greeting(party.name), copy.updateHeading, update, url].join('\n');
 }
 
 // The single contact address of the site, for users and authorities. scripts/pages.js puts it in every footer.

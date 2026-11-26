@@ -73,7 +73,7 @@ The promises:
 - Hosts and guests need no account and no email address.
 - The site sets no cookies and loads nothing from another origin except Vercel Web Analytics, which sets no cookie.
 - The photo never leaves the host's browser.
-- The server stores the party names the host enters on a guest list, and when each personal link was first and last opened. Deleting the invitation deletes those names and times. Petalpost deletes the guest list, its opened times and its replies at the first daily retention run after 23:59 Bucharest time on the day after the event.
+- The server stores the party names the host enters on a guest list, the latest update for the parties, and when each personal link was first and last opened. Deleting the invitation deletes those names, the update and the times. Petalpost deletes the guest list, the update, its opened times and its replies at the first daily retention run after 23:59 Bucharest time on the day after the event.
 - Petalpost counts a fixed set of actions per day and page language, and stores no cookie, identifier, IP address or invitation content with the counts.
 - The site is in English and Romanian. Botez, Cununie and Moț exist only in Romanian.
 
@@ -89,11 +89,12 @@ A host can:
 - use the tracker to see how many parties have yet to reply and open a WhatsApp reminder for each party with an active personal link. Each reminder uses the party's language and includes its personal link. The tracker marks which reminders the host opened in the current tab session;
 - set, change and clear an optional RSVP deadline in the tracker, checked in Europe/Bucharest time, and edit a party's reply in the tracker even after the deadline;
 - create, rename, resize and remove tables in the guest-list tracker. The host can move a party to a table with a picker or, on a desktop, by dragging the party onto the table, and see filled and free seats from accepting replies. The host can print the seating plan with each table and its parties. Removing a table clears its parties' assignments;
+- write, change or remove one update of up to 500 characters for a guest-list invitation, such as "The party starts at 19:00". Every personal link and view link shows it at the top. With the management link, the tracker lists one WhatsApp message per party with the update and the party's personal link, in the party's language;
 - publish changes from the browser that published the invitation, which keeps the link and the replies;
 - see every reply with its note and the totals on the management page, download the replies as a CSV file, and delete the invitation with all its replies;
 - save a passkey for the invitation on the management page with Face ID, a fingerprint or Windows Hello, and on another device with the same Apple, Google or Microsoft account use "Find my invitations" on the home page to open the management page for an hour.
 
-For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies or the guest list, rename and delete parties, and delete the invitation. It cannot add parties, manage personal links or save another passkey.
+For a passkey, the server stores the credential id, the public key and a signature counter with the invitation, and no name, email address or biometric data. The Apple, Google or Microsoft account that syncs the passkey belongs to the host's device, so hosts still need no Petalpost account and no email address. Deleting the invitation deletes its passkeys. A passkey sign-in can view and download the replies or the guest list, rename and delete parties, save or remove the update, and delete the invitation. It cannot add parties, manage personal links, list the WhatsApp update messages or save another passkey.
 
 A host cannot:
 
@@ -114,7 +115,8 @@ A guest can:
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw an open-mode reply through its reply edit link;
 - open a personal link to see the party's greeting and reply on its behalf with up to 20 seats. The guest can view, change or withdraw the reply through the same link until the RSVP deadline passes. After it passes, the personal link shows the reply read-only;
-- share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private.
+- share a view link from the personal link. The view link shows the party's greeting and invitation and keeps the reply private;
+- see the host's latest update at the top of the personal link and the view link.
 
 A guest cannot see other guests' replies or the totals.
 
@@ -230,7 +232,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
-The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, and `personal` has the party greeting, reply form and view link sharing strings.
+The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, `partyUpdate` has the tracker strings of the update for every party, and `personal` has the party greeting, update heading, reply form and view link sharing strings.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.
@@ -342,6 +344,7 @@ The personal link and view link API use `parties`. The tracker reads it alongsid
 A reply in `responses` belongs to a party or to no party, and it holds answers per sub-event and meal counts.
 The invitation settings of the guest-list features live in the invitation's stored content `d`, so the `events` table is unchanged.
 `d.mode` is `open` or `guestList`, and a `d` without a mode, stored before invitations had modes, is open.
+`d.updateNotice` holds the latest update of a guest-list invitation. `PATCH /api/events/{id}` sets it without changing the invitation version, a publish keeps it, and only the tracker, personal link and view link reads return it.
 `tests/check-migrations.js` applies the migrations to an empty database and to one with the earlier schema and data.
 
 Every page loads Vercel Web Analytics.

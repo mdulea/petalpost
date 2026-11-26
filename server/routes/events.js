@@ -2,6 +2,7 @@
 //
 // PUT /api/events/{id}                     management secret; {t, d, version?, lang?} creates, replays or updates
 // GET /api/events/{id}                     public; {t, d}
+// PATCH /api/events/{id}                   host credential; {updateNotice} sets or removes the latest update; 204
 // DELETE /api/events/{id}                  management secret; removes the event and its responses; 204
 // PATCH /api/events/{id}/deadline          management secret; {deadline} sets, changes or clears (null) the RSVP deadline
 // PATCH /api/events/{id}/mode              management secret; {mode} switches mode; 400 without a date for the
@@ -17,16 +18,25 @@
 // another number; the 429 stores nothing.
 import { isValidDate } from '../../public/js/countdown.js';
 import { normalizeLang } from '../../public/js/i18n.js';
-import { MODES, modeOf, readPublished } from '../../public/js/invite.js';
+import { MODES, modeOf, readPublished, UPDATE_NOTICE_LIMIT } from '../../public/js/invite.js';
 import { addCount, bearer, hash, isEnded, json, ownedEvent, readBody, Refusal, today } from './shared.js';
 
 export const DAILY_EVENTS = 20;
 
 export const routes = [
-  { pattern: /^\/api\/events\/([^/]+)$/, methods: { GET: getEvent, PUT: putEvent, DELETE: deleteEvent } },
+  {
+    pattern: /^\/api\/events\/([^/]+)$/,
+    methods: { GET: getEvent, PUT: putEvent, PATCH: saveUpdate, DELETE: deleteEvent },
+  },
   { pattern: /^\/api\/events\/([^/]+)\/deadline$/, methods: { PATCH: setDeadline } },
   { pattern: /^\/api\/events\/([^/]+)\/mode$/, methods: { PATCH: switchMode } },
 ];
+
+// Keep the tracker update outside the editor's invitation fields and include it only on authorized reads.
+export function presentationOf(event, includeUpdate = false) {
+  const { updateNotice, ...d } = event.d;
+  return { t: event.t, d, ...(includeUpdate && updateNotice ? { updateNotice } : {}) };
+}
 
 async function getEvent({ db, ids: [id] }) {
   const event = (await db.query('select t, d from events where id = $1', [id])).rows[0];
@@ -34,7 +44,7 @@ async function getEvent({ db, ids: [id] }) {
     if (await isEnded(db, id)) throw new Refusal(410, 'eventEnded');
     throw new Refusal(404, 'eventMissing');
   }
-  return json(200, { t: event.t, d: event.d });
+  return json(200, presentationOf(event));
 }
 
 async function putEvent({ db, request, ids: [id], dailyEvents }) {
@@ -49,7 +59,7 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
       const event = await ownedEvent(tx, id, secret);
       if (body.version === undefined) return json(200, { version: event.version, created: false });
       if (body.version !== event.version) {
-        throw new Refusal(409, 'eventChanged', { version: event.version, t: event.t, d: event.d });
+        throw new Refusal(409, 'eventChanged', { ...presentationOf(event), version: event.version });
       }
       const mode = modeOf(event.d);
       if (mode === 'guestList' && !record.d.date) throw new Refusal(400, 'guestListDate');
@@ -57,6 +67,7 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
         ...record.d,
         mode,
         ...(isValidDate(event.d?.deadline) ? { deadline: event.d.deadline } : {}),
+        updateNotice: event.d.updateNotice,
       };
       await tx.query(
         'update events set t = $2, d = $3::text::jsonb, version = version + 1, updated_at = now() where id = $1',
@@ -88,6 +99,27 @@ async function putEvent({ db, request, ids: [id], dailyEvents }) {
     ]);
     await addCount(tx, 'invitation_publish', normalizeLang(body.lang));
     return json(201, { version: 1, created: true });
+  });
+}
+
+async function saveUpdate({ db, request, ids: [id] }) {
+  const secret = bearer(request);
+  const { updateNotice } = await readBody(request);
+  const text = typeof updateNotice === 'string' ? updateNotice.trim() : '';
+  if (
+    updateNotice !== null &&
+    (!text || text.length > UPDATE_NOTICE_LIMIT || !text.isWellFormed() || text.includes('\0'))
+  ) {
+    throw new Refusal(400, 'updateNotice');
+  }
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, id, secret);
+    if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'updateMode');
+    // The editor and tracker lock the same row, but the update leaves the invitation version alone. Like the other
+    // host writes, it moves updated_at.
+    const d = { ...event.d, updateNotice: text || undefined };
+    await tx.query('update events set d = $2::text::jsonb, updated_at = now() where id = $1', [id, JSON.stringify(d)]);
+    return json(204, null);
   });
 }
 

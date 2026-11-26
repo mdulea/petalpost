@@ -193,6 +193,7 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     },
     // Public presentation fields {t, d} of an event.
     loadEvent: (id) => call('GET', eventPath(id)),
+    saveUpdate: (cred, updateNotice) => call('PATCH', eventPath(cred.id), cred.secret, { updateNotice }),
     // Removes the event and every reply to it; data is null.
     deleteEvent: (cred) => call('DELETE', eventPath(cred.id), cred.secret),
     // Switches the invitation between open and guestList modes; data is {mode, version}.

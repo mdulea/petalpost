@@ -1678,6 +1678,12 @@ textarea.input {
   font-weight: 700;
   color: var(--rose-deep);
 }
+/* The host's update keeps its line breaks, and a long word wraps inside the panel. */
+.party-update p {
+  margin: 4px 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 /* A guest's note keeps its line breaks, and a long word wraps inside the list. */
 .reply p {
   margin: 4px 0;

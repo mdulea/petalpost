@@ -2,6 +2,7 @@
 // {entries: [{id, name}], defaultSeats, lang}. PUT /{id} adds one from {name, defaultSeats, lang}.
 // On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply, deadlineClosed}.
 // GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
+// Both reads also return updateNotice when the host has saved one.
 // PATCH with the personal secret saves {attending, partySize, note?, version?, lang?} and returns {version}.
 // DELETE with the same secret and {version} withdraws the reply. A stale write gets 409 and the current reply.
 // PATCH on /{id}/link needs the management secret and {action, linkGeneration}.
@@ -17,6 +18,7 @@ import { validPartyName } from '../../public/js/guest-list.js';
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { ID_PATTERN, makeReply, newId, PARTY_LIMITS, partyLinkSecret, viewLinkSecret } from '../../public/js/rsvp.js';
+import { presentationOf } from './events.js';
 import { addCount, bearer, hash, isEnded, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
 const viewRoute = { pattern: /^\/api\/events\/([^/]+)\/parties\/([^/]+)\/view$/, methods: { GET: getView } };
@@ -205,7 +207,7 @@ async function getView({ db, request, ids: [eventId, id] }) {
   );
   if (!party && (await isEnded(db, eventId))) throw new Refusal(410, 'eventEnded');
   checkPartyLink(party, secret, 'view_hash');
-  return json(200, { t: party.t, d: party.d, name: party.name });
+  return json(200, { ...presentationOf(party, true), name: party.name });
 }
 
 async function renameParty({ db, request, ids: [eventId, id] }) {
@@ -256,8 +258,7 @@ async function getParty({ db, request, ids: [eventId, id], now }) {
   );
   if (!opened.rows.length) throw new Refusal(404, 'personalLink');
   return json(200, {
-    t: party.t,
-    d: party.d,
+    ...presentationOf(party, true),
     name: party.name,
     defaultSeats: party.default_seats,
     reply: replyOf(party),
