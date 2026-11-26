@@ -70,8 +70,11 @@
                 <input class="input" id="defaultSeats" name="defaultSeats" type="number" min="1" value="1" required />
               </div>
               <button class="btn btn-primary btn-small" type="submit">Add party</button>
-              <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Refresh</button>
             </form>
+            <p class="hint" id="partyManagementLinkRequired" hidden>
+              Open the management link to add parties or copy personal links.
+            </p>
+            <button class="btn btn-ghost btn-small" id="refreshParties" type="button">Refresh</button>
             <p class="status" role="status" id="partyStatus"></p>
           </section>
 

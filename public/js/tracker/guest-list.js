@@ -3,8 +3,12 @@ import { UI } from '../i18n.js';
 import { eventLink } from '../invite.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, personalLink } from '../rsvp.js';
 
-function init({ client, cred, load }) {
+function init({ client, cred, load, signedIn }) {
   const form = /** @type {HTMLFormElement} */ (document.getElementById('addParty'));
+  document.getElementById('refreshParties').addEventListener('click', load);
+  form.hidden = signedIn;
+  document.getElementById('partyManagementLinkRequired').hidden = !signedIn;
+  if (signedIn) return;
   const seats = /** @type {HTMLInputElement} */ (document.getElementById('defaultSeats'));
   const submit = form.querySelector('button[type="submit"]');
   const status = document.getElementById('partyStatus');
@@ -27,15 +31,12 @@ function init({ client, cred, load }) {
     form.reset();
     load();
   });
-  document.getElementById('refreshParties').addEventListener('click', load);
 }
 
-async function show({ parties }, { cred, lang, copy }) {
+async function show({ parties }, { cred, lang, copy, signedIn }) {
   const words = UI[lang].guestList;
   const rows = await Promise.all(
     parties.map(async (party) => {
-      const secret = await partyLinkSecret(cred.secret, party.id, 'personal');
-      const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
       const row = document.createElement('li');
       row.className = 'reply';
       const name = document.createElement('strong');
@@ -50,6 +51,9 @@ async function show({ parties }, { cred, lang, copy }) {
         note.textContent = party.reply.note;
         row.append(note);
       }
+      if (signedIn) return row;
+      const secret = await partyLinkSecret(cred.secret, party.id, 'personal');
+      const link = personalLink(eventLink(location.origin, cred.id, party.lang), party.id, secret);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'btn btn-ghost btn-small';

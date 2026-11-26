@@ -30,7 +30,7 @@ async function addParty({ db, request, ids: [eventId, id] }) {
     throw new Refusal(400, 'party');
 
   return db.transaction(async (tx) => {
-    const event = await ownedEvent(tx, eventId, secret);
+    const event = await ownedEvent(tx, eventId, secret, { token: false });
     if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
     const existing = (await tx.query('select event_id from parties where id = $1', [id])).rows[0];
     if (existing?.event_id === eventId) return json(200, { id });

@@ -1,12 +1,36 @@
 // Checks party creation, personal access, one versioned reply, and withdrawal through the API in both languages.
+// A passkey session can read the guest list and needs the management secret to add a party.
 // Run: pnpm exec node --test tests/check-personal-link.js
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { test } from 'node:test';
 import { newId } from '../public/js/rsvp.js';
 import { host, party, setup } from './api-setup.js';
+import { authenticator } from './passkey-authenticator.js';
 
 const hash = (secret) => createHash('sha256').update(secret).digest('hex');
+
+test('a passkey session reads the guest list and cannot create parties', async () => {
+  const { client } = await setup();
+  const cred = host();
+  const owner = client();
+  const other = client(newId());
+  await owner.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
+  assert.equal((await owner.addParty(cred, newId(), { name: 'Sam', defaultSeats: 2 })).status, 201);
+  const key = authenticator();
+  const registration = (await owner.passkeyChallenge(cred)).data;
+  assert.equal((await owner.savePasskey(cred, key.register(registration.challenge))).status, 201);
+  const challenge = (await other.signInChallenge()).data;
+  const signedIn = await other.signIn(key.signIn(challenge.challenge));
+  assert.equal(signedIn.status, 200);
+  const tokenCred = { id: cred.id, secret: signedIn.data.token };
+  const refused = await other.addParty(tokenCred, newId(), { name: 'Lee', defaultSeats: 3 });
+  const list = await other.loadResponses(tokenCred);
+  assert.deepEqual(
+    { refused: refused.status, read: list.status, names: list.data.parties.map(({ name }) => name) },
+    { refused: 403, read: 200, names: ['Sam'] },
+  );
+});
 
 for (const lang of ['en', 'ro']) {
   test(`in ${lang}, each party can manage only its own reply through its personal link`, async () => {
