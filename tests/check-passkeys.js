@@ -2,9 +2,8 @@
 // saved with the management secret sign in and get a token for their own invitation; the token loads the replies,
 // publishes changes and deletes the invitation, and the sign-in link round trip; a token reaches no other invitation,
 // cannot ask for a registration challenge or save a passkey, and gets a 401 after it expires; the management link
-// lists two saved passkeys and their dates and removes only the selected one; a token can list them but cannot remove them;
-// a challenge works once,
-// belongs to its own invitation or to sign-in, and expires; refusals of a wrong origin, relying party, type, missing
+// lists two saved passkeys and their dates and removes only the selected one; a token can list them but cannot remove
+// them; a challenge works once, belongs to its own invitation or to sign-in, and expires; refusals of a wrong origin, relying party, type, missing
 // user verification, signature, sign counter that stops rising, malformed fields and an unknown passkey; the
 // passkey limit per invitation; deleting the invitation deletes its passkeys and tokens, and its passkey then opens
 // nothing; no response contains a stored hash or public key, and all are no-store.
