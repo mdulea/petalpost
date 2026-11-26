@@ -80,6 +80,7 @@ The promises:
 A host can:
 
 - choose a template, add a photo, names, a date, a time, a venue, an address and a note, and pick one of six accent colors;
+- add up to 8 sub-events, such as the civil ceremony, the church and the party, each with a name, a date, a time and a venue, and change, reorder and remove them;
 - download the invitation as a PNG with the photo;
 - publish the invitation and get an invitation link and a management link;
 - choose the open mode or the guest-list mode on the first publish. The open mode is the default, and any guest with the invitation link replies in it. In the guest-list mode, the invitation link shows the invitation without a reply form, and the tracker shows the guest list;
@@ -109,11 +110,11 @@ A host cannot:
 - start a separate new invitation while keeping the current one, as [decision 0001](docs/decisions/0001-start-a-new-invitation-explicitly.md) records;
 - publish more than 20 invitations from one IP address in a day;
 - publish a guest-list invitation without an event date;
-- keep an open invitation longer than 90 days after its event date, or 90 days after its last change when it has no date.
+- keep an open invitation longer than 90 days after its event date, or 90 days after its last change when it has no date. With sub-events, the event date is the latest date of its sub-events.
 
 A guest can:
 
-- open the invitation link in any browser, add the event to a calendar with reminders one day and two hours before it, and open the address on a map;
+- open the invitation link in any browser, see each sub-event's name, date, time and venue, add the event to a calendar with one entry for each sub-event and reminders one day and two hours before each entry, and open the address on a map;
 - see the days left before the event, then the hours on its day;
 - reply with a name of up to 80 characters, whether the party attends, a party size of up to 10 and an optional note of up to 300 characters for the host;
 - view, change or withdraw an open-mode reply through its reply edit link;
@@ -164,7 +165,7 @@ A guest cannot see other guests' replies or the totals.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
   - `api-setup.js` starts the API against an in-memory PGlite database and publishes an invitation for the Node checks, `passkey-authenticator.js` is the software authenticator of the passkey checks, and `browser-setup.js` holds the page watcher, the separate browser and the publish step of the browser tests.
-  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js`, `passkey.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
+  - `browser.spec.js`, `rsvp.spec.js`, `guest-list.spec.js`, `passkey.spec.js`, `sub-events.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
 - `.claude/settings.json` runs `scripts/command-guard.js` before each shell command that Claude Code runs.
@@ -236,6 +237,7 @@ The tests fail when a page breaks the Content-Security-Policy.
 `UI` in `public/js/i18n.js` holds the strings that scripts write into pages, with one group per feature under `en` and `ro`.
 The `editor` group has the host's editor and publishing strings, `guest` has the guest view and reply form, `manage` has the management page, and `passkey` has the passkey messages of the management page and the home page.
 The `guestList` group has the tracker guest list strings, `seating` has the seating plan strings, `deadline` has the RSVP deadline strings, `countdowns` has the tracker's deadline and deletion countdowns with their nudges and the personal link's deadline countdown, `partyUpdate` has the tracker strings of the update for every party, and `personal` has the party greeting, update heading, reply form and view link sharing strings.
+The `subEvents` group has the editor fields and buttons of each sub-event.
 A script reads its group once, such as `UI[lang].guest`.
 A new feature adds its own group under `en` and under `ro`, with the same keys in both, and leaves the other groups unchanged.
 `apiMessages` in the same file holds the API error messages for both languages.

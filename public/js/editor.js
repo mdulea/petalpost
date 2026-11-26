@@ -1,7 +1,7 @@
 import './icons.js';
 import './language-banner.js';
 import { UI, accentLabel, categoryLabel, localeOf, normalizeLang } from './i18n.js';
-import { ACCENTS, categoriesFor, getTemplate, renderInvite, templatesFor } from './templates.js';
+import { ACCENTS, categoriesFor, getTemplate, renderInvite, renderSchedule, templatesFor } from './templates.js';
 import { mountInvites } from './mount.js';
 import { animate } from './motion.js';
 import { countdown, eventStart } from './countdown.js';
@@ -10,6 +10,9 @@ import {
   EDITABLE,
   FIELDS,
   FIELD_LIMITS,
+  MAX_SUB_EVENTS,
+  SUB_EVENT_LIMITS,
+  addSubEvent,
   buildIcs,
   charsLeft,
   changePhoto,
@@ -17,7 +20,9 @@ import {
   eventPreviewMeta,
   makeInviteData,
   mapLink,
+  moveSubEvent,
   openInvite,
+  removeSubEvent,
   reportLink,
   resetInvite,
   saveDraft,
@@ -28,6 +33,7 @@ import {
   storedInvite,
   switchTemplate,
   updateInvite,
+  updateSubEvent,
   whatsappLink,
 } from './invite.js';
 import {
@@ -105,6 +111,9 @@ function render() {
   const mapUrl = mapLink(state.d);
   map.hidden = !mapUrl;
   if (mapUrl) map.href = mapUrl;
+  const schedule = renderSchedule(state.d, locale);
+  document.getElementById('scheduleList').innerHTML = schedule;
+  document.getElementById('schedule').hidden = !schedule;
 }
 
 function commit() {
@@ -197,8 +206,77 @@ function fillForm() {
   EDITABLE.forEach((f) => {
     form.elements[f].value = state.d[f] ?? '';
   });
+  fillSubEvents();
   showCounts();
 }
+
+// The sub-event fields, one fieldset for each sub-event in order. Each input carries the sub-event's index and field
+// name, and each button its action. The inputs have no name, so updateInvite ignores them. A redraw follows only an
+// add, a move, a removal or a fill, so typing keeps the focused input.
+const subEventList = document.getElementById('subEvents');
+const addSubEventButton = /** @type {HTMLButtonElement} */ (document.getElementById('addSubEvent'));
+const SUB_EVENT_INPUTS = { name: 'text', date: 'date', time: 'time', venue: 'text' };
+
+function fillSubEvents() {
+  const list = state.d.subEvents ?? [];
+  subEventList.innerHTML = list
+    .map((_, i) => {
+      const text = UI[lang].subEvents.part(i + 1);
+      const input = (f) => `<div class="field">
+          <label for="sub${i}-${f}">${text[f]}</label>
+          <input class="input" type="${SUB_EVENT_INPUTS[f]}" id="sub${i}-${f}" data-index="${i}" data-field="${f}" />
+        </div>`;
+      const button = (action, disabled) =>
+        `<button class="btn btn-ghost btn-small" type="button" data-index="${i}" data-action="${action}"
+          aria-label="${text[`${action}Label`]}"${disabled ? ' disabled' : ''}>${text[action]}</button>`;
+      return `<li class="sub-event"><fieldset>
+        <legend>${text.legend}</legend>
+        ${input('name')}
+        <div class="field-row">${input('date')}${input('time')}</div>
+        ${input('venue')}
+        <div class="sub-event-tools">
+          ${button('up', i === 0)}${button('down', i === list.length - 1)}${button('remove', false)}
+        </div>
+      </fieldset></li>`;
+    })
+    .join('');
+  subEventList.querySelectorAll('input').forEach((/** @type {HTMLInputElement} */ el) => {
+    const limit = SUB_EVENT_LIMITS[el.dataset.field];
+    if (limit) el.maxLength = limit;
+    el.value = list[Number(el.dataset.index)][el.dataset.field];
+  });
+  addSubEventButton.disabled = list.length >= MAX_SUB_EVENTS;
+}
+
+addSubEventButton.addEventListener('click', () => {
+  if (!addSubEvent(state, lang)) return;
+  fillSubEvents();
+  commit();
+  /** @type {HTMLElement} */ (subEventList.querySelector('li:last-child input')).focus();
+});
+
+// A moved sub-event keeps focus on the same button, or on its other move button at the end of the list. After a
+// removal, focus goes to the next sub-event's name, the previous one's at the end, or the add button.
+subEventList.addEventListener('click', (e) => {
+  const button = /** @type {HTMLButtonElement} */ (/** @type {Element} */ (e.target).closest('button[data-action]'));
+  if (!button) return;
+  const index = Number(button.dataset.index);
+  const { action } = button.dataset;
+  const offset = action === 'up' ? -1 : 1;
+  const changed = action === 'remove' ? removeSubEvent(state, index, lang) : moveSubEvent(state, index, offset, lang);
+  if (!changed) return;
+  fillSubEvents();
+  commit();
+  const items = subEventList.children;
+  if (action === 'remove') {
+    const next = items[index] ?? items[index - 1];
+    /** @type {HTMLElement} */ (next?.querySelector('input') ?? addSubEventButton).focus();
+    return;
+  }
+  const moved = items[index + offset];
+  const same = /** @type {HTMLButtonElement} */ (moved.querySelector(`[data-action="${action}"]`));
+  /** @type {HTMLElement} */ (same.disabled ? moved.querySelector('[data-action]:not(:disabled)') : same).focus();
+});
 
 FIELDS.forEach((f) => {
   if (FIELD_LIMITS[f]) addCounter(form.elements[f], FIELD_LIMITS[f]);
@@ -249,7 +327,11 @@ document.getElementById('swatches').innerHTML =
   }).join('');
 
 form.addEventListener('input', (e) => {
-  const { name, value } = /** @type {HTMLInputElement} */ (e.target);
+  const { name, value, dataset } = /** @type {HTMLInputElement} */ (e.target);
+  if (dataset.field) {
+    if (updateSubEvent(state, Number(dataset.index), dataset.field, value, lang)) commit();
+    return;
+  }
   if (name === 'template') {
     switchTemplate(state, value, lang);
     fillForm();

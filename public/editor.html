@@ -151,6 +151,20 @@
           </div>
         </section>
 
+        <section class="panel" id="sub-events-panel" aria-labelledby="h-sub-events">
+          <h2 id="h-sub-events">
+            <svg class="icon"><use href="#i-calendar" /></svg>Schedule
+          </h2>
+          <p class="hint">
+            Add the parts of your event, such as the ceremony and the party. Guests see each part, and the calendar file
+            gets one entry for each part with a date.
+          </p>
+          <ol class="sub-events" id="subEvents"></ol>
+          <button class="btn btn-ghost btn-small" type="button" id="addSubEvent">
+            <svg class="icon"><use href="#i-plus" /></svg>Add a part
+          </button>
+        </section>
+
         <section class="panel" aria-labelledby="h-note">
           <h2 id="h-note">
             <svg class="icon"><use href="#i-heart" /></svg>Note and reply
@@ -214,6 +228,12 @@
             ><svg class="icon"><use href="#i-pin" /></svg>Open map</a
           >
         </div>
+        <section class="panel schedule" id="schedule" aria-labelledby="h-schedule" hidden>
+          <h2 id="h-schedule">
+            <svg class="icon"><use href="#i-calendar" /></svg>Schedule
+          </h2>
+          <ol class="schedule-list" id="scheduleList"></ol>
+        </section>
         <p class="hint share-note owner-only">
           Publish stores the text, template and color, and guests reply from the invitation link. The photo stays in
           this browser. To send it, download the PNG. After you change the invite, publish again to update it.

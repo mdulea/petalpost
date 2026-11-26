@@ -343,6 +343,22 @@ export const UI = {
       deletionDue: 'The guest list and its replies are deleted within a day.',
       download: 'Download the guest-list CSV to keep a copy.',
     },
+    // The editor fields and buttons of sub-event n, counted from 1.
+    subEvents: {
+      part: (n) => ({
+        legend: `Part ${n}`,
+        name: 'Name',
+        date: 'Date',
+        time: 'Start time',
+        venue: 'Venue',
+        up: 'Up',
+        down: 'Down',
+        remove: 'Remove',
+        upLabel: `Move part ${n} up`,
+        downLabel: `Move part ${n} down`,
+        removeLabel: `Remove part ${n}`,
+      }),
+    },
     invite: {
       photoAlt: 'Event photo',
     },
@@ -603,6 +619,22 @@ export const UI = {
       deletion: (left) => `Lista de invitați și răspunsurile ei se șterg peste ${roLeft(left)}.`,
       deletionDue: 'Lista de invitați și răspunsurile ei se șterg în cel mult o zi.',
       download: 'Descarcă lista de invitați în format CSV ca să păstrezi o copie.',
+    },
+    // The editor fields and buttons of sub-event n, counted from 1.
+    subEvents: {
+      part: (n) => ({
+        legend: `Momentul ${n}`,
+        name: 'Nume',
+        date: 'Data',
+        time: 'Ora (24h)',
+        venue: 'Locație',
+        up: 'Sus',
+        down: 'Jos',
+        remove: 'Șterge',
+        upLabel: `Mută momentul ${n} mai sus`,
+        downLabel: `Mută momentul ${n} mai jos`,
+        removeLabel: `Șterge momentul ${n}`,
+      }),
     },
     invite: {
       photoAlt: 'Fotografia evenimentului',

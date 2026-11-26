@@ -5,7 +5,7 @@
 // Europe/Bucharest midnight checks across winter and summer time; the last minute of the RSVP deadline and the start of
 // the deletion at 23:59 Europe/Bucharest time in winter and summer, whatever the runtime's time zone; the tracker's
 // deadline countdown until the deadline passes, and its nudge in the last 7 days while a party has not replied; the
-// deletion countdown, and its nudge in the last 3 days and until the retention run deletes the list; the English and Romanian countdown and nudge text.
+// deletion countdown, counted from the latest sub-event date when there is one, and its nudge in the last 3 days and until the retention run deletes the list; the English and Romanian countdown and nudge text.
 // The checks run in the Europe/Bucharest time zone, which changes to summer time on 29 March 2026 at 03:00 and back
 // on 25 October 2026 at 04:00.
 // Run: pnpm exec node tests/check-countdown.js
@@ -163,6 +163,11 @@ test('the tracker counts down to the deletion and nudges in the last 3 days', ()
   assert.deepEqual(due(d, 0, '2026-12-18T10:00:00Z').deletion, { left: { unit: 'days', count: 3 }, nudge: true });
   assert.deepEqual(due(d, 5, '2026-12-21T21:00:00Z').deletion, { left: { unit: 'hours', count: 1 }, nudge: true });
   assert.equal(due({ date: '' }, 0, '2026-11-26T10:00:00Z').deletion, null);
+});
+
+test('the deletion countdown counts from the latest sub-event date', () => {
+  const d = { date: '2026-12-01', subEvents: [{ date: '2026-12-20' }, { date: '' }, { date: '2026-12-05' }] };
+  assert.deepEqual(due(d, 0, '2026-11-26T10:00:00Z').deletion, { left: { unit: 'days', count: 25 }, nudge: false });
 });
 
 test('after 23:59 on the day after the event, the deletion nudge stays until the retention run deletes the list', () => {
