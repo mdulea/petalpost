@@ -189,7 +189,7 @@ It starts `scripts/server.js` on a free port with an in-memory database, so it r
 When the selector matches nothing or the path answers with an error status, it writes no file and exits with status 1.
 Git Bash rewrites an argument that starts with `/` into a Windows path, so write the path without the leading `/`, such as `ro/` for the Romanian home page.
 
-`test` runs the Prettier format check, ESLint and the browser port, command guard, contrast, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
+`test` runs the Prettier format check, ESLint and the browser port, command guard, contrast, countdown, DOM-free, filter, invite, paths, RSVP, screenshot, site and worktree checks in `tests/` with the Node.js test runner.
 The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 

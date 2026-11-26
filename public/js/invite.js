@@ -1,5 +1,6 @@
 // Invite records, share links and the calendar file. No DOM access, so tests/check-invite.js runs it in Node.
 
+import { DEFAULT_TIME } from './countdown.js';
 import { UI, normalizeLang } from './i18n.js';
 import { ID_PATTERN, SECRET_PATTERN } from './rsvp.js';
 import { ACCENTS, formatDate, formatTime, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
@@ -394,12 +395,15 @@ function foldIcs(line) {
   return folded;
 }
 
-// data: a record from makeInviteData. Events last three hours in floating local time. now sets DTSTAMP.
-// Returns null when the date is empty.
+// A calendar app shows an alarm one day and two hours before the event.
+const ALARMS = ['-P1D', '-PT2H'];
+
+// data: a record from makeInviteData. Events last three hours in floating local time and carry ALARMS. now sets
+// DTSTAMP. Returns null when the date is empty.
 export function buildIcs(data, now) {
   if (!data.date) return null;
   const [y, mo, day] = data.date.split('-').map(Number);
-  const [h, m] = (data.time || '12:00').split(':').map(Number);
+  const [h, m] = (data.time || DEFAULT_TIME).split(':').map(Number);
   const start = new Date(Date.UTC(y, mo - 1, day, h, m));
   const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
   const local = (date) =>
@@ -420,6 +424,13 @@ export function buildIcs(data, now) {
     `SUMMARY:${icsEscape(data.title)}`,
     `LOCATION:${icsEscape([data.venue, data.address].filter(Boolean).join(', '))}`,
     `DESCRIPTION:${icsEscape([data.hosts, data.message, data.rsvp].filter(Boolean).join('\n'))}`,
+    ...ALARMS.flatMap((trigger) => [
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      `TRIGGER:${trigger}`,
+      `DESCRIPTION:${icsEscape(data.title)}`,
+      'END:VALARM',
+    ]),
     'END:VEVENT',
     'END:VCALENDAR',
   ]

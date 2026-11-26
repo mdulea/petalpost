@@ -1,5 +1,5 @@
 // Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the WhatsApp link, the guest templates prompt or the management page break in Chromium against the real API of
-// scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and via legacy ?view=1&e=; a guest's reply, its edit
+// scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and its countdown and via legacy ?view=1&e=; a guest's reply, its edit
 // link and an edit that keeps one reply; a guest sees the free templates prompt below the reply form from page load and once after a reply; the host
 // and the missing-invitation message never show it; it links to the home page templates tagged from=invite in English and Romanian; the management totals and reply list; a guest's note, which the edit link loads
 // and the management page shows under its reply as text with its line breaks; the replies CSV download with its
@@ -58,6 +58,16 @@ test('an invitation published in one browser opens in another', async ({ browser
   await guest.page.goto(invitation);
   await expect(guest.page.locator('h1')).toHaveText('Zoe turns 30');
   await expect(guest.page.locator('#previewCard .invite-title')).toHaveText('Zoe turns 30');
+  expect([...host.problems, ...guest.problems]).toEqual([]);
+});
+
+test('a published invitation shows its guests the days left before the event', async ({ browser }) => {
+  const host = await newBrowser(browser);
+  const { invitation } = await publish(host.page, 'Zoe turns 30', { date: '2026-12-12', time: '14:00' });
+  const guest = await newBrowser(browser, { timezoneId: 'Europe/Bucharest' });
+  await guest.page.clock.install({ time: new Date('2026-12-01T08:00:00Z') });
+  await guest.page.goto(invitation);
+  await expect(guest.page.locator('#countdown')).toHaveText('Starts in 11 days');
   expect([...host.problems, ...guest.problems]).toEqual([]);
 });
 
