@@ -54,6 +54,20 @@
             </div>
           </section>
 
+          <section class="panel" id="switchMode" aria-labelledby="h-switch-mode" hidden>
+            <h2 id="h-switch-mode">
+              <svg class="icon"><use href="#i-heart" /></svg>Lista de invitați
+            </h2>
+            <p class="hint">
+              Treci la modul listă de invitați ca să oferi fiecărui grup un link personal. Linkul invitației și
+              răspunsurile anterioare rămân, iar linkul public nu mai primește răspunsuri noi.
+            </p>
+            <button class="btn btn-ghost btn-small" type="button" id="switchToGuestList">
+              Treci la modul listă de invitați
+            </button>
+            <p class="status" role="status" id="switchModeStatus"></p>
+          </section>
+
           <section class="panel" id="guestList" aria-labelledby="h-guest-list" hidden>
             <h2 id="h-guest-list">
               <svg class="icon"><use href="#i-heart" /></svg>Lista de invitați
@@ -81,6 +95,10 @@
             </p>
             <p class="status" role="status" id="partyStatus"></p>
             <ul class="totals" id="partyTotals"></ul>
+            <div id="unattachedReplies" hidden>
+              <h3 id="h-unattached-replies">Răspunsuri fără link personal</h3>
+              <ul class="reply-list" id="unattachedList"></ul>
+            </div>
             <div class="field">
               <label for="partySearch">Caută după nume</label>
               <input class="input" id="partySearch" type="search" />

@@ -195,8 +195,13 @@ export function createClient(fetchFn = fetch, { lang = 'en' } = {}) {
     loadEvent: (id) => call('GET', eventPath(id)),
     // Removes the event and every reply to it; data is null.
     deleteEvent: (cred) => call('DELETE', eventPath(cred.id), cred.secret),
-    // data is {t, d, version, responses, totals}, with parties and tables in guest-list mode.
+    // Switches the invitation between open and guestList modes; data is {mode, version}.
+    switchMode: (cred, mode) => call('PATCH', `${eventPath(cred.id)}/mode`, cred.secret, { mode }),
+    // data is {t, d, version, responses, totals}, with parties, tables and each unattached reply's id in guest-list mode.
     loadResponses: (cred) => call('GET', `${eventPath(cred.id)}/responses`, cred.secret),
+    // Attaches an earlier unattached reply to a party without a reply; data is null.
+    attachReply: (cred, responseId, partyId) =>
+      call('POST', `${replyPath(cred.id, responseId)}/attach`, cred.secret, { partyId }),
     // Creates the guest's reply {name, attending, partySize, note}, or updates it when cred.version is set.
     // The page language goes with it for the server's count. data is {version, created}.
     saveReply: (eventId, cred, reply) => save(replyPath(eventId, cred.id), cred, { ...reply, lang: code }),

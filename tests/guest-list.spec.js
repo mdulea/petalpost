@@ -5,8 +5,11 @@
 // invitation link of an open invitation keeps the reply form, and its tracker keeps the replies section without a
 // guest list; the editor refuses to publish a guest-list invitation without a date, and after retention deletes a
 // past guest-list invitation the tracker, personal link and public invitation link show "This invitation has ended"
-// without event details, including when the host submits a party from an already open tracker; no page breaks the
-// Content-Security-Policy or throws.
+// without event details, including when the host submits a party from an already open tracker; switching a published
+// open invitation to the guest-list mode keeps its link and earlier replies under "Replies without a personal link"
+// and in the totals, stops taking public replies, lets the host attach a reply to a party so its personal link shows
+// it, and makes the old reply edit link show the unavailable message; no page breaks the Content-Security-Policy or
+// throws.
 // The tracker also pastes, searches, filters, exports, renames and deletes parties in both languages.
 // A maximum-length paste fills the list, and the page refuses an extra party.
 // A retry after a lost batch response keeps the same names, seats and language and creates no duplicates.
@@ -37,6 +40,10 @@ const COPY = {
     dateRequired: 'Add an event date before publishing a guest-list invitation.',
     endedHeading: 'This invitation has ended',
     endedMessage: 'This invitation has ended.',
+    switchButton: 'Switch to guest-list mode',
+    unattachedHeading: 'Replies without a personal link',
+    attach: 'Attach',
+    editLinkEnded: 'This link no longer works. Use the personal link the host sent you to view or change your reply.',
   },
   ro: {
     editor: '/ro/editor.html?t=botez-porumbel',
@@ -59,6 +66,11 @@ const COPY = {
     dateRequired: 'Adaugă data evenimentului înainte de a publica o invitație cu listă de invitați.',
     endedHeading: 'Această invitație s-a încheiat',
     endedMessage: 'Această invitație s-a încheiat.',
+    switchButton: 'Treci la modul listă de invitați',
+    unattachedHeading: 'Răspunsuri fără link personal',
+    attach: 'Asociază',
+    editLinkEnded:
+      'Acest link nu mai funcționează. Folosește linkul personal trimis de gazdă pentru a vedea sau modifica răspunsul.',
   },
 };
 
@@ -234,6 +246,65 @@ for (const lang of ['en', 'ro']) {
     await expect(invited.page.locator('#personalSections')).toBeHidden();
     await expect(invited.page.getByText('Familia Radu')).toBeHidden();
     expect([...host.problems, ...guest.problems, ...invited.problems]).toEqual([]);
+  });
+
+  test(`in ${lang}, a host switches an open invitation to guest-list mode and attaches an earlier reply`, async ({
+    browser,
+  }) => {
+    const host = await newBrowser(browser);
+    const { invitation, manage } = await publishIn(host.page, lang, 'open');
+
+    const guest = await newBrowser(browser);
+    await guest.page.goto(invitation);
+    await guest.page.fill('#guestName', 'Sam');
+    await guest.page.check('input[name="attending"][value="yes"]');
+    await guest.page.fill('#partySize', '2');
+    await guest.page.fill('#guestNote', 'Fără nuci');
+    await guest.page.click('#sendReply');
+    await expect(guest.page.locator('#replyLink')).toHaveValue(/#r=[\w-]+\.[\w-]+$/);
+    const editLink = await guest.page.locator('#replyLink').inputValue();
+
+    await host.page.goto(manage);
+    await expect(host.page.locator('#responseList')).toContainText('Sam');
+    host.page.once('dialog', (dialog) => dialog.accept());
+    await host.page.getByRole('button', { name: copy.switchButton }).click();
+
+    await expect(host.page.locator('#guestList')).toBeVisible();
+    await expect(host.page.locator('#replies')).toBeHidden();
+    await expect(host.page.locator('#eventLink')).toHaveValue(invitation);
+    await expect(host.page.locator('#eventLinkNoReplies')).toHaveText(copy.noReplies);
+    await expect(host.page.locator('#partyTotals li').first()).toHaveText(copy.totals[0]);
+    await expect(host.page.locator('#h-unattached-replies')).toHaveText(copy.unattachedHeading);
+    await expect(host.page.locator('#unattachedList')).toContainText('Sam');
+    await expect(host.page.locator('#unattachedList')).toContainText('Fără nuci');
+
+    const otherGuest = await newBrowser(browser);
+    await otherGuest.page.goto(invitation);
+    await expect(otherGuest.page.locator('#guestListNotice')).toHaveText(copy.notice);
+    await expect(otherGuest.page.locator('#rsvpForm')).toBeHidden();
+
+    await host.page.fill('#partyName', 'Familia Sam');
+    await host.page.fill('#defaultSeats', '1');
+    await host.page.getByRole('button', { name: copy.add }).click();
+    const partyRow = host.page.locator('#partyList li').filter({ hasText: 'Familia Sam' });
+    await expect(partyRow).toBeVisible();
+
+    const unattachedRow = host.page.locator('#unattachedList li').filter({ hasText: 'Sam' });
+    await unattachedRow.getByRole('button', { name: copy.attach }).click();
+    await expect(host.page.locator('#unattachedReplies')).toBeHidden();
+    await expect(host.page.locator('#partyTotals li').first()).toHaveText(copy.totals[0]);
+    await expect(partyRow).toContainText(/Yes, 2|Da, 2/);
+    await expect(partyRow).toContainText('Fără nuci');
+
+    const personalLink = await partyRow.locator('input[readonly]').inputValue();
+    await guest.page.goto(personalLink);
+    await expect(guest.page.locator('#personalReply [name="partySize"]')).toHaveValue('2');
+    await expect(guest.page.locator('#personalReply [name="note"]')).toHaveValue('Fără nuci');
+
+    await otherGuest.page.goto(editLink);
+    await expect(otherGuest.page.locator('#guestListNotice')).toHaveText(copy.editLinkEnded);
+    await expect(otherGuest.page.locator('#rsvpForm')).toBeHidden();
+    expect([...host.problems, ...guest.problems, ...otherGuest.problems]).toEqual([]);
   });
 }
 

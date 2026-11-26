@@ -1,9 +1,10 @@
 // The reply routes of server/api.js:
 //
-// GET /api/events/{id}/responses           tracker credentials; {t, d, version, responses, totals, parties?, tables?}
-// PUT /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note?, version?, lang?}
-// GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note, version}
-// DELETE /api/events/{id}/responses/{rid}  edit secret; {version} withdraws the reply; 204, also when it is gone
+// GET /api/events/{id}/responses                management secret; {t, d, version, responses, totals, parties?}
+// PUT /api/events/{id}/responses/{rid}          edit secret; {name, attending, partySize, note?, version?, lang?}
+// GET /api/events/{id}/responses/{rid}          edit secret; {name, attending, partySize, note, version}
+// DELETE /api/events/{id}/responses/{rid}       edit secret; {version} withdraws the reply; 204, also when it is gone
+// POST /api/events/{id}/responses/{rid}/attach  management secret; {partyId} attaches an earlier reply to a party; 204
 //
 // A PUT without version creates the reply: 201 {version: 1, created: true}, or 200 {version, created: false}
 // unchanged when it already exists with the same secret. A PUT with version updates: 200 {version, created: false},
@@ -15,7 +16,7 @@
 // that stores nothing.
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
-import { makeReply, tally } from '../../public/js/rsvp.js';
+import { ID_PATTERN, makeReply, tally } from '../../public/js/rsvp.js';
 import { tableSeats } from '../../public/js/seating.js';
 import { listParties } from './parties.js';
 import { listTables } from './seating.js';
@@ -29,19 +30,29 @@ export const routes = [
     pattern: /^\/api\/events\/([^/]+)\/responses\/([^/]+)$/,
     methods: { GET: getReply, PUT: putReply, DELETE: withdrawReply },
   },
+  { pattern: /^\/api\/events\/([^/]+)\/responses\/([^/]+)\/attach$/, methods: { POST: attachReply } },
 ];
 
-// Read the tracker without locking the event. Only older view hashes may need an update.
+// Read from one snapshot without locking the event, so a concurrently attached reply appears exactly once.
+// Only older view hashes may need an update.
 async function listResponses({ db, request, ids: [id] }) {
   const secret = bearer(request);
-  const event = await ownedEvent(db, id, secret, { lock: false });
+  return db.transaction(async (tx) => {
+    await tx.query('set transaction isolation level repeatable read');
+    return readResponses(tx, id, secret);
+  });
+}
+
+async function readResponses(tx, id, secret) {
+  const event = await ownedEvent(tx, id, secret, { lock: false });
   const hasGuestList = modeOf(event.d) === 'guestList';
-  const { rows } = await db.query(
-    `select name, attending, party_size, note, created_at, updated_at from responses
+  const { rows } = await tx.query(
+    `select id, name, attending, party_size, note, created_at, updated_at from responses
      where event_id = $1${hasGuestList ? ' and party_id is null' : ''} order by created_at, updated_at`,
     [id],
   );
   const responses = rows.map((r) => ({
+    ...(hasGuestList ? { id: r.id } : {}),
     name: r.name,
     attending: r.attending,
     partySize: r.party_size,
@@ -50,8 +61,8 @@ async function listResponses({ db, request, ids: [id] }) {
     updatedAt: new Date(r.updated_at).toISOString(),
   }));
   const managementSecret = matches(secret, event.secret_hash) ? secret : undefined;
-  const parties = hasGuestList ? await listParties(db, id, managementSecret) : undefined;
-  const tables = hasGuestList ? tableSeats(await listTables(db, id), parties) : undefined;
+  const parties = hasGuestList ? await listParties(tx, id, managementSecret) : undefined;
+  const tables = hasGuestList ? tableSeats(await listTables(tx, id), parties) : undefined;
   return json(200, {
     t: event.t,
     d: event.d,
@@ -84,8 +95,9 @@ const replyOf = (row) => ({ name: row.name, attending: row.attending, partySize:
 async function getReply({ db, request, ids: [eventId, id] }) {
   const secret = bearer(request);
   return db.transaction(async (tx) => {
-    const event = (await tx.query('select 1 from events where id = $1', [eventId])).rows[0];
+    const event = (await tx.query('select d from events where id = $1', [eventId])).rows[0];
     if (!event) throw new Refusal(404, 'eventMissing');
+    if (modeOf(event.d) === 'guestList') throw new Refusal(404, 'replyLinkUnavailable');
     const reply = await ownedReply(tx, eventId, id, secret);
     if (!reply) throw new Refusal(404, 'replyMissing');
     return json(200, { ...replyOf(reply), version: reply.version });
@@ -137,14 +149,45 @@ async function withdrawReply({ db, request, ids: [eventId, id] }) {
   if (body.version === undefined) throw new Refusal(400, 'version');
   return db.transaction(async (tx) => {
     // The same event row lock as putReply, so a withdrawal and a new reply to one event take turns.
-    const event = (await tx.query('select 1 from events where id = $1 for update', [eventId])).rows[0];
+    const event = (await tx.query('select d from events where id = $1 for update', [eventId])).rows[0];
     if (!event) throw new Refusal(404, 'eventMissing');
+    if (modeOf(event.d) === 'guestList') throw new Refusal(403, 'guestListReply');
     const existing = await ownedReply(tx, eventId, id, secret);
     if (!existing) return json(204, null);
     if (body.version !== existing.version) {
       throw new Refusal(409, 'replyChanged', { version: existing.version, ...replyOf(existing) });
     }
     await tx.query('delete from responses where id = $1', [id]);
+    return json(204, null);
+  });
+}
+
+// Attaches an earlier unattached reply to a party that has no reply and clears its reply edit link secret hash.
+async function attachReply({ db, request, ids: [eventId, id] }) {
+  const secret = bearer(request);
+  const { partyId } = await readBody(request);
+  if (typeof partyId !== 'string' || !ID_PATTERN.test(partyId)) throw new Refusal(400, 'body');
+  return db.transaction(async (tx) => {
+    const event = await ownedEvent(tx, eventId, secret, { token: false });
+    if (modeOf(event.d) !== 'guestList') throw new Refusal(403, 'partyMode');
+    const party = (
+      await tx.query('select id, version from parties where id = $1 and event_id = $2 for update', [partyId, eventId])
+    ).rows[0];
+    if (!party) throw new Refusal(404, 'partyMissing');
+    const reply = (
+      await tx.query('select id, party_id from responses where id = $1 and event_id = $2 for update', [id, eventId])
+    ).rows[0];
+    if (!reply) throw new Refusal(404, 'replyMissing');
+    if (reply.party_id === partyId) return json(204, null);
+    if (reply.party_id !== null) throw new Refusal(409, 'replyAttached');
+    const existing = (await tx.query('select 1 from responses where party_id = $1 limit 1', [partyId])).rows.length > 0;
+    if (existing) throw new Refusal(409, 'partyHasReply');
+    const version = party.version + 1;
+    await tx.query(
+      'update responses set party_id = $2, secret_hash = null, version = $3, updated_at = now() where id = $1',
+      [id, partyId, version],
+    );
+    await tx.query('update parties set version = $2 where id = $1', [partyId, version]);
     return json(204, null);
   });
 }

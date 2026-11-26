@@ -499,7 +499,7 @@ function setOutcome(panel, heading) {
 }
 
 // The links show once the server has confirmed the event; until then the stored identity waits for a retry. The
-// server keeps the mode of the first publish, so the mode choice locks once the event is live.
+// tracker changes the stored mode, so the editor's mode choice locks once the event is live.
 function showPublished() {
   const cred = state.publishedEvent;
   const live = Boolean(cred && cred.version !== null);
@@ -598,6 +598,7 @@ addCounter(nameInput, REPLY_LIMITS.name);
 addCounter(noteInput, REPLY_LIMITS.note, { codePoints: true });
 partySizeInput.max = String(REPLY_LIMITS.partySize);
 const fromLink = readCredential(location.hash, 'r=');
+const isReplyEdit = location.hash.startsWith('#r=');
 const partyPrefix = partyLinkPrefix(location.hash);
 const replyCred = { ...(fromLink ?? { id: newId(), secret: newSecret() }), version: null };
 const withdrawButton = /** @type {HTMLButtonElement} */ (document.getElementById('withdrawReply'));
@@ -829,8 +830,13 @@ async function openEvent() {
   // The invitation link of a guest-list invitation takes no reply, so it shows a notice in place of the form.
   const takesReplies = state.d.mode === 'open';
   rsvpForm.hidden = !takesReplies;
-  document.getElementById('guestListNotice').hidden = takesReplies;
-  if (!takesReplies || !fromLink) return;
+  const guestListNotice = document.getElementById('guestListNotice');
+  guestListNotice.hidden = takesReplies;
+  if (!takesReplies) {
+    if (isReplyEdit) guestListNotice.textContent = guestCopy.replyLinkUnavailable;
+    return;
+  }
+  if (!fromLink) return;
   const saved = await client.loadReply(state.event, replyCred);
   // The event exists, so the reply was never saved or was withdrawn. The empty form sends it as a new reply.
   if (saved.status === 404) {
@@ -858,7 +864,9 @@ if (state.guest) {
     setHeading(guestCopy.openingHeading);
     openEvent();
     window.addEventListener('hashchange', () => {
-      if (partyPrefix || partyLinkPrefix(location.hash)) location.reload();
+      if (partyPrefix || partyLinkPrefix(location.hash) || isReplyEdit || location.hash.startsWith('#r=')) {
+        location.reload();
+      }
     });
   } else if (state.sample) {
     setHeading(state.d.title || guestCopy.defaultGuestHeading);

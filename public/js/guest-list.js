@@ -12,14 +12,19 @@ export const parsePartyNames = (text) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
-// Sums accepted seats, declined parties and parties without a reply across the whole guest list.
-export function partyTotals(parties) {
+// Sums accepted seats, declined parties and parties without a reply across the whole guest list. Earlier replies
+// without a party add their accepted seats and count a decline as a declined party.
+export function partyTotals(parties, unattached = []) {
   let accepted = 0;
   let declined = 0;
   let pending = 0;
   for (const { reply } of parties) {
     if (!reply) pending++;
     else if (reply.attending) accepted += reply.partySize;
+    else declined++;
+  }
+  for (const reply of unattached) {
+    if (reply.attending) accepted += reply.partySize;
     else declined++;
   }
   return { accepted, declined, pending };

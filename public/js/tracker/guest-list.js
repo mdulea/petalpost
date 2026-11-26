@@ -1,4 +1,4 @@
-// Edits the guest list and renders its parties, replies, totals and personal links.
+// Edits the guest list and renders its parties, replies, earlier unattached replies, totals and personal links.
 import { guestListCsv, guestListCsvName } from '../csv.js';
 import { UI } from '../i18n.js';
 import { eventLink, personalMessage, whatsappUrl } from '../invite.js';
@@ -331,18 +331,67 @@ async function personalLinkControls(party, cred, invite, words, linkControls) {
   return controls;
 }
 
-async function show({ parties, tables, invite }, page) {
+// An earlier open-mode reply without a party, with a picker of parties without a reply to attach it to.
+function unattachedRow(reply, available, { client, cred, copy, signedIn, load }, words) {
+  const row = document.createElement('li');
+  row.className = 'reply';
+  const name = document.createElement('strong');
+  name.textContent = reply.name;
+  const answer = document.createElement('span');
+  answer.textContent = reply.attending ? copy.yesCount(reply.partySize) : copy.no;
+  row.append(name, answer);
+  if (reply.note) {
+    const note = document.createElement('p');
+    note.textContent = reply.note;
+    row.append(note);
+  }
+  if (signedIn) return row;
+  if (!available.length) {
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = words.noPartyToAttach;
+    row.append(hint);
+    return row;
+  }
+  const select = document.createElement('select');
+  select.className = 'input';
+  select.setAttribute('aria-label', `${words.attachTo} · ${reply.name}`);
+  for (const party of available) {
+    const option = document.createElement('option');
+    option.value = party.id;
+    option.textContent = party.name;
+    select.append(option);
+  }
+  const attach = button(words.attach, () =>
+    writeAndReload(load, [select, attach], async () => {
+      const result = await client.attachReply(cred, reply.id, select.value);
+      return result.ok ? { ...result, message: words.attached } : result;
+    }),
+  );
+  const controls = document.createElement('div');
+  controls.className = 'copy-row';
+  controls.append(select, attach);
+  row.append(controls);
+  return row;
+}
+
+async function show({ parties, tables, invite, responses }, page) {
   loadedParties = parties;
   const words = UI[page.lang].guestList;
   const rendered = await Promise.all(parties.map((party) => renderParty(party, tables, page, invite, words)));
   if (loadedParties !== parties) return;
   rows = rendered;
-  const { accepted, declined, pending } = partyTotals(parties);
+  const { accepted, declined, pending } = partyTotals(parties, responses);
   renderTotals(document.getElementById('partyTotals'), [
     [accepted, words.acceptedSeats(accepted)],
     [declined, words.declinedParties(declined)],
     [pending, words.pendingParties(pending)],
   ]);
+  const available = parties.filter((party) => !party.reply);
+  document.getElementById('unattachedReplies').hidden = responses.length === 0;
+  document
+    .getElementById('unattachedList')
+    .replaceChildren(...responses.map((reply) => unattachedRow(reply, available, page, words)));
   document.getElementById('partyList').replaceChildren(...rows.map(({ row }) => row));
   filterRows();
 }

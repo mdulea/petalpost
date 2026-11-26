@@ -54,6 +54,20 @@
             </div>
           </section>
 
+          <section class="panel" id="switchMode" aria-labelledby="h-switch-mode" hidden>
+            <h2 id="h-switch-mode">
+              <svg class="icon"><use href="#i-heart" /></svg>Guest list
+            </h2>
+            <p class="hint">
+              Switch to the guest-list mode to give each party a personal link. Your invitation link and earlier replies
+              stay, and the public link stops taking new replies.
+            </p>
+            <button class="btn btn-ghost btn-small" type="button" id="switchToGuestList">
+              Switch to guest-list mode
+            </button>
+            <p class="status" role="status" id="switchModeStatus"></p>
+          </section>
+
           <section class="panel" id="guestList" aria-labelledby="h-guest-list" hidden>
             <h2 id="h-guest-list">
               <svg class="icon"><use href="#i-heart" /></svg>Guest list
@@ -81,6 +95,10 @@
             </p>
             <p class="status" role="status" id="partyStatus"></p>
             <ul class="totals" id="partyTotals"></ul>
+            <div id="unattachedReplies" hidden>
+              <h3 id="h-unattached-replies">Replies without a personal link</h3>
+              <ul class="reply-list" id="unattachedList"></ul>
+            </div>
             <div class="field">
               <label for="partySearch">Search by name</label>
               <input class="input" id="partySearch" type="search" />
