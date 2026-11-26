@@ -14,14 +14,14 @@
 // changes, withdrawals, the daily quota, the reply limit and other refused requests add nothing; /api/stats, which
 // counts the five browser actions in en and ro and refuses other actions, languages, bodies and methods; the browser
 // counter, which posts the page language and ignores a failed send.
-// Each test uses fresh random ids and client IPs in one migrated in-memory PGlite database, except the quota key
-// and action count checks, which read the stored rows in a database of their own.
+// Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
+// tests/api-setup.js, except the quota key and action count checks, which read the stored rows in a database of
+// their own.
 // Run: pnpm exec node tests/check-rsvp.js
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { after, test } from 'node:test';
-import { PGlite } from '@electric-sql/pglite';
 import { getTemplate } from '../public/js/templates.js';
 import { eventLink, makeInviteData } from '../public/js/invite.js';
 import {
@@ -36,9 +36,8 @@ import {
   readCredential,
   responseLink,
 } from '../public/js/rsvp.js';
-import { createApi } from '../server/api.js';
 import { createEventPage } from '../server/event-page.js';
-import { migrate } from '../server/migrate.js';
+import { guest, host, openDatabase, party, publishedEvent, setup } from './api-setup.js';
 
 const ID = 'AAAAAAAAAAAAAAAAAAAAAA';
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
@@ -143,33 +142,6 @@ for (const [label, [hash, prefix]] of Object.entries(invalidFragments)) {
   test(`a fragment with ${label} gives no credential`, () => assert.equal(readCredential(hash, prefix), null));
 }
 
-// Tests share one migrated in-memory database. Every id is random, and each setup call gets its own client IP,
-// so tests stay independent. client(ip) talks to the API the way the browser does;
-// raw(path, init) sends a hand-made request for input that the client never produces.
-let shared;
-after(async () => (await shared)?.close());
-async function openDatabase() {
-  const db = new PGlite();
-  await migrate(db);
-  return db;
-}
-async function setup(db, options) {
-  db ??= await (shared ??= openDatabase());
-  const api = createApi(db, options);
-  const ownIp = newId();
-  const raw = (path, init = {}) => api(new Request(new URL(path, 'http://petalpost.test'), init));
-  const client = (ip = ownIp, lang = 'en') =>
-    createClient((path, init = {}) => raw(path, { ...init, headers: { ...init.headers, 'x-real-ip': ip } }), {
-      lang,
-    });
-  return { raw, client };
-}
-
-const host = () => ({ id: newId(), secret: newSecret(), version: null });
-const party = {
-  t: 'birthday',
-  d: makeInviteData(getTemplate('birthday'), { title: 'Zoë turns 7', message: 'Café, a piñata and 🎂', photoY: 20 }),
-};
 const { photoY, ...partyFields } = party.d;
 
 test('a published invitation opens from another browser with its presentation fields', async () => {
@@ -251,20 +223,11 @@ test('an update of a missing invitation gets 404', async () => {
   assert.equal((await client().publish({ ...host(), version: 1 }, party)).status, 404);
 });
 
-const guest = () => ({ id: newId(), secret: newSecret(), version: null });
 const sam = { name: 'Sam', attending: true, partySize: 2, note: 'No nuts, please.\n<b>We arrive at 3.</b>' };
 const ana = { name: 'Ana', attending: false, partySize: 0, note: '' };
 const lee = { name: 'Lee', attending: true, partySize: 1, note: '' };
 const answers = (list) =>
   list.data.responses.map(({ name, attending, partySize, note }) => ({ name, attending, partySize, note }));
-
-// A published event; a separate browser, without the management secret, plays the guests.
-async function publishedEvent() {
-  const { client, raw } = await setup();
-  const cred = host();
-  await client().publish(cred, party);
-  return { client, raw, cred, guests: client(newId()) };
-}
 
 test('the host sees every reply oldest first with the totals', async () => {
   const { client, cred, guests } = await publishedEvent();
@@ -369,18 +332,16 @@ test('a withdrawn reply leaves the host list and totals, and its edit link no lo
 });
 
 test('a withdrawn reply leaves no stored row or note', async () => {
-  const { cred, guests } = await publishedEvent();
+  const { db, cred, guests } = await publishedEvent();
   const reply = guest();
   const note = `Allergic to peanuts ${newId()}`;
   await guests.saveReply(cred.id, reply, { ...sam, note });
   await guests.withdrawReply(cred.id, { ...reply, version: 1 });
-  const db = await shared;
   assert.equal((await db.query('select 1 from responses where id = $1 or note = $2', [reply.id, note])).rows.length, 0);
 });
 
 test('a stored reply without a note gets an empty note, and the database refuses a note over 300 characters', async () => {
-  const { cred } = await publishedEvent();
-  const db = await shared;
+  const { db, cred } = await publishedEvent();
   const insert = (id, note) =>
     db.query(
       `insert into responses (id, event_id, secret_hash, name, attending, party_size${note === undefined ? '' : ', note'})
@@ -934,8 +895,7 @@ test('a Romanian client receives Romanian API and network error messages', async
 });
 
 test('the /e/{id} route renders dynamic OG tags, escapes special text and handles HEAD, 404, 405 and 503', async () => {
-  const db = await (shared ??= openDatabase());
-  const { client } = await setup(db);
+  const { db, client } = await setup();
   const eventPage = createEventPage(db);
   const cred = host();
   const special = {
@@ -1003,8 +963,7 @@ test('the /e/{id} route renders dynamic OG tags, escapes special text and handle
 });
 
 test('the /e/{id} route names the template link preview image, and the generic image when it cannot', async () => {
-  const db = await (shared ??= openDatabase());
-  const { client } = await setup(db);
+  const { db, client } = await setup();
   // The og:image address and og:image:alt text that the page at path names.
   const image = async (path, pageDb = db) => {
     const html = await (await createEventPage(pageDb)(new Request(`https://petalpost.test${path}`))).text();

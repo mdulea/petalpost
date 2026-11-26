@@ -126,7 +126,7 @@ A guest cannot see other guests' replies or the totals.
   - `og-image.png`, `ro/og-image.png`, `favicon.svg` and `robots.txt` are the remaining site files.
 - `types/globals.d.ts` declares the types of the `htmlToImage` and analytics globals for the type check.
 - `api/index.js` is the Vercel Function for `/api/`, `/e/{id}` and `/ro/e/{id}` paths. Vercel requires it in `api/`.
-- `server/` holds the server code. `server/api.js` routes, validates and stores the requests, `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
+- `server/` holds the server code. `server/api.js` matches each `/api/` request to a route and turns refusals into error responses. `server/routes/` holds one route module each for invitations, replies, retention and stats, `server/routes/index.js` lists them, and `server/routes/shared.js` holds the helpers they share. `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
 - `scripts/` holds the scripts a developer runs:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `browser-port.js` picks the port that the browser tests run the server on.
@@ -140,6 +140,7 @@ A guest cannot see other guests' replies or the totals.
   - `sweep-plan.js` prints the order in which `/sweep` implements the open issues, and the issues it leaves alone.
 - `tests/` holds the checks that `pnpm check` runs:
   - `check-*.js` are the Node checks that `pnpm test` runs. The header comment of `check-site.js` states what the file covers, and the header comment of each other file lists what it checks.
+  - `api-setup.js` starts the API against an in-memory PGlite database and publishes an invitation for the Node checks, and `browser-setup.js` holds the page watcher, the separate browser and the publish step of the browser tests.
   - `browser.spec.js`, `rsvp.spec.js` and `layout.spec.js` hold the browser tests that `pnpm test:browser` runs. `rsvp.spec.js` publishes, replies and manages invitations through the real API, with a separate browser for the host and each guest. `layout.spec.js` checks alignment, target sizes and that the Preview button never covers the focused field. It runs at both sides of every width breakpoint in `public/css/styles.css` and at common phone, tablet and desktop sizes up to 4K.
   - Playwright writes its output to `node_modules/.cache/playwright/`. Every tool already ignores `node_modules/`.
 - `.github/workflows/checks.yml` runs `pnpm check` on each pull request event and on each push to `main`.
@@ -231,6 +232,16 @@ The tests fail when a page breaks the Content-Security-Policy.
 
 `check-contrast.js` fails when the template's colors or an accent swatch on its background drop below 4.5:1, `check-invite.js` fails when a template in both languages has no Romanian copy, and `check-site.js` fails when a frame or font has no CSS rule or the template has no link preview image.
 
+### Add an API route
+
+1. Create a module in `server/routes/` that exports `routes`, a list of `{pattern, methods}` entries. `pattern` matches the whole path and captures its ids, and `methods` maps each HTTP method to an action. An action gets `{db, request, ids, dailyEvents}` and returns a `Response`, or throws a `Refusal` from `server/routes/shared.js`.
+2. List the module's endpoints and their contract in its header comment.
+3. Add the module to `ROUTES` in `server/routes/index.js`.
+4. Add a Node check file `tests/check-<module>.js` that imports `setup`, `publishedEvent` and the credentials it needs from `tests/api-setup.js`. A browser test of the route goes in a spec file of its own that imports from `tests/browser-setup.js`.
+
+`server/api.js` refuses an id that does not match `ID_PATTERN` before it calls the action.
+A limit that an error message names also goes into `LIMITS` in `server/api.js`, which passes it to `apiMessages` in `public/js/i18n.js`.
+
 ### Tooling notes
 
 - `.gitattributes` forces LF line endings. A CRLF checkout makes `pnpm format:check` fail on every file and makes the vendored library hash check fail.
@@ -263,7 +274,7 @@ The Development, Preview and Production environments all connect to the same Neo
 Until a separate Neon branch for development is verified, treat every Neon connection string as production data.
 Local development and every test use PGlite, so they never need a Neon connection string.
 
-Vercel Cron calls `/api/retention` daily at 03:17 UTC, as `vercel.json` schedules. That route deletes each invitation and its replies 90 days after the later of the event date and the last change, and a Vercel Hobby project allows one such run per day. Cron runs only on production deployments. The route needs no secret, because it deletes only what the next scheduled run deletes. `RETENTION_DAYS` in `server/api.js` sets the period, and `privacy.html` states it.
+Vercel Cron calls `/api/retention` daily at 03:17 UTC, as `vercel.json` schedules. That route deletes each invitation and its replies 90 days after the later of the event date and the last change, and a Vercel Hobby project allows one such run per day. Cron runs only on production deployments. The route needs no secret, because it deletes only what the next scheduled run deletes. `RETENTION_DAYS` in `server/routes/retention.js` sets the period, and `privacy.html` states it.
 
 Apply schema changes with `pnpm migrate`, which applies the unapplied files in `server/migrations/` in name order and needs the direct connection string in `DATABASE_URL_UNPOOLED`:
 

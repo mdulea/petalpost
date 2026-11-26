@@ -24,34 +24,7 @@
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';
 import { UI } from '../public/js/i18n.js';
-
-// Policy violations and uncaught errors. The Vercel analytics script only exists in production, so its 404 is not one.
-function watch(page) {
-  const problems = [];
-  page.on('console', (message) => {
-    if (/Content Security Policy/i.test(message.text())) problems.push(message.text());
-  });
-  page.on('pageerror', (error) => problems.push(error.message));
-  return problems;
-}
-
-// A page in a browser context of its own, as on another device. options are Playwright context options.
-async function newBrowser(browser, options = {}) {
-  const page = await (await browser.newContext(options)).newPage();
-  return { page, problems: watch(page) };
-}
-
-// Publishes a birthday invitation with the title and returns the links the editor shows.
-async function publish(page, title) {
-  await page.goto('editor.html?t=birthday');
-  await page.fill('#title', title);
-  await page.click('#publish');
-  await expect(page.locator('#eventLink')).toHaveValue(/\/e\/[A-Za-z0-9_-]{22}$/);
-  return {
-    invitation: await page.locator('#eventLink').inputValue(),
-    manage: await page.locator('#manageLink').inputValue(),
-  };
-}
+import { newBrowser, publish, watch } from './browser-setup.js';
 
 // Records each Web Animations API call on an element that matches selector as {id, keyframes, duration} in
 // window.animations.
