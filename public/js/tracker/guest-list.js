@@ -5,6 +5,7 @@ import { eventLink, personalMessage, whatsappUrl } from '../invite.js';
 import { normalizePartySearch, parsePartyNames, partyMatches, partyTotals, validPartyName } from '../guest-list.js';
 import { newId, PARTY_LIMITS, partyLinkSecret, partyStatus, personalLink, viewLink, viewLinkSecret } from '../rsvp.js';
 import { downloadCsv } from './download.js';
+import { tablePicker } from './seating.js';
 import { renderTotals } from './totals.js';
 
 let loadedParties = [];
@@ -207,7 +208,8 @@ function buildHostReplyForm(party, { client, cred, load }, words) {
   return form;
 }
 
-async function renderParty(party, { client, cred, load, signedIn, formatTime }, invite, words) {
+async function renderParty(party, tables, page, invite, words) {
+  const { client, cred, load, signedIn, formatTime } = page;
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
@@ -242,7 +244,7 @@ async function renderParty(party, { client, cred, load, signedIn, formatTime }, 
     revoked.textContent = words.revoked;
     row.append(revoked);
   }
-  row.append(seatEditor(party, { client, cred, load }, words));
+  row.append(seatEditor(party, { client, cred, load }, words), tablePicker(party, tables, page));
   const actions = document.createElement('div');
   row.append(actions);
   actions.className = 'reply-actions';
@@ -329,10 +331,10 @@ async function personalLinkControls(party, cred, invite, words, linkControls) {
   return controls;
 }
 
-async function show({ parties, invite }, page) {
+async function show({ parties, tables, invite }, page) {
   loadedParties = parties;
   const words = UI[page.lang].guestList;
-  const rendered = await Promise.all(parties.map((party) => renderParty(party, page, invite, words)));
+  const rendered = await Promise.all(parties.map((party) => renderParty(party, tables, page, invite, words)));
   if (loadedParties !== parties) return;
   rows = rendered;
   const { accepted, declined, pending } = partyTotals(parties);

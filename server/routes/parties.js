@@ -117,7 +117,7 @@ const replyColumns = 'r.attending, r.party_size, r.note, r.version as reply_vers
 // Reads the authenticated host's parties and prepares older view hashes when the host has the management link.
 export async function listParties(db, eventId, managementSecret) {
   const { rows } = await db.query(
-    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, p.secret_hash, p.view_hash,
+    `select p.id, p.name, p.lang, p.default_seats, p.revoked, p.link_generation, p.secret_hash, p.view_hash, p.table_id,
             p.first_opened_at, p.last_opened_at, ${replyColumns} from parties p
      left join responses r on r.party_id = p.id where p.event_id = $1 order by p.created_at, p.id`,
     [eventId],
@@ -132,6 +132,7 @@ export async function listParties(db, eventId, managementSecret) {
     linkGeneration: p.link_generation,
     firstOpenedAt: p.first_opened_at ? new Date(p.first_opened_at).toISOString() : null,
     lastOpenedAt: p.last_opened_at ? new Date(p.last_opened_at).toISOString() : null,
+    tableId: p.table_id,
     reply: replyOf(p),
   }));
 }

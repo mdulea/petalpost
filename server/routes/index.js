@@ -6,6 +6,7 @@ import { routes as parties } from './parties.js';
 import { routes as passkeys } from './passkeys.js';
 import { routes as replies } from './replies.js';
 import { routes as retention } from './retention.js';
+import { routes as seating } from './seating.js';
 import { routes as stats } from './stats.js';
 
-export const ROUTES = [events, parties, passkeys, replies, retention, stats].flat();
+export const ROUTES = [events, parties, passkeys, replies, retention, seating, stats].flat();

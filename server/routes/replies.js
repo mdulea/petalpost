@@ -1,6 +1,6 @@
 // The reply routes of server/api.js:
 //
-// GET /api/events/{id}/responses           management secret; {t, d, version, responses, totals}
+// GET /api/events/{id}/responses           tracker credentials; {t, d, version, responses, totals, parties?, tables?}
 // PUT /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note?, version?, lang?}
 // GET /api/events/{id}/responses/{rid}     edit secret; {name, attending, partySize, note, version}
 // DELETE /api/events/{id}/responses/{rid}  edit secret; {version} withdraws the reply; 204, also when it is gone
@@ -16,7 +16,9 @@
 import { normalizeLang } from '../../public/js/i18n.js';
 import { modeOf } from '../../public/js/invite.js';
 import { makeReply, tally } from '../../public/js/rsvp.js';
+import { tableSeats } from '../../public/js/seating.js';
 import { listParties } from './parties.js';
+import { listTables } from './seating.js';
 import { addCount, bearer, hash, json, matches, ownedEvent, readBody, Refusal } from './shared.js';
 
 export const EVENT_RESPONSES = 200;
@@ -49,7 +51,16 @@ async function listResponses({ db, request, ids: [id] }) {
   }));
   const managementSecret = matches(secret, event.secret_hash) ? secret : undefined;
   const parties = hasGuestList ? await listParties(db, id, managementSecret) : undefined;
-  return json(200, { t: event.t, d: event.d, version: event.version, responses, totals: tally(responses), parties });
+  const tables = hasGuestList ? tableSeats(await listTables(db, id), parties) : undefined;
+  return json(200, {
+    t: event.t,
+    d: event.d,
+    version: event.version,
+    responses,
+    totals: tally(responses),
+    parties,
+    tables,
+  });
 }
 
 // The response row, locked for the transaction, after checking that it belongs to the event and that the edit

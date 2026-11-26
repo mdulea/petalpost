@@ -12,6 +12,7 @@ import { section as guestList } from './guest-list.js';
 import { section as invitationLink } from './invitation-link.js';
 import { section as passkey } from './passkey.js';
 import { section as replies } from './replies.js';
+import { section as seating } from './seating.js';
 
 /** @type {{id: string, modes: string[], init?: (page: any) => void, show?: (view: any, page: any) => void | Promise<void>}[]} */
-export const SECTIONS = [replies, guestList, rsvpDeadline, invitationLink, passkey, deleteInvitation];
+export const SECTIONS = [replies, guestList, rsvpDeadline, seating, invitationLink, passkey, deleteInvitation];

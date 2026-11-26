@@ -235,6 +235,19 @@ export const UI = {
       withdraw: 'Withdraw my reply',
       withdrawn: 'Reply withdrawn',
     },
+    seating: {
+      add: 'Add table',
+      name: 'Table name or number',
+      capacity: 'Capacity',
+      save: 'Save table',
+      remove: 'Remove table',
+      removeConfirm: 'Remove this table? Its parties will be unassigned.',
+      picker: 'Move to table',
+      unassigned: 'Unassigned',
+      move: 'Move party',
+      seats: (filled, free) => `${filled} filled, ${free} free`,
+      over: (seats) => `Over capacity by ${seats}`,
+    },
     guestList: {
       invalidName: (max) => `Enter a name of up to ${max} characters on each line.`,
       csvColumns: ['Name', 'Status', 'Seats', 'Attending', 'Note'],
@@ -442,6 +455,19 @@ export const UI = {
       withdraw: 'Retrage răspunsul',
       withdrawn: 'Răspuns retras',
     },
+    seating: {
+      add: 'Adaugă o masă',
+      name: 'Numele sau numărul mesei',
+      capacity: 'Număr de locuri',
+      save: 'Salvează masa',
+      remove: 'Elimină masa',
+      removeConfirm: 'Elimini masa? Grupurile de la această masă vor rămâne fără masă.',
+      picker: 'Mută la masă',
+      unassigned: 'Fără masă',
+      move: 'Mută grupul',
+      seats: (filled, free) => `${filled} locuri ocupate, ${free} libere`,
+      over: (seats) => `Peste capacitate cu ${seats} ${seats === 1 ? 'loc' : seats < 20 ? 'locuri' : 'de locuri'}`,
+    },
     guestList: {
       invalidName: (max) => `Introdu un nume de cel mult ${max} de caractere pe fiecare rând.`,
       csvColumns: ['Nume', 'Stare', 'Locuri', 'Participă', 'Notă'],
@@ -634,6 +660,10 @@ export function apiMessages(
       deadline: 'Alege o dată calendaristică validă pentru termenul de confirmare.',
       deadlineMode: 'Doar invitațiile cu listă de invitați pot avea un termen de confirmare.',
       deadlinePassed: 'Confirmările sunt închise deoarece termenul de confirmare a trecut.',
+      table: 'Introdu un nume și un număr valid de locuri pentru masă.',
+      tableMode: 'Mesele sunt disponibile doar pentru invitațiile cu listă de invitați.',
+      tableMissing: 'Masa nu mai este disponibilă.',
+      tableChanged: 'Masa a fost modificată. Verifică detaliile actuale.',
     };
   }
   return {
@@ -676,5 +706,9 @@ export function apiMessages(
     deadline: 'Choose a valid calendar date for the RSVP deadline.',
     deadlineMode: 'Only guest-list invitations can have an RSVP deadline.',
     deadlinePassed: 'Replies are closed because the RSVP deadline has passed.',
+    table: 'Enter a name and a valid number of seats for the table.',
+    tableMode: 'Tables are available only for guest-list invitations.',
+    tableMissing: 'The table is no longer available.',
+    tableChanged: 'The table changed. Check its current details.',
   };
 }

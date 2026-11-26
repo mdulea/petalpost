@@ -14,6 +14,7 @@ const DOM_FREE = [
   'public/js/invite.js',
   'public/js/passkey.js',
   'public/js/rsvp.js',
+  'public/js/seating.js',
   'public/js/templates.js',
   'public/js/templates-ro.js',
 ];
