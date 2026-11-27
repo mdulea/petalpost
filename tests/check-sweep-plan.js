@@ -1,8 +1,9 @@
 // Fails when the sweep plan starts an issue before an open blocker, breaks a tie other than by ascending issue number,
-// implements a parent or an issue labelled wontfix, duplicate, invalid, question or blocked, misses an in-progress
-// issue's open pull request, starts an issue whose blocker the run cannot finish, drops a dependency cycle, lists a
-// parent before its sub-issue parent, or, given issue numbers, leaves out their sub-issues, blockers or parents or
-// takes in another issue.
+// implements a parent or an issue labelled wontfix, duplicate, invalid, question or blocked, does not resume an issue
+// that is not labelled blocked and has an open pull request that closes it, leaves that pull request out of a blocked
+// issue's reason, starts an issue whose blocker the run cannot finish, drops a dependency cycle, lists a parent before
+// its sub-issue parent, or, given issue numbers, leaves out their sub-issues, blockers or parents or takes in another
+// issue.
 // Run: pnpm exec node tests/check-sweep-plan.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -59,6 +60,21 @@ test('in-progress issues rejoin with their open pull request or are held without
   assert.deepEqual(plan.held, [{ number: 2, title: 'Issue 2', reason: 'left in progress by an earlier run' }]);
 });
 
+test('an issue with an open pull request that closes it resumes whatever its labels, unless labelled blocked', () => {
+  const plan = planSweep(
+    [issue(1), issue(2, { labels: ['blocked'] }), issue(3, { labels: ['bug'] })],
+    [
+      { number: 40, closes: [1] },
+      { number: 41, closes: [2, 3] },
+    ],
+  );
+  assert.deepEqual(plan.resume, [
+    { number: 1, title: 'Issue 1', pr: 40 },
+    { number: 3, title: 'Issue 3', pr: 41 },
+  ]);
+  assert.deepEqual(plan.order, []);
+  assert.deepEqual(plan.held, [{ number: 2, title: 'Issue 2', reason: 'labelled blocked, pull request #41 open' }]);
+});
 test('an issue whose blocker the run cannot finish is held, and so are its dependents', () => {
   const plan = planSweep([
     issue(1, { labels: ['blocked'] }),
