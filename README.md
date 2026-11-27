@@ -206,7 +206,8 @@ The check names command runs one check file and prints the name of each check, a
 Each targeted command finishes in seconds, so rerun the check you are working on with one of them and run `pnpm check` once at the end.
 `check-filter.js` fails when a check file keeps running after its filtered tests finish.
 
-`fix` rewrites formatting with Prettier, applies the ESLint fixes that ESLint can make itself, and then runs `pnpm pages`, so the page dates in `scripts/lastmod.json` come from the formatted pages.
+`fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
+It then runs `pnpm pages`, so the page dates in `scripts/lastmod.json` come from the formatted pages.
 Prettier wraps code at 120 columns and leaves comments alone, so ESLint rejects a comment line longer than 120 columns, and you rewrap it by hand.
 Run it before `check`. `check` reports formatting and lint errors and never rewrites a file.
 

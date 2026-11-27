@@ -75,6 +75,7 @@ test('an issue with an open pull request that closes it resumes whatever its lab
   assert.deepEqual(plan.order, []);
   assert.deepEqual(plan.held, [{ number: 2, title: 'Issue 2', reason: 'labelled blocked, pull request #41 open' }]);
 });
+
 test('an issue whose blocker the run cannot finish is held, and so are its dependents', () => {
   const plan = planSweep([
     issue(1, { labels: ['blocked'] }),

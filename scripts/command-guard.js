@@ -7,8 +7,8 @@
 // directNodeCall(command) reports whether node or npx starts the command or follows a separator: ;, &, |, a newline,
 // ( or a backtick, after optional VAR=value assignments. pnpm exec node and node as an argument pass.
 // hiddenCheckStatus(command) reports whether pnpm check, pnpm check:fast or pnpm test:browser pipes into tail, head or
-// grep in a command that names neither pipefail nor PIPESTATUS, or is followed by ; and a final echo of $?. Node
-// checks run by file take seconds, so they pass.
+// grep in a command that names neither pipefail nor PIPESTATUS, or whether such a check comes before a ; and the
+// command ends with an echo of $?. Node checks run by file take seconds, so they pass.
 // Run: pnpm exec node scripts/command-guard.js < hook-input.json
 import { readFileSync } from 'node:fs';
 

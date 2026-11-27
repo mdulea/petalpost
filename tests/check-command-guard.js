@@ -118,7 +118,8 @@ writeFileSync(join(brokenPnpm, 'pnpm'), '#!/bin/sh\necho "pnpm failed to start" 
 chmodSync(join(brokenPnpm, 'pnpm'), 0o755);
 
 test('the hook command blocks with status 2 and names pnpm when pnpm fails to start', () => {
-  const result = spawnSync('sh', ['-c', hookCommands[0]], {
+  const guard = hookCommands.find((command) => command.includes('scripts/command-guard.js'));
+  const result = spawnSync('sh', ['-c', guard], {
     input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git status' } }),
     encoding: 'utf8',
     env: {

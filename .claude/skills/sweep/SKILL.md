@@ -19,9 +19,9 @@ disable-model-invocation: true
 
 1. Args: `--max <n>` (default 15), issue numbers (optional). `RUN=$(pwd -W)/.sweep/$(date +%Y%m%d-%H%M)`, Windows path for implementers; `mkdir -p "${RUN}"`; `SKILLS=$(cygpath -m ~/.claude/skills)`; `TMP=$(cygpath -m /tmp)`; prompts: `<RUN>`, `<SKILLS>`, `<TMP>` -> these values
 2. Labels: `gh label create in-progress --force --color fbca04 --description "A sweep run works on this issue"`; `gh label create blocked --force --color b60205 --description "A sweep run gave up; remove the label to retry"`
-3. `pnpm -s sweep-plan <issue numbers> > "${RUN}/plan.json"`; print one line per `order`, `resume`, `parents`, `held` item via `jq`; start without confirmation. Preflight, once, before the first `claude -p`: cwd = that session's worktree, `MSYS_NO_PATHCONV=1 pnpm --version`; fails -> stop run, start no session, report the error; the command guard blocks every shell command while `pnpm` cannot start
+3. `pnpm -s sweep-plan <issue numbers> > "${RUN}/plan.json"`; print one line per `order`, `resume`, `parents`, `held` item via `jq`; start without confirmation. Preflight, once, right before the first `claude -p` of step 6 or 9, after its worktree exists: cwd = that worktree, same env as `claude -p`, `MSYS_NO_PATHCONV=1 pnpm --version`; fails -> stop run, start no session, report the error; the command guard blocks every shell command while `pnpm` cannot start
 4. Done set = closed issues; parents with empty `subIssues` -> close now per step 10
-5. Per `resume` item: `gh issue edit <n> --add-label in-progress`; branch `gh pr view <pr> --json headRefName --jq .headRefName`; counts as in progress; merge per step 8; session ID unknown -> fixes per step 9 start new session in its worktree, worktree missing -> block
+5. Per `resume` item: branch `gh pr view <pr> --json headRefName --jq .headRefName`; counts as in progress; merge per step 8; session ID unknown -> fixes per step 9 start new session in its worktree, worktree missing -> block
 6. Start next `order` item with every `blockedBy` in done set, while limits allow, ascending plan position:
 
 - `gh issue edit <n> --add-label in-progress`
