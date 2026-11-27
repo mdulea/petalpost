@@ -6,6 +6,7 @@ import {
   RISE,
   canShareLink,
   copyLink,
+  createLimitAlert,
   createStatus,
   openPanel,
   renderInviteCard,
@@ -45,11 +46,12 @@ export function initGuestView({ state, lang, locale }) {
   document.body.classList.toggle('invite-hidden', state.broken || Boolean(state.event));
 
   function render() {
-    renderInviteCard(previewCard, state, lang, locale);
+    // Update #openMap before mountInvites forces layout so setting href does not trigger a button CSS transition.
     const map = /** @type {HTMLAnchorElement} */ (document.getElementById('openMap'));
     const mapUrl = mapLink(state.d);
     map.hidden = !mapUrl;
     if (mapUrl) map.href = mapUrl;
+    renderInviteCard(previewCard, state, lang, locale);
   }
 
   function revealInvite() {
@@ -106,11 +108,7 @@ export function initGuestView({ state, lang, locale }) {
   const replySavedPanel = document.getElementById('replySaved');
   const withdrawnPanel = document.getElementById('replyWithdrawn');
 
-  const limitAlert = document.createElement('p');
-  limitAlert.className = 'visually-hidden';
-  limitAlert.id = 'limitAlert';
-  limitAlert.setAttribute('role', 'status');
-  document.body.append(limitAlert);
+  const limitAlert = createLimitAlert();
 
   /** @type {ReturnType<typeof createReplyFields> | null} */
   let openReplyFields = null;

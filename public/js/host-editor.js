@@ -4,6 +4,7 @@ import { createClient, createCounter } from './api-client.js';
 import {
   canShareLink,
   copyLink,
+  createLimitAlert,
   createStatus,
   renderInviteCard,
   setOutcome,
@@ -118,11 +119,7 @@ export function initHostEditor({ state, storage, lang, locale }) {
     animate([previewCard], [{ opacity: 0.6 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
   }
 
-  const limitAlert = document.createElement('p');
-  limitAlert.className = 'visually-hidden';
-  limitAlert.id = 'limitAlert';
-  limitAlert.setAttribute('role', 'status');
-  document.body.append(limitAlert);
+  const limitAlert = createLimitAlert();
   const counters = FIELDS.filter((f) => FIELD_LIMITS[f]).map((f) =>
     attachCounter(form.elements[f], FIELD_LIMITS[f], { lang, liveRegion: limitAlert }),
   );

@@ -6,7 +6,6 @@ import {
   fromBase64url,
   ID_PATTERN,
   newId,
-  partyLinkSecret,
   personalLink,
   SECRET_PATTERN,
   signPartySecret,
@@ -348,16 +347,6 @@ export const eventLink = (origin, id, lang = 'en') => `${origin}${normalizeLang(
 export async function derivePartyLinks(origin, eventId, signingKey, party) {
   const base = eventLink(origin, eventId, party.lang);
   const secret = await signPartySecret(signingKey, party.id, 'personal', party.linkGeneration);
-  return {
-    personal: personalLink(base, party.id, secret),
-    preview: async () => viewLink(base, party.id, await viewLinkSecret(secret, party.id)),
-  };
-}
-
-// Builds the party's current links in its language from the management credential. Derives the preview only on demand.
-export async function partyInviteLinks(origin, cred, party) {
-  const base = eventLink(origin, cred.id, party.lang);
-  const secret = await partyLinkSecret(cred.secret, party.id, 'personal', party.linkGeneration);
   return {
     personal: personalLink(base, party.id, secret),
     preview: async () => viewLink(base, party.id, await viewLinkSecret(secret, party.id)),

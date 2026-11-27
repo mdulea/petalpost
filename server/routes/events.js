@@ -4,7 +4,8 @@
 // GET /api/events/{id}                     public; {t, d}
 // PATCH /api/events/{id}                   host credential; {updateNotice} sets or removes the latest update; 204
 // DELETE /api/events/{id}                  host credential; removes the event and its responses; 204
-// PATCH /api/events/{id}/deadline          management secret; {deadline} sets, changes or clears (null) the RSVP deadline
+// PATCH /api/events/{id}/deadline          management secret; {deadline} sets, changes or clears (null) the RSVP
+//                                          deadline
 // PATCH /api/events/{id}/mode              management secret; {mode} switches mode; 400 without a date for the
 //                                          guest-list mode; 409 when parties block the open mode
 import { isValidDate } from '../../public/js/countdown.js';

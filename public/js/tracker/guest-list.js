@@ -293,12 +293,27 @@ function personalLinkControls(party, invite, words, linkControls) {
   preview.target = '_blank';
   preview.rel = 'noopener';
   preview.textContent = words.preview;
+  /** @type {Promise<string> | null} */
+  let pendingPreview = null;
+  const ensurePreviewHref = () => {
+    if (!pendingPreview) {
+      pendingPreview = derivePreview().then((url) => {
+        preview.href = url;
+        preview.dataset.ready = '1';
+        return url;
+      });
+    }
+    return pendingPreview;
+  };
+  for (const eventName of ['pointerenter', 'focus', 'contextmenu', 'auxclick']) {
+    preview.addEventListener(eventName, () => {
+      void ensurePreviewHref();
+    });
+  }
   preview.addEventListener('click', async (event) => {
     if (preview.dataset.ready === '1') return;
     event.preventDefault();
-    const url = await derivePreview();
-    preview.href = url;
-    preview.dataset.ready = '1';
+    const url = await ensurePreviewHref();
     window.open(url, '_blank', 'noopener');
   });
   const whatsapp = document.createElement('a');

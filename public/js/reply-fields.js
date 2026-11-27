@@ -367,33 +367,6 @@ export function createReplyFields({
     if (meals) meals.element.disabled = !attendingChecked();
   }
 
-  // Inline per-field errors (used on open-mode reply form).
-  /** @type {{name: string, field: Element, focusTarget: () => HTMLElement | null, message: HTMLElement, describedBy: string | null}[]} */
-  const errorSlots = [];
-  if (inlineErrors && existing) {
-    /** @type {Record<string, {field: Element, focusTarget: () => HTMLElement | null}>} */
-    const controls = {
-      name: { field: nameInput, focusTarget: () => nameInput },
-      attending: {
-        field: attendingField,
-        focusTarget: () => form.querySelector('input[name="attending"]'),
-      },
-      partySize: { field: partySizeInput, focusTarget: () => partySizeInput },
-      answers: { field: answersField, focusTarget: () => answers?.focusTarget ?? null },
-      meals: { field: mealsField, focusTarget: () => meals?.focusTarget ?? null },
-      note: { field: noteInput, focusTarget: () => noteInput },
-    };
-    for (const name of REPLY_FIELDS) {
-      const { field, focusTarget } = controls[name];
-      const message = document.createElement('p');
-      message.className = 'field-error';
-      message.id = `${name}Error`;
-      message.hidden = true;
-      field.closest('.field').append(message);
-      errorSlots.push({ name, field, focusTarget, message, describedBy: field.getAttribute('aria-describedby') });
-    }
-  }
-
   function focusFor(fieldName) {
     if (fieldName === 'name') return nameInput;
     if (fieldName === 'attending') return yesRadio ?? form?.querySelector('input[name="attending"]') ?? null;
@@ -402,6 +375,39 @@ export function createReplyFields({
     if (fieldName === 'meals') return meals?.focusTarget ?? null;
     if (fieldName === 'note') return noteInput;
     return null;
+  }
+
+  // Inline per-field errors (used on open-mode reply form).
+  /**
+   * @type {{name: string, field: Element, focusTarget: () => HTMLElement | null,
+   *   message: HTMLElement, describedBy: string | null}[]}
+   */
+  const errorSlots = [];
+  if (inlineErrors && existing) {
+    /** @type {Record<string, Element>} */
+    const fieldsByName = {
+      name: nameInput,
+      attending: attendingField,
+      partySize: partySizeInput,
+      answers: answersField,
+      meals: mealsField,
+      note: noteInput,
+    };
+    for (const name of REPLY_FIELDS) {
+      const field = fieldsByName[name];
+      const message = document.createElement('p');
+      message.className = 'field-error';
+      message.id = `${name}Error`;
+      message.hidden = true;
+      field.closest('.field').append(message);
+      errorSlots.push({
+        name,
+        field,
+        focusTarget: () => focusFor(name),
+        message,
+        describedBy: field.getAttribute('aria-describedby'),
+      });
+    }
   }
 
   function showErrors(invalid) {

@@ -17,9 +17,9 @@ import { test } from 'node:test';
 import { guestListCsv } from '../public/js/csv.js';
 import { partySubEventTally } from '../public/js/guest-list.js';
 import { makeInviteData, partyInvite, partySubEventIds, subEventIds } from '../public/js/invite.js';
-import { newId, PARTY_LIMITS, partyLinkSecret, partyReply, viewLinkSecret } from '../public/js/rsvp.js';
+import { newId, PARTY_LIMITS, partyReply } from '../public/js/rsvp.js';
 import { getTemplate } from '../public/js/templates.js';
-import { host, setup } from './api-setup.js';
+import { guestListEvent, host } from './api-setup.js';
 
 const civil = { id: 'civil', name: 'Civil ceremony', date: '2027-06-12', time: '11:00', venue: 'City Hall' };
 const church = { id: 'church', name: 'Church', date: '2027-06-12', time: '14:00', venue: '' };
@@ -86,24 +86,13 @@ test('the totals of each sub-event count only the invited parties and the invite
 });
 
 // A published guest-list wedding with the parties of names, and the personal and view credentials of each.
-async function guestList(subEvents, names, lang = 'en') {
-  const { client, db } = await setup();
-  const tracker = client(newId(), lang);
-  const cred = host();
-  await tracker.publish(cred, wedding(subEvents, lang));
-  const parties = [];
-  for (const name of names) {
-    const id = newId();
-    await tracker.addParty(cred, id, { name, defaultSeats: 4 });
-    const secret = await partyLinkSecret(cred.secret, id, 'personal');
-    parties.push({
-      id,
-      personal: { id, secret, version: undefined },
-      view: { id, secret: await viewLinkSecret(secret, id) },
-    });
-  }
-  return { client, db, tracker, cred, parties };
-}
+const guestList = (subEvents, names, lang = 'en') =>
+  guestListEvent({
+    lang,
+    template: 'wedding',
+    overrides: { title: 'Ana & Mihai', subEvents },
+    parties: names.map((name) => ({ name, defaultSeats: 4 })),
+  });
 
 for (const lang of ['en', 'ro']) {
   test(`in ${lang}, the personal link and the view link show only the party sub-events and refuse an answer to another`, async () => {

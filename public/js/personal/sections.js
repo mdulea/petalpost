@@ -54,15 +54,19 @@ export function showPersonalSections(party, page, viewOnly) {
   if (!viewOnly) {
     const deadlineClosedListeners = [];
     let closed = Boolean(party.deadlineClosed);
+    let closedMessage = null;
     const sectionPage = {
       ...page,
       onDeadlineClosed(listener) {
         deadlineClosedListeners.push(listener);
+        if (closed) listener(closedMessage);
       },
       closeDeadline(message = null) {
-        if (closed) return;
+        const alreadyClosed = closed;
         closed = true;
-        for (const listener of deadlineClosedListeners) listener(message);
+        if (message) closedMessage = message;
+        if (alreadyClosed && !message) return;
+        for (const listener of deadlineClosedListeners) listener(closedMessage);
       },
     };
     container.append(...sections.map((render) => render(party, sectionPage)).filter(Boolean));

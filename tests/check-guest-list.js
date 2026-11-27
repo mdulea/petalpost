@@ -21,7 +21,7 @@ import { partyTotals } from '../public/js/guest-list.js';
 import { makeInviteData } from '../public/js/invite.js';
 import { newId, partyLinkSecret } from '../public/js/rsvp.js';
 import { getTemplate } from '../public/js/templates.js';
-import { guest, host, setup } from './api-setup.js';
+import { guest, guestListEvent, host, setup } from './api-setup.js';
 
 const invitation = (mode) => ({
   t: 'birthday',
@@ -39,6 +39,7 @@ const { photoY: _photoY, mode: _mode, ...unmoded } = invitation('open').d;
 
 // Publishes the invitation in the mode in lang and returns the host's credentials and a guest's client in lang.
 async function published(mode, lang) {
+  if (mode === 'guestList') return guestListEvent({ lang });
   const { client, raw } = await setup();
   const cred = host();
   await client(newId(), lang).publish(cred, invitation(mode));

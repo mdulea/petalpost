@@ -67,8 +67,6 @@ export function renderReply(
     if (message) status.textContent = message;
   }
 
-  onDeadlineClosed(lockClosed);
-
   function fill(reply) {
     cred.version = reply?.version;
     replyFields.fill(reply, party.defaultSeats);
@@ -119,7 +117,7 @@ export function renderReply(
   });
 
   fill(party.reply);
-  if (closed) lockClosed();
+  onDeadlineClosed(lockClosed);
   if (!party.reply) status.textContent = copy.noReply;
   return form;
 }

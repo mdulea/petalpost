@@ -1,6 +1,7 @@
 // Guest replies, private links and base64url helpers. It has no DOM access, because the browser and server share it
 // and tests/check-rsvp.js runs it in Node.
-import { normalizeLang } from './i18n.js';
+
+const isRomanian = (lang) => typeof lang === 'string' && lang.toLowerCase().startsWith('ro');
 
 export const REPLY_LIMITS = { name: 80, partySize: 10, note: 300 };
 export const PARTY_LIMITS = { name: REPLY_LIMITS.name, seats: 20, count: 300 };
@@ -159,19 +160,19 @@ export const subEventTally = (ids, replies) =>
 
 // The editor page URL on the site origin. Share, invitation and response edit links start from it.
 export const editorPage = (origin, lang = 'en') =>
-  normalizeLang(lang) === 'ro' ? `${origin}/ro/editor.html` : `${origin}/editor.html`;
+  isRomanian(lang) ? `${origin}/ro/editor.html` : `${origin}/editor.html`;
 
 // Private links keep the secret in the fragment, which the browser never sends to a server.
 // readCredential(hash, 'r=') reads the response edit link back.
 export const responseLink = (origin, eventId, responseId, secret, lang = 'en') =>
-  `${origin}${normalizeLang(lang) === 'ro' ? '/ro' : ''}/e/${eventId}#r=${responseId}.${secret}`;
+  `${origin}${isRomanian(lang) ? '/ro' : ''}/e/${eventId}#r=${responseId}.${secret}`;
 // readCredential(hash, '') reads the management link back.
 export const manageLink = (origin, id, secret, lang = 'en') =>
-  `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#${id}.${secret}`;
+  `${origin}${isRomanian(lang) ? '/ro/manage.html' : '/manage.html'}#${id}.${secret}`;
 // A passkey sign-in opens the management page with its access token in place of the secret.
 // readCredential(hash, 't=') reads it back.
 export const signedInLink = (origin, id, token, lang = 'en') =>
-  `${origin}${normalizeLang(lang) === 'ro' ? '/ro/manage.html' : '/manage.html'}#t=${id}.${token}`;
+  `${origin}${isRomanian(lang) ? '/ro/manage.html' : '/manage.html'}#t=${id}.${token}`;
 
 // The tracker reconstructs the party's link from its management secret without reading any secret from the API.
 export const personalLink = (url, id, secret) => `${url}#p=${id}.${secret}`;
@@ -201,7 +202,8 @@ export async function partyLinkSecret(parentSecret, partyId, purpose, generation
 }
 
 // A private link fragment #<prefix><id>.<secret> gives {id, secret}, or null when it is incomplete or malformed.
-// Prefixes are '' for management, 't=' for passkey sign-in, 'r=' for reply edit, 'p=' for personal and 'v=' for view links.
+// Prefixes are '' for management, 't=' for passkey sign-in, 'r=' for reply edit, 'p=' for personal and 'v=' for view
+// links.
 export function readCredential(hash, prefix) {
   if (!hash.startsWith(`#${prefix}`)) return null;
   const [id, secret, ...rest] = hash.slice(prefix.length + 1).split('.');

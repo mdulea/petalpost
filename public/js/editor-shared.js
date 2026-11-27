@@ -75,3 +75,13 @@ export function showOutcome(panel, heading) {
   setOutcome(panel, heading);
   openPanel(panel);
 }
+
+// Creates and appends the visually hidden live region for character-limit announcements.
+export function createLimitAlert() {
+  const alert = document.createElement('p');
+  alert.className = 'visually-hidden';
+  alert.id = 'limitAlert';
+  alert.setAttribute('role', 'status');
+  document.body.append(alert);
+  return alert;
+}

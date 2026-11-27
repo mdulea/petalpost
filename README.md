@@ -141,8 +141,8 @@ A guest cannot see other guests' replies or the totals.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `passkey.js` saves a passkey on the management page and signs in with one on the home page. It has no DOM access, so the Node checks import it.
     - `reply-format.js` formats sub-event answer lines, meal lines and their tracker total lines. It has no DOM access, so the Node checks import it.
-    - `reply-fields.js` builds the unified reply form fields (sub-event answers, menu meal counts, validation, counters and tab sanitization) shared by the open-mode, personal-link and tracker host reply forms. It runs only in the browser.
-    - `publish-recovery.js` and `guest-route.js` hold the DOM-free host publish recovery and five-way guest-link route transitions.
+    - `reply-fields.js` builds the unified reply form fields shared by the open-mode, personal-link and tracker host reply forms, including sub-event answers, menu meal counts, validation, counters and tab sanitization. It runs only in the browser.
+    - `publish-recovery.js` and `guest-route.js` hold the DOM-free host publish recovery and five-way guest-view route transitions.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
     - `editor.js` dispatches `editor.html` and `ro/editor.html` to `host-editor.js` or `guest-view.js` so guest visits skip host setup; `manage.js` and `landing.js` are the entry modules of the tracker and the landing page.
