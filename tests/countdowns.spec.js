@@ -1,7 +1,8 @@
 // Checks the countdowns to the RSVP deadline and to the deletion in English and Romanian: the tracker shows the
 // deadline nudge with the parties without a reply in the last 7 days before the deadline, hides the deadline countdown
-// once it passes, and shows the deletion nudge in the last 3 days before the deletion and until the deletion runs; the personal link counts down
-// to the deadline until it passes. The tracker and guest pages run on a Europe/Bucharest clock that the test moves.
+// once it passes, and shows the deletion nudge in the last 3 days before the deletion and until the deletion runs; the
+// personal link counts down to the deadline until it passes. The tracker and guest pages run on a Europe/Bucharest
+// clock that the test moves.
 // Run: pnpm test:browser tests/countdowns.spec.js
 import { expect, test } from '@playwright/test';
 import { newBrowser } from './browser-setup.js';

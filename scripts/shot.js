@@ -2,7 +2,8 @@
 // 1280 by 720. It starts scripts/server.js on a free port with an in-memory database, so it runs next to pnpm dev and
 // the browser checks of any worktree, and it opens the path once the page's fonts have loaded. Without a selector it
 // writes the full page. A selector that matches nothing, an empty selector or a path that answers with an error status
-// writes no file, prints a message naming the cause, and exits with status 1. The server and the browser stop in every case.
+// writes no file, prints a message naming the cause, and exits with status 1. The server and the browser stop in every
+// case.
 // The path resolves against the site root with or without its leading /, and a path that leaves the site exits with
 // status 1 before the server starts.
 // Run: pnpm shot <path> [<selector>] <file>, such as pnpm shot ro/ .gallery gallery.png

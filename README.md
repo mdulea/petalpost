@@ -206,7 +206,8 @@ The check names command runs one check file and prints the name of each check, a
 Each targeted command finishes in seconds, so rerun the check you are working on with one of them and run `pnpm check` once at the end.
 `check-filter.js` fails when a check file keeps running after its filtered tests finish.
 
-`fix` rewrites formatting with Prettier and applies the ESLint fixes that ESLint can make itself.
+`fix` rewrites formatting with Prettier, applies the ESLint fixes that ESLint can make itself, and then runs `pnpm pages`, so the page dates in `scripts/lastmod.json` come from the formatted pages.
+Prettier wraps code at 120 columns and leaves comments alone, so ESLint rejects a comment line longer than 120 columns, and you rewrap it by hand.
 Run it before `check`. `check` reports formatting and lint errors and never rewrites a file.
 
 `check` runs `test`, `typecheck` and `test:browser` in that order, and CI runs the same command.
@@ -222,6 +223,7 @@ The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
 `test:browser` starts `scripts/server.js` with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests and the tests tagged `@webkit` in WebKit too, because Safari sizes date and time inputs differently. The tagged tests check the focus and error descriptions of the reply form in Safari.
+WebKit spreads its tests over at most 4 workers, so the layout tests finish in about 2 minutes.
 Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
 The main checkout and CI run the server on port 4321.
 Each worktree runs it on a port between 4400 and 4999 that is derived from the worktree's path, so worktrees can run their browser checks at the same time, and a worktree gets the same port on every run.
@@ -285,6 +287,8 @@ A limit that an error message names also goes into `LIMITS` in `server/api.js`, 
 
 - `.gitattributes` forces LF line endings. A CRLF checkout makes `pnpm format:check` fail on every file and makes the vendored library hash check fail.
 - Claude Code rejects an agent shell command that starts with `node` or `npx`, or calls either after a command separator, and its message names `pnpm exec`. A global Node.js install on the PATH can run another version than the one `package.json` pins. `.claude/settings.json` runs the check, and `check-command-guard.js` tests it against allowed and rejected sample commands.
+- The same check rejects `pnpm check`, `pnpm check:fast` or `pnpm test:browser` piped into `tail`, `head` or `grep` without `set -o pipefail`, and such a command that ends in `; echo exit $?`. Both forms exit with the status of the last program, so a failed check looks like a passed one.
+- When `pnpm` cannot start the check, the hook exits with status 2 and blocks every shell command, with a message that names the `pnpm` command. Fix `pnpm` on the PATH, and the next command runs the check again.
 - pnpm refuses package releases younger than its minimum release age. When you upgrade a dependency, pick a release older than that age.
 
 ## Deployment
@@ -424,6 +428,8 @@ The main checkout stays on `main` and changes only through `git pull --ff-only`.
    It prunes the remote-tracking branches whose remote branch GitHub deleted, and deletes the remote branch when it still exists.
    When Windows refuses to delete the worktree folder, because a shell or another program still uses it, the command retries the deletion for about 2 seconds and still deletes the branches.
    A folder that stays behind is named in the output, and the command exits with status 1.
+
+When a rebase or merge conflicts in `scripts/lastmod.json`, `sitemap.xml` or a generated region of a page, take either side and run `pnpm fix`, which writes them again.
 
 ### Commits and pull requests
 

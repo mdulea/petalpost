@@ -3,10 +3,10 @@
 // publishes changes and deletes the invitation, and the sign-in link round trip; a token reaches no other invitation,
 // cannot ask for a registration challenge or save a passkey, and gets a 401 after it expires; the management link
 // lists two saved passkeys and their dates and removes only the selected one; a token can list them but cannot remove
-// them; a challenge works once, belongs to its own invitation or to sign-in, and expires; refusals of a wrong origin, relying party, type, missing
-// user verification, signature, sign counter that stops rising, malformed fields and an unknown passkey; the
-// passkey limit per invitation; deleting the invitation deletes its passkeys and tokens, and its passkey then opens
-// nothing; no response contains a stored hash or public key, and all are no-store.
+// them; a challenge works once, belongs to its own invitation or to sign-in, and expires; refusals of a wrong origin,
+// relying party, type, missing user verification, signature, sign counter that stops rising, malformed fields and an
+// unknown passkey; the passkey limit per invitation; deleting the invitation deletes its passkeys and tokens, and its
+// passkey then opens nothing; no response contains a stored hash or public key, and all are no-store.
 // Each test uses the shared migrated in-memory PGlite database of tests/api-setup.js with fresh ids.
 // Run: pnpm exec node tests/check-passkeys.js
 import assert from 'node:assert/strict';

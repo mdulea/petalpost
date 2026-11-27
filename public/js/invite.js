@@ -301,7 +301,8 @@ export function readPublished(value) {
   return { t: value.t, d };
 }
 
-// The invitation link of a published event opens the guest view at /e/<id> (or /ro/e/<id>), serving dynamic link metadata.
+// The invitation link of a published event opens the guest view at /e/<id> (or /ro/e/<id>), serving dynamic link
+// metadata.
 export const eventLink = (origin, id, lang = 'en') => `${origin}${normalizeLang(lang) === 'ro' ? '/ro' : ''}/e/${id}`;
 
 // Builds the party's current links in its language from the management credential. Derives the preview only on demand.
@@ -607,7 +608,8 @@ const photoChanges = new WeakMap();
 // The only writer of the photo: a JPEG or PNG data URL, a promise for one, or null to remove it.
 // The latest request wins, even when decoding completes out of order; older requests return 'superseded'.
 // Returns 'refused' and keeps the current photo for anything else, such as the "data:," export of an empty canvas.
-// Returns 'unsaved' when the photo does not fit in storage: it shows now and the stored one is removed. Otherwise 'saved'.
+// Returns 'unsaved' when the photo does not fit in storage: it shows now and the stored one is removed. Otherwise
+// 'saved'.
 export async function changePhoto(state, source, storage, lang = 'en') {
   const request = {};
   photoChanges.set(state, request);

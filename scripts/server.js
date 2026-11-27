@@ -1,7 +1,9 @@
-// The local server for pnpm dev and the browser checks, in place of Vercel. It serves the files in public/ that buildSite
-// copies, with the vercel.json headers on every path and its redirects, / as index.html, no clean URLs, no directory
-// listing and 404.html with status 404 for anything else, and never a file or directory whose name starts with a dot.
-// /api paths go to createApi and /e paths go to createEventPage over PGlite after migrate. PGlite runs in memory with --memory and in .pglite/ otherwise.
+// The local server for pnpm dev and the browser checks, in place of Vercel. It serves the files in public/ that
+// buildSite copies, with the vercel.json headers on every path and its redirects, / as index.html, no clean URLs, no
+// directory listing and 404.html with status 404 for anything else, and never a file or directory whose name starts
+// with a dot.
+// /api paths go to createApi and /e paths go to createEventPage over PGlite after migrate. PGlite runs in memory with
+// --memory and in .pglite/ otherwise.
 // startServer resolves {url, close} once it listens; check-site.js compares its answers with production.
 // On a port that another program holds, startServer closes the database and rejects with code EADDRINUSE and a
 // message that names the port and PORT_ENV. The command prints that message and exits with status 1.

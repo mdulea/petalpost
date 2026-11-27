@@ -207,7 +207,8 @@ test('every indexed page but the home pages is linked from at least two other in
   );
 });
 
-// The Romanian-only comparison guide has no English pair to link to it, so every Romanian footer lists all Romanian guides.
+// The Romanian-only comparison guide has no English pair to link to it, so every Romanian footer lists all Romanian
+// guides.
 test("every Romanian page's footer Guides list links to every Romanian guide", () => {
   const guides = [
     '/ro/text-invitatii.html',
@@ -474,7 +475,8 @@ for (const file of ['manage.html', 'ro/manage.html']) {
   });
 }
 
-// editor.js writes every invite field to the form control of the same name; it generates the accent swatches into #swatches.
+// editor.js writes every invite field to the form control of the same name; it generates the accent swatches into
+// #swatches.
 for (const file of ['editor.html', 'ro/editor.html']) {
   test(`${file} has a control for every invite field`, () => {
     const editor = read(file);
@@ -495,7 +497,8 @@ test('css/styles.css styles every template frame and title font', () => {
   assert.deepEqual([...new Set(missing)], []);
 });
 
-// A custom property that refers to itself is invalid, and every rule using it falls back to transparent or inherited color.
+// A custom property that refers to itself is invalid, and every rule using it falls back to transparent or inherited
+// color.
 test('no CSS custom property refers to itself', () => {
   const selfReferring = [...styles.matchAll(/(--[\w-]+):([^;]+);/g)]
     .filter(([, name, value]) => value.includes(`var(${name})`))
@@ -574,7 +577,8 @@ test('vendor/html-to-image.js is the published html-to-image 1.11.11 dist/html-t
 // /ro/e/{id} through the dynamic event page.
 // The first test that needs the server starts it, so it listens only after every top-level line has run, and a run
 // filtered to other tests never starts it. A server started at top level kept the process alive when a later top-level
-// line threw. A server started in a before hook kept a filtered run alive, because the after hook ran before it listened.
+// line threw. A server started in a before hook kept a filtered run alive, because the after hook ran before it
+// listened.
 let localServer;
 const localUrl = async () => (await (localServer ??= startServer({ port: 0, memory: true }))).url;
 after(async () => (await localServer)?.close());

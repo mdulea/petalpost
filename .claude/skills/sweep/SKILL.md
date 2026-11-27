@@ -17,11 +17,11 @@ disable-model-invocation: true
 
 # Workflow
 
-1. Args: `--max <n>` (default 15), issue numbers (optional). `RUN=$(pwd -W)/.sweep/$(date +%Y%m%d-%H%M)`, Windows path for implementers; `mkdir -p "${RUN}"`
+1. Args: `--max <n>` (default 15), issue numbers (optional). `RUN=$(pwd -W)/.sweep/$(date +%Y%m%d-%H%M)`, Windows path for implementers; `mkdir -p "${RUN}"`; `SKILLS=$(cygpath -m ~/.claude/skills)`; `TMP=$(cygpath -m /tmp)`; prompts: `<RUN>`, `<SKILLS>`, `<TMP>` -> these values
 2. Labels: `gh label create in-progress --force --color fbca04 --description "A sweep run works on this issue"`; `gh label create blocked --force --color b60205 --description "A sweep run gave up; remove the label to retry"`
-3. `pnpm -s sweep-plan <issue numbers> > "${RUN}/plan.json"`; print one line per `order`, `resume`, `parents`, `held` item via `jq`; start without confirmation
+3. `pnpm -s sweep-plan <issue numbers> > "${RUN}/plan.json"`; print one line per `order`, `resume`, `parents`, `held` item via `jq`; start without confirmation. Preflight, once, before the first `claude -p`: cwd = that session's worktree, `MSYS_NO_PATHCONV=1 pnpm --version`; fails -> stop run, start no session, report the error; the command guard blocks every shell command while `pnpm` cannot start
 4. Done set = closed issues; parents with empty `subIssues` -> close now per step 10
-5. Per `resume` item: branch `gh pr view <pr> --json headRefName --jq .headRefName`; counts as in progress; merge per step 8; session ID unknown -> fixes per step 9 start new session in its worktree, worktree missing -> block
+5. Per `resume` item: `gh issue edit <n> --add-label in-progress`; branch `gh pr view <pr> --json headRefName --jq .headRefName`; counts as in progress; merge per step 8; session ID unknown -> fixes per step 9 start new session in its worktree, worktree missing -> block
 6. Start next `order` item with every `blockedBy` in done set, while limits allow, ascending plan position:
 
 - `gh issue edit <n> --add-label in-progress`
@@ -29,10 +29,10 @@ disable-model-invocation: true
 - Bash `run_in_background: true`, cwd = worktree:
 
 ```sh
-MSYS_NO_PATHCONV=1 claude -p "/implement gh issue <n>. Coordinated sweep run: you are in worktree .worktrees/<type>-<task> on branch <type>/<task>; skip pnpm worktree add. Questions you would ask the user -> stop and end with BLOCKED <question>. Branch ready once pnpm fix and pnpm check pass: draft the body with the pr skill, include Closes #<n>, push, open the pull request with gh pr create. Never merge. Then run the retrospective skill on this session and write its findings, at most 300 words, to <RUN>/<n>.retro.md. Last line: PR <number> or BLOCKED <reason>." --permission-mode auto --output-format json > "<RUN>/<n>.json"
+MSYS_NO_PATHCONV=1 claude -p "/implement gh issue <n>. Coordinated sweep run: you are in worktree .worktrees/<type>-<task> on branch <type>/<task>; skip pnpm worktree add. Questions you would ask the user -> stop and end with BLOCKED <question>. Branch ready once pnpm fix and pnpm check pass: draft the body per <SKILLS>/pr/SKILL.md, include Closes #<n>, write it to <TMP>/pr-<n>.md, push, open the pull request with gh pr create --body-file <TMP>/pr-<n>.md. Never merge. Then follow <SKILLS>/retrospective/SKILL.md on this session and write its findings, at most 300 words, to <RUN>/<n>.retro.md. Last line: PR <number> or BLOCKED <reason>." --permission-mode auto --output-format json > "<RUN>/<n>.json"
 ```
 
-7. Exit notification -> `jq -r '.session_id, (.permission_denials | length), (.result | split("\n") | last)' "${RUN}/<n>.json"`; record session ID; `PR <number>` + zero denials -> step 8; else block with last line or denials
+7. Exit notification -> `jq -r '.session_id, (.permission_denials | length), (.result | split("\n") | last)' "${RUN}/<n>.json"`; record session ID; last line `PR <number>` -> step 8, denials > 0 -> record `jq -r '.permission_denials[] | "\(.tool_name): \(.tool_input.command // .tool_input.file_path // "")"' "${RUN}/<n>.json"` per pull request for report; else block with last line
 8. Per pull request: background `gh pr checks <pr> --watch --interval 30 > /dev/null; gh pr view <pr> --json mergeStateStatus --jq .mergeStateStatus` -> notification:
 
 - checks failed: `gh pr checks <pr> --json name,state --jq '.[] | select(.state=="FAILURE") | .name'` -> step 9
@@ -43,7 +43,7 @@ MSYS_NO_PATHCONV=1 claude -p "/implement gh issue <n>. Coordinated sweep run: yo
 9. Fix, max 2 attempts per pull request, then block; last line `PUSHED` -> step 8, else block; background, cwd = worktree:
 
 ```sh
-MSYS_NO_PATHCONV=1 claude -p --resume <session id> "Coordinated fix for pull request <pr>: <failed check names | merge conflict with main>. In this worktree: on conflict git fetch -q origin and git rebase origin/main, then resolve; fix; pnpm fix; pnpm check; git push --force-with-lease. Then add this fix's findings to <RUN>/<n>.retro.md, at most 300 words in total. Never merge. Last line: PUSHED or BLOCKED <reason>." --permission-mode auto --output-format json > "<RUN>/<n>.fix<attempt>.json"
+MSYS_NO_PATHCONV=1 claude -p --resume <session id> "Coordinated fix for pull request <pr>: <failed check names | merge conflict with main>. In this worktree: on conflict git fetch -q origin and git rebase origin/main, then resolve; conflict in scripts/lastmod.json, sitemap.xml or a generated page region -> take either side, pnpm fix regenerates it; fix; pnpm fix; pnpm check; git push --force-with-lease. Then follow <SKILLS>/retrospective/SKILL.md on this fix and add its findings to <RUN>/<n>.retro.md, at most 300 words in total. Never merge. Last line: PUSHED or BLOCKED <reason>." --permission-mode auto --output-format json > "<RUN>/<n>.fix<attempt>.json"
 ```
 
 10. After merge: main checkout `git pull --ff-only` + `pnpm worktree remove <worktree dir>`; `gh issue edit <n> --remove-label in-progress`; `gh issue view <n> --json state --jq .state` != `CLOSED` -> `gh issue close <n> --comment "<marker> Closed by #<pr>."`; add `<n>` to done set; record report line; per `parents` item in plan order whose `subIssues` all in done set: `gh issue close <p> --comment "<marker> Closed after its sub-issues merged: #<pr>, #<pr>."` + add `<p>` to done set; back to step 6
@@ -60,6 +60,10 @@ Report template:
 ## Pull requests
 
 - [#<pr>](url) <title>. Closes [#<n>](url), [#<parent>](url). <Applied migration <file>, <file>.>
+
+## Permission denials
+
+- [#<pr>](url) <tool>: <command or path>.
 
 ## Held issues
 

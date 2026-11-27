@@ -5,7 +5,8 @@
 // Europe/Bucharest midnight checks across winter and summer time; the last minute of the RSVP deadline and the start of
 // the deletion at 23:59 Europe/Bucharest time in winter and summer, whatever the runtime's time zone; the tracker's
 // deadline countdown until the deadline passes, and its nudge in the last 7 days while a party has not replied; the
-// deletion countdown, counted from the latest sub-event date when there is one, and its nudge in the last 3 days and until the retention run deletes the list; the English and Romanian countdown and nudge text.
+// deletion countdown, counted from the latest sub-event date when there is one, and its nudge in the last 3 days and
+// until the retention run deletes the list; the English and Romanian countdown and nudge text.
 // The checks run in the Europe/Bucharest time zone, which changes to summer time on 29 March 2026 at 03:00 and back
 // on 25 October 2026 at 04:00.
 // Run: pnpm exec node tests/check-countdown.js

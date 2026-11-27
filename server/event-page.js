@@ -1,6 +1,7 @@
 // Dynamic HTML route for published invitations at /e/{id} and /ro/e/{id}. Serves editor.html or ro/editor.html with
 // per-event Open Graph metadata built from the event's title, date, time and venue and its template's link preview
-// image, noindex so personal invites stay out of search engines, and cache-control: no-store so edits and deletions take effect immediately.
+// image, noindex so personal invites stay out of search engines, and cache-control: no-store so edits and deletions
+// take effect immediately.
 import { readFileSync } from 'node:fs';
 import { localeOf, normalizeLang } from '../public/js/i18n.js';
 import { eventPreviewMeta, makeInviteData } from '../public/js/invite.js';

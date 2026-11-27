@@ -1,4 +1,5 @@
-// Checks read-only view links, rejection of view secrets by the reply API, and invalidation on revocation or personal link regeneration in both languages.
+// Checks read-only view links, rejection of view secrets by the reply API, and invalidation on revocation or personal
+// link regeneration in both languages.
 // Checks that batch-created parties have working view links before their personal links are opened.
 // Run: pnpm exec node --test tests/check-view-link.js
 import assert from 'node:assert/strict';
