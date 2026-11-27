@@ -1,15 +1,22 @@
-// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates, the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply form field errors with their descriptions and focus in English and Romanian, including the note error after its hint and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the guest note, which counts code points and keeps text past its limit, with their descriptions and limit announcement in English and Romanian, the calendar download with its alarms, the event countdown in English and Romanian, which counts days, then hours on the last day, hides at the start and shows nothing without a date, the photo
-// upload and its notice, the delivery actions under the preview, the PNG download, the link preview generator or the
-// Romanian language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with structured data, breaks the Content-Security-Policy. The banner checks fail when
-// it is missing for a Romanian browser on a paired English page, its link misses the paired page, it shows for an
-// English browser or on a page without a pair, a close does not last across pages, a close with blocked storage breaks
-// the page, or it writes a cookie, requests another origin or changes the canonical and hreflang links.
+// Fails when the landing gallery or its occasion filter, a content page, the Romanian editor's Moț tab and templates,
+// the Moț page gallery, the editor preview, the draft reload, the guest view, the sample guest invitation, the reply
+// form field errors with their descriptions and focus in English and Romanian, including the note error after its hint
+// and a pasted tab that becomes a space, the characters-left counters of the editor fields, the guest name and the
+// guest note, which counts code points and keeps text past its limit, with their descriptions and limit announcement in
+// English and Romanian, the calendar download with its alarms, the event countdown in English and Romanian, which
+// counts days, then hours on the last day, hides at the start and shows nothing without a date, the photo upload and
+// its notice, the delivery actions under the preview, the PNG download, the link preview generator or the Romanian
+// language banner breaks in Chromium, a test tagged @webkit also fails in WebKit, or a page, including a page with
+// structured data, breaks the Content-Security-Policy. The banner checks fail when it is missing for a Romanian browser
+// on a paired English page, its link misses the paired page, it shows for an English browser or on a page without a
+// pair, a close does not last across pages, a close with blocked storage breaks the page, or it writes a cookie,
+// requests another origin or changes the canonical and hreflang links.
 // The filter checks also fail when a category change misses its 150ms fade-out or its 200ms fade-in with an 8px rise,
 // rapid clicks end on another category or leave an animation running, or filtering animates under reduced motion.
 // The motion checks fail when a template or accent change misses the preview's 180ms settle from opacity 0.6 or a
 // text edit animates it, rapid changes leave the preview faded, on an earlier accent or with an animation running, a
-// share link or the sample invitation misses its single 400ms reveal with a 12px rise, or the preview, the guest view or the countdown animates
-// under reduced motion.
+// share link or the sample invitation misses its single 400ms reveal with a 12px rise, or the preview, the guest view
+// or the countdown animates under reduced motion.
 // Run: pnpm test:browser
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';

@@ -1,25 +1,27 @@
 // Fails when browserCheckPort gives the same worktree path different ports, gives two sample worktrees the same port,
 // gives a worktree a port outside WORKTREE_PORTS or the pnpm dev port, gives the main checkout or a copy without .git
-// a port other than DEFAULT_PORT, ignores BROWSER_CHECK_PORT, or accepts a BROWSER_CHECK_PORT that is not a port. Fails too when ESLint accepts a local origin with a port written into
-// a browser test, in a string or a template literal, or rejects a colon outside a local origin or a local host without a port.
+// a port other than DEFAULT_PORT, ignores BROWSER_CHECK_PORT, or accepts a BROWSER_CHECK_PORT that is not a port. Fails
+// too when ESLint accepts a local origin with a port written into a browser test, in a string or a template literal, or
+// rejects a colon outside a local origin or a local host without a port.
 // Run: pnpm exec node tests/check-browser-port.js
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { after, test } from 'node:test';
+import { test } from 'node:test';
 import { ESLint } from 'eslint';
 import { DEFAULT_PORT, PORT_ENV, WORKTREE_PORTS, browserCheckPort } from '../scripts/browser-port.js';
 
-const dir = mkdtempSync(join(tmpdir(), 'petalpost-port-'));
-after(() => rmSync(dir, { recursive: true, force: true }));
+// The ports hash from the full paths, so the sample worktrees sit at fixed paths and get the same ports on every run.
+// Worktrees run this check at the same time, so the paths are created when missing and never deleted.
+const dir = join(tmpdir(), 'petalpost-port-check');
 
 // A linked worktree has a .git file that points at the main checkout's .git directory.
 const checkout = (name, linked) => {
   const root = join(dir, name);
-  mkdirSync(root);
+  mkdirSync(root, { recursive: true });
   if (linked) writeFileSync(join(root, '.git'), 'gitdir: elsewhere\n');
-  else mkdirSync(join(root, '.git'));
+  else mkdirSync(join(root, '.git'), { recursive: true });
   return root;
 };
 const main = checkout('main', false);
@@ -57,7 +59,7 @@ test(`${PORT_ENV} that is not a port number throws with a message naming it`, ()
 
 test('a copy without .git uses DEFAULT_PORT', () => {
   const copy = join(dir, 'copy');
-  mkdirSync(copy);
+  mkdirSync(copy, { recursive: true });
   assert.equal(browserCheckPort(copy, {}), DEFAULT_PORT);
 });
 

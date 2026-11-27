@@ -20,11 +20,18 @@ export default defineConfig({
   // Linux WebKit resizes about ten times slower than Chromium. With two workers, a viewport sweep takes up to 36
   // seconds there, so the default 30-second timeout fails it. WebKit runs the layout suite and every test tagged
   // @webkit; grep matches the file name and the tags in each test's title path.
+  // One worker ran the whole layout suite in 6.1 minutes on a 12-core developer machine. WebKit spreads its tests over
+  // at most 4 workers instead, so three sweep sessions on one machine start at most 12 WebKit workers. There the
+  // WebKit project took 2.2 minutes, and it must finish within 3 minutes.
+  // CI runs 2 workers on 4 cores. Two WebKit workers at once there slowed the Preview button sweep past its 6-minute
+  // timeout, so CI keeps the layout suite on one worker, next to a Chromium worker.
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     {
       name: 'webkit',
       grep: [/layout\.spec\.js/, /@webkit/],
+      fullyParallel: !process.env.CI,
+      workers: 4,
       timeout: 120000,
       use: { ...devices['iPhone 15'] },
     },

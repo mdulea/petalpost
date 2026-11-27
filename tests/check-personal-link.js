@@ -1,5 +1,5 @@
-// Checks party creation with default and explicit languages, personal access, opened times, view link read-only access, one versioned reply,
-// and withdrawal through the API in both languages.
+// Checks party creation with default and explicit languages, personal access, opened times, view link read-only access,
+// one versioned reply, and withdrawal through the API in both languages.
 // The management tracker can preview an older party before it opens a personal link.
 // Also checks replies above default seats, host seat edits and whole-list seat totals.
 // Checks that revoking or regenerating a link blocks old guest access and keeps replies and tracker totals.

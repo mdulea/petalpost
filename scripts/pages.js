@@ -5,11 +5,11 @@
 // page footer.
 // It also writes sitemap.xml with every indexed page and its lastmod date. scripts/lastmod.json keeps each indexed
 // page's date with a fingerprint of its content: the page text outside its generated regions, or the occasion copy of
-// an occasion page. A page whose fingerprint changed gets today's UTC date, so a change inside a generated region, such as
-// a new footer link, leaves every date alone.
+// an occasion page. A page whose fingerprint changed gets today's UTC date, so a change inside a generated region, such
+// as a new footer link, leaves every date alone.
 // generatePages({ now, ledger }) dates a changed page with the date of now, by default the current time, and reads
-// the stored dates from ledger, by default scripts/lastmod.json. It resolves a Map from file path relative to the repository root to its content, formatted with
-// Prettier; check-site.js fails when a committed file differs from it.
+// the stored dates from ledger, by default scripts/lastmod.json. It resolves a Map from file path relative to the
+// repository root to its content, formatted with Prettier; check-site.js fails when a committed file differs from it.
 // Run: pnpm pages, which writes the files.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';

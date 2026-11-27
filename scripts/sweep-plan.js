@@ -1,8 +1,8 @@
-// Plans a sweep run, which the sweep skill in .claude/skills/sweep/ starts. planSweep(issues, pulls, only) takes the open
-// issues as { number, title, labels, parent, subIssues, blockedBy }, where subIssues and blockedBy list { number, state },
-// and the open pull requests as { number, closes }. It returns:
+// Plans a sweep run, which the sweep skill in .claude/skills/sweep/ starts. planSweep(issues, pulls, only) takes the
+// open issues as { number, title, labels, parent, subIssues, blockedBy }, where subIssues and blockedBy list { number,
+// state }, and the open pull requests as { number, closes }. It returns:
 // - order: the issues to implement, each with the open blockers it waits for, blockers first, ties by ascending number
-// - resume: in-progress issues with an open pull request that closes them, to watch and merge
+// - resume: issues not labelled blocked with an open pull request that closes them, to watch and merge
 // - parents: open issues with sub-issues, never implemented, each with its open sub-issues, sub-issue parents first
 // - held: issues the run leaves alone, each with the reason
 // An issue labelled wontfix, duplicate, invalid or question is left out. An open blocker outside order, resume and
@@ -80,12 +80,12 @@ export const planSweep = (allIssues, pulls = [], only = []) => {
   const candidates = new Map();
   for (const issue of issues) {
     if (issue.subIssues.length) continue;
-    if (issue.labels.includes('blocked')) hold(issue, 'labelled blocked');
-    else if (issue.labels.includes('in-progress')) {
-      const pull = pulls.find((p) => p.closes.includes(issue.number));
-      if (pull) resume.push({ number: issue.number, title: issue.title, pr: pull.number });
-      else hold(issue, 'left in progress by an earlier run');
-    } else candidates.set(issue.number, issue);
+    const pull = pulls.find((p) => p.closes.includes(issue.number));
+    if (issue.labels.includes('blocked')) {
+      hold(issue, pull ? `labelled blocked, pull request #${pull.number} open` : 'labelled blocked');
+    } else if (pull) resume.push({ number: issue.number, title: issue.title, pr: pull.number });
+    else if (issue.labels.includes('in-progress')) hold(issue, 'left in progress by an earlier run');
+    else candidates.set(issue.number, issue);
   }
 
   // A blocker the run finishes elsewhere, as a resumed pull request or a parent, waits at run time only.

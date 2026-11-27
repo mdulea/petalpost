@@ -1,19 +1,24 @@
-// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break. Checks: reply validation and the invalid fields it reports, including the optional note, its trimming, line breaks, control characters and 300-character limit; link fragment
-// validation and party link prefixes; publishing and opening an invitation from another browser with presentation fields only; updates,
-// replays after a lost confirmation, stale versions and simultaneous updates; management and edit secrets that
-// reach only their own event or reply; reply totals; reply notes in the management data, the edit link load and their change and clearing, and an update without a note that keeps it; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no stored row or note, its stale version and its repeat; deletion
-// with its replies; no secret, hash or reply id in any response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a reply without an answer; the daily
-// invitation and per-invitation reply quotas; simultaneous new replies at the reply limit and simultaneous edits of
-// one reply; the retention job, which deletes an invitation and its replies 91 days after the later of the event
-// date and the last change; a daily quota key that is not the IP hash and changes with the day; unavailable storage; network
-// failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses; the template's
-// link preview image at 1200 by 630 with the escaped title in its English or Romanian alt text, and the generic image
-// of the page language for a missing invitation, a storage error or an unknown template; Romanian link helpers and localized API error messages via Accept-Language;
-// the action totals that the README query reads: a new invitation and a new reply each add 1 under the body's page
-// language, en for a missing or unknown one and never the Accept-Language one, and republishing, replays, reply
-// changes, withdrawals, the daily quota, the reply limit and other refused requests add nothing; /api/stats, which
-// counts the five browser actions in en and ro and refuses other actions, languages, bodies and methods; the browser
-// counter, which posts the page language and ignores a failed send.
+// Fails when guest replies, private links, the API client, the RSVP API or the dynamic /e/{id} Open Graph route break.
+// Checks: reply validation and the invalid fields it reports, including the optional note, its trimming, line breaks,
+// control characters and 300-character limit; link fragment validation and party link prefixes; publishing and opening
+// an invitation from another browser with presentation fields only; updates, replays after a lost confirmation, stale
+// versions and simultaneous updates; management and edit secrets that reach only their own event or reply; reply
+// totals; reply notes in the management data, the edit link load and their change and clearing, and an update without a
+// note that keeps it; the stored note column's empty default and 300-character check; reply withdrawal, which leaves no
+// stored row or note, its stale version and its repeat; deletion with its replies; no secret, hash or reply id in any
+// response, and no-store on all; malformed paths, methods, ids, credentials, bodies, sizes and fields, including a
+// reply without an answer; the daily invitation and per-invitation reply quotas; simultaneous new replies at the reply
+// limit and simultaneous edits of one reply; the retention job, which deletes an invitation and its replies 91 days
+// after the later of the event date and the last change; a daily quota key that is not the IP hash and changes with the
+// day; unavailable storage; network failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph
+// metadata, escaping, HEAD, 404, 405 and 503 responses; the template's link preview image at 1200 by 630 with the
+// escaped title in its English or Romanian alt text, and the generic image of the page language for a missing
+// invitation, a storage error or an unknown template; Romanian link helpers and localized API error messages via
+// Accept-Language; the action totals that the README query reads: a new invitation and a new reply each add 1 under the
+// body's page language, en for a missing or unknown one and never the Accept-Language one, and republishing, replays,
+// reply changes, withdrawals, the daily quota, the reply limit and other refused requests add nothing; /api/stats,
+// which counts the five browser actions in en and ro and refuses other actions, languages, bodies and methods; the
+// browser counter, which posts the page language and ignores a failed send.
 // Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
 // tests/api-setup.js, except the quota key and action count checks, which read the stored rows in a database of
 // their own.

@@ -1,25 +1,40 @@
-// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the WhatsApp link, the guest templates prompt or the management page break in Chromium against the real API of
-// scripts/server.js. Checks: an invitation published in one browser opens at /e/{id} with dynamic OG tags and its countdown and via legacy ?view=1&e=; a guest's reply, its edit
-// link and an edit that keeps one reply; a guest sees the free templates prompt below the reply form from page load and once after a reply; the host
-// and the missing-invitation message never show it; it links to the home page templates tagged from=invite in English and Romanian; the management totals and reply list; a guest's note, which the edit link loads
-// and the management page shows under its reply as text with its line breaks; the replies CSV download with its
-// byte order mark, file name, columns, answers, browser time zone times, empty "Changed" cell, formula apostrophe
-// and quoting, with no totals row, in English with commas and in Romanian with semicolons; the invitation link and a guessed
-// secret cannot open the management page; one guest's edit link cannot load another's reply; a failed reply shows
-// the failure and no confirmation, and its retry saves one reply; a reply whose confirmation is lost loads again
-// after a reload and its resend keeps one reply; a reply changed elsewhere loads the latest answer; a confirmed
-// withdrawal replaces the form with its panel and clears the address, Reply again shows the empty form, its old edit link says no reply is saved yet and can send, and a stale
-// withdrawal loads the latest answer; the Romanian withdrawal copy; a Moț invitation published in Romanian takes a guest's reply;
-// the confirmation panels of a sent, updated and withdrawn reply and of a first and a repeated publish, with their
-// headings in English and Romanian, the links they show, their 250ms fade-in with a 12px rise and the focus move, and
-// no panel after a failed send, withdrawal or publish; an invitation link reveals the invitation once over 400ms with
-// a 12px rise, and sending or changing a reply does not replay it; under reduced motion neither the invitation nor a
-// panel animates; publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first
-// publish publishes to the same invitation; deletion shows guests a missing message and lets the host publish
-// anew; a lost publish confirmation keeps the event identity; secrets appear only in the Authorization header;
-// analytics gets page addresses without the fragment; the WhatsApp link on the published panel and the management page, in
-// English and Romanian, opens wa.me in a new tab with no opener and prefills the title, the date and venue line and the
-// invitation link, never the management link, and the pages request nothing from another origin; the report link of a published invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files with clipboard fallback and AbortError handling; in English and Romanian, a count to /api/stats with the page language after an invitation link copy, a share fallback copy, an invitation link share, a PNG share, a PNG download and a calendar file, and none after a cancelled link or PNG share or a copy of the management link, the reply edit link or the invitation link on the management page; each of those actions with the same status and file when navigator.sendBeacon throws; the page language in publish and reply bodies in English and Romanian; in English and Romanian, an opened management link lists its invitation with its title, link and date under My invitations on both home pages, without a cookie or a request that carries its secret, until Remove takes it off, and a deleted invitation shows there as ended in the deleting browser and, after its load fails, in another; Send the link to myself and Share with a co-host share the management link, ignore a cancelled share, copy the link after a failed share or without navigator.share, and send no count; with storage blocked, the management page loads and both home pages work without My invitations; no page breaks the Content-Security-Policy or throws.
+// Fails when publishing, guest replies, the dynamic /e/{id} route, native sharing, the WhatsApp link, the guest
+// templates prompt or the management page break in Chromium against the real API of scripts/server.js. Checks: an
+// invitation published in one browser opens at /e/{id} with dynamic OG tags and its countdown and via legacy
+// ?view=1&e=; a guest's reply, its edit link and an edit that keeps one reply; a guest sees the free templates prompt
+// below the reply form from page load and once after a reply; the host and the missing-invitation message never show
+// it; it links to the home page templates tagged from=invite in English and Romanian; the management totals and reply
+// list; a guest's note, which the edit link loads and the management page shows under its reply as text with its line
+// breaks; the replies CSV download with its byte order mark, file name, columns, answers, browser time zone times,
+// empty "Changed" cell, formula apostrophe and quoting, with no totals row, in English with commas and in Romanian with
+// semicolons; the invitation link and a guessed secret cannot open the management page; one guest's edit link cannot
+// load another's reply; a failed reply shows the failure and no confirmation, and its retry saves one reply; a reply
+// whose confirmation is lost loads again after a reload and its resend keeps one reply; a reply changed elsewhere loads
+// the latest answer; a confirmed withdrawal replaces the form with its panel and clears the address, Reply again shows
+// the empty form, its old edit link says no reply is saved yet and can send, and a stale withdrawal loads the latest
+// answer; the Romanian withdrawal copy; a Moț invitation published in Romanian takes a guest's reply; the confirmation
+// panels of a sent, updated and withdrawn reply and of a first and a repeated publish, with their headings in English
+// and Romanian, the links they show, their 250ms fade-in with a 12px rise and the focus move, and no panel after a
+// failed send, withdrawal or publish; an invitation link reveals the invitation once over 400ms with a 12px rise, and
+// sending or changing a reply does not replay it; under reduced motion neither the invitation nor a panel animates;
+// publishing again updates the invitation, and a stale tab hears of the change; a tab opened before the first publish
+// publishes to the same invitation; deletion shows guests a missing message and lets the host publish anew; a lost
+// publish confirmation keeps the event identity; secrets appear only in the Authorization header; analytics gets page
+// addresses without the fragment; the WhatsApp link on the published panel and the management page, in English and
+// Romanian, opens wa.me in a new tab with no opener and prefills the title, the date and venue line and the invitation
+// link, never the management link, and the pages request nothing from another origin; the report link of a published
+// invitation names the invitation link and never a guest's edit secret; native navigator.share for links and PNG files
+// with clipboard fallback and AbortError handling; in English and Romanian, a count to /api/stats with the page
+// language after an invitation link copy, a share fallback copy, an invitation link share, a PNG share, a PNG download
+// and a calendar file, and none after a cancelled link or PNG share or a copy of the management link, the reply edit
+// link or the invitation link on the management page; each of those actions with the same status and file when
+// navigator.sendBeacon throws; the page language in publish and reply bodies in English and Romanian; in English and
+// Romanian, an opened management link lists its invitation with its title, link and date under My invitations on both
+// home pages, without a cookie or a request that carries its secret, until Remove takes it off, and a deleted
+// invitation shows there as ended in the deleting browser and, after its load fails, in another; Send the link to
+// myself and Share with a co-host share the management link, ignore a cancelled share, copy the link after a failed
+// share or without navigator.share, and send no count; with storage blocked, the management page loads and both home
+// pages work without My invitations; no page breaks the Content-Security-Policy or throws.
 // Each test uses its own browser contexts for the host and every guest, so no test shares storage with another.
 // Run: pnpm test:browser
 import { expect, test } from '@playwright/test';

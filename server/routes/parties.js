@@ -1,6 +1,7 @@
 // Under /api/events/{eventId}/parties, POST with the management secret adds a batch from
 // {entries: [{id, name}], defaultSeats, lang}. PUT /{id} adds one from {name, defaultSeats, lang}.
-// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name, defaultSeats, reply, deadlineClosed, table}.
+// On /{id}, GET uses the personal secret, records the first and last opened times and returns {t, d, name,
+// defaultSeats, reply, deadlineClosed, table}.
 // table is the party's table name while the seating plan is published, and null otherwise.
 // GET on /{id}/view uses the view secret and returns {t, d, name} without recording an opened time.
 // Both reads also return updateNotice when the host has saved one. Their d holds only the party's sub-events, from

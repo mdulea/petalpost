@@ -20,7 +20,10 @@ import { section as seating } from './seating.js';
 import { section as switchMode } from './switch-mode.js';
 import { section as partyUpdate } from './update.js';
 
-/** @type {{id: string, modes: string[], init?: (page: any) => void, show?: (view: any, page: any) => void | Promise<void>}[]} */
+/**
+ * @type {{id: string, modes: string[], init?: (page: any) => void,
+ *   show?: (view: any, page: any) => void | Promise<void>}[]}
+ */
 export const SECTIONS = [
   countdowns,
   replies,

@@ -3,9 +3,9 @@
 // that is not lowercase and hyphenated, runs while the main checkout has uncommitted changes, or when pnpm worktree
 // remove leaves the worktree, an empty .worktrees directory, its local branch, its remote branch or its
 // remote-tracking branch behind, or when a worktree folder that cannot be deleted at first makes remove skip a later
-// step, or one that stays undeletable goes unnamed or leaves remove exiting with status 0. Each case runs the command against a throwaway repository
-// with a local bare origin and skips the dependency install. Fails too when a GIT_DIR inherited from a git hook or
-// git rebase --exec redirects these git calls away from the throwaway repository.
+// step, or one that stays undeletable goes unnamed or leaves remove exiting with status 0. Each case runs the command
+// against a throwaway repository with a local bare origin and skips the dependency install. Fails too when a GIT_DIR
+// inherited from a git hook or git rebase --exec redirects these git calls away from the throwaway repository.
 // Run: pnpm exec node tests/check-worktree.js
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';

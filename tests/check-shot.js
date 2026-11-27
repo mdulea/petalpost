@@ -1,7 +1,8 @@
 // Fails when pnpm shot does not write a PNG of the element that the selector matches, does not write a PNG of the full
 // page without a selector or for a path without its leading slash, or, for a selector that matches nothing, exits with
 // status 0, prints no message naming the selector, writes a file or keeps running. Fails too when it accepts a path
-// on another origin, an empty selector or a path that answers 404. Each case runs the command on its own free port with Chromium.
+// on another origin, an empty selector or a path that answers 404. Each case runs the command on its own free port with
+// Chromium.
 // Run: pnpm exec node tests/check-shot.js
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

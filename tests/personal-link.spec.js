@@ -1,6 +1,6 @@
-// Checks that a host shares a party's personal link message in its language, previews the party's page without recording an opened time,
-// filters parties by status (not opened, opened, replied), and sees opened times, replies, edits and withdrawal
-// in both languages. Also checks revoke, regenerate and the unavailable page in both languages.
+// Checks that a host shares a party's personal link message in its language, previews the party's page without
+// recording an opened time, filters parties by status (not opened, opened, replied), and sees opened times, replies,
+// edits and withdrawal in both languages. Also checks revoke, regenerate and the unavailable page in both languages.
 // Also checks guest replies above default seats, over-default markers, accepted seats and host seat edits.
 // Also checks the reminder queue, localized WhatsApp text and marks that last for the tab session.
 // Run: pnpm test:browser tests/personal-link.spec.js

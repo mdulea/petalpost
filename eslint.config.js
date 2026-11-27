@@ -14,6 +14,11 @@ export default [
     rules: { 'no-unused-vars': ['error', { ignoreRestSiblings: true }] },
   },
   {
+    // Prettier wraps code at its printWidth of 120 but leaves comments alone, so comment lines get the same limit
+    // here and code gets none. ESLint keeps max-len until version 11.
+    rules: { 'max-len': ['error', { code: Infinity, comments: 120, ignoreUrls: true }] },
+  },
+  {
     files: ['public/js/**/*.js'],
     languageOptions: { globals: { ...globals.browser, htmlToImage: 'readonly' } },
   },

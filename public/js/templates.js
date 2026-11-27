@@ -1773,7 +1773,8 @@ export const PHOTO_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 // The card sizes in container units, so it renders inside its .invite-wrap container:
 // a link when href is set, a <span> when inline is set for use inside a <label>, otherwise a <div>.
 // label becomes the container's aria-label. decorative hides a sample thumbnail from screen readers.
-// locale formats the date and time; it defaults to the browser's, and scripts/pages.js fixes it so its output is stable.
+// locale formats the date and time; it defaults to the browser's, and scripts/pages.js fixes it so its output is
+// stable.
 // Pages insert the result with mountInvites (js/mount.js), which also fits the text.
 /**
  * @param {(typeof TEMPLATES)[number]} template

@@ -1,11 +1,11 @@
-// Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, sample guest, invitation, management,
-// privacy, terms, About, guide or occasion page, or an English page showing the Romanian language banner, scrolls sideways, a form control leaves its panel,
-// single-line inputs differ in height, fields sharing a row differ in top, height or overlap horizontally, the spacing between stacked
-// fields is uneven, the floating Preview button leaves the panels' right edge, a control is smaller than its target
-// size, or the Preview button covers a control that has keyboard focus. On the English and Romanian landing pages it
-// fails when the Create invite bar shows at 640px or wider, beside the hero button or the footer, or not between them
-// below 640px; links anywhere but the editor in the page language; lacks safe-area padding; covers a control that has
-// keyboard focus; or slides under reduced motion.
+// Fails when, at any tested viewport in Chromium or WebKit, the landing, editor, guest, sample guest, invitation,
+// management, privacy, terms, About, guide or occasion page, or an English page showing the Romanian language banner,
+// scrolls sideways, a form control leaves its panel, single-line inputs differ in height, fields sharing a row differ
+// in top, height or overlap horizontally, the spacing between stacked fields is uneven, the floating Preview button
+// leaves the panels' right edge, a control is smaller than its target size, or the Preview button covers a control that
+// has keyboard focus. On the English and Romanian landing pages it fails when the Create invite bar shows at 640px or
+// wider, beside the hero button or the footer, or not between them below 640px; links anywhere but the editor in the
+// page language; lacks safe-area padding; covers a control that has keyboard focus; or slides under reduced motion.
 // Target sizes: 44px where the primary pointer is touch, which is iOS's minimum, and 24px elsewhere, which is
 // WCAG 2.2 Target Size (Minimum). Links inside a sentence are exempt, as WCAG allows. A stretched link is measured by
 // the card it covers.

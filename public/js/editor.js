@@ -174,7 +174,10 @@ limitAlert.className = 'visually-hidden';
 limitAlert.id = 'limitAlert';
 limitAlert.setAttribute('role', 'status');
 document.body.append(limitAlert);
-/** @type {Map<HTMLInputElement | HTMLTextAreaElement, {counter: HTMLElement, limit: number, length: (text: string) => number, count: number}>} */
+/**
+ * @type {Map<HTMLInputElement | HTMLTextAreaElement,
+ *   {counter: HTMLElement, limit: number, length: (text: string) => number, count: number}>}
+ */
 const counters = new Map();
 
 // Gives input its limit, a counter after it as its description, and a counter refresh on each input event. By

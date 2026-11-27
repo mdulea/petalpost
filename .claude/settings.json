@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pnpm --dir \"$CLAUDE_PROJECT_DIR\" exec node scripts/command-guard.js"
+            "command": "pnpm --dir \"$CLAUDE_PROJECT_DIR\" exec node scripts/command-guard.js || { status=$?; [ \"$status\" = 2 ] || echo \"The command guard did not run: pnpm --dir \\\"$CLAUDE_PROJECT_DIR\\\" exec node scripts/command-guard.js exited with status $status. Every shell command stays blocked until pnpm starts. Report the pnpm error above instead of working around it.\" >&2; exit 2; }"
           }
         ]
       }

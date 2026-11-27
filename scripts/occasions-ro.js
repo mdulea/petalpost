@@ -1,7 +1,9 @@
 // The text of each Romanian occasion page that scripts/pages.js generates, keyed by canonical template category.
 // Every category in categoriesFor('ro') needs an entry; check-site.js fails when one is missing.
-// Each description holds at least one Romanian search phrase from check-site.js, such as gratuit, online, WhatsApp or confirmare.
-// A section renders intro, list, quotes, then paragraphs. Its strings are trusted HTML written here, so they may hold links and inline markup.
+// Each description holds at least one Romanian search phrase from check-site.js, such as gratuit, online, WhatsApp or
+// confirmare.
+// A section renders intro, list, quotes, then paragraphs. Its strings are trusted HTML written here, so they may hold
+// links and inline markup.
 
 export const OCCASIONS_RO = {
   Wedding: {

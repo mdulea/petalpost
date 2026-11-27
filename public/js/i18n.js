@@ -817,8 +817,8 @@ export const UI = {
  * @param {string} lang
  * @param {{
  *   replyNameLimit: number, partySizeLimit: number, replyNoteLimit: number, dailyEvents: number,
- *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, partySeatsLimit: number, eventParties: number,
- *   updateNoticeLimit: number
+ *   eventResponses: number, eventPasskeys: number, partyNameLimit: number, partySeatsLimit: number,
+ *   eventParties: number, updateNoticeLimit: number
  * }} limits
  */
 export function apiMessages(

@@ -4,11 +4,10 @@
 // link in English and Romanian, the reminder message with its greeting and personal link in English and Romanian,
 // the party update message with its greeting, update and personal link in English and Romanian, invite records and
 // their mode, published records with an optional mode, the characters left in a limited field, storage writes, the
-// stored published event identity, the "My invitations" list, template switching, template ids, Romanian localization coverage, the same UI
-// string and API message keys in English and Romanian, the
-// Romanian occasion order, Romanian-only occasions kept out of the English catalog, 24-hour time formatting, the
-// calendar file with its alarms, the report link or the choice of when the Romanian
-// language banner shows and where it links break.
+// stored published event identity, the "My invitations" list, template switching, template ids, Romanian localization
+// coverage, the same UI string and API message keys in English and Romanian, the Romanian occasion order, Romanian-only
+// occasions kept out of the English catalog, 24-hour time formatting, the calendar file with its alarms, the report
+// link or the choice of when the Romanian language banner shows and where it links break.
 // Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -140,7 +139,8 @@ check(
   ctx.openInvite({ photo: 'data:image/png;base64,iVBORw0KGgo=' }).photo,
   'data:image/png;base64,iVBORw0KGgo=',
 );
-// A messaging app can cut a long share link; the guest must not see the sample or this browser's own draft as the invite.
+// A messaging app can cut a long share link; the guest must not see the sample or this browser's own draft as the
+// invite.
 const cut = hashOf(zoeLink).slice(0, 40);
 for (const hash of [cut, '#d=%%%', '']) {
   check(
@@ -247,7 +247,8 @@ check(
   [...ctx.EDITABLE].sort(),
 );
 
-// Date and time keep the editor input formats, YYYY-MM-DD and HH:MM. Anything else is the template sample; a cleared input stays empty.
+// Date and time keep the editor input formats, YYYY-MM-DD and HH:MM. Anything else is the template sample; a cleared
+// input stays empty.
 const linked = (d) =>
   ctx.openInvite({ hash: hashOf(ctx.shareLink(BASE, { t: 'birthday', d: { ...birthday.defaults, ...d } })) }).d;
 check(
@@ -1035,7 +1036,8 @@ test('the report link mails the contact address with the invitation link and the
   );
 });
 
-// Romanian localization: copy coverage, string key parity, sample limits, 24-hour time formatting, locale-scoped storage, diacritic slugs and Romanian DSA notice.
+// Romanian localization: copy coverage, string key parity, sample limits, 24-hour time formatting, locale-scoped
+// storage, diacritic slugs and Romanian DSA notice.
 check(
   'every bilingual template has Romanian localization copy',
   ctx.TEMPLATES.filter((t) => (!t.locales || (t.locales.includes('en') && t.locales.includes('ro'))) && !t.ro).map(
@@ -1181,7 +1183,8 @@ check(
   [EVENT_ID, true],
 );
 
-// The banner shows on an English page with a Romanian alternate, to a browser that prefers Romanian, until it is closed.
+// The banner shows on an English page with a Romanian alternate, to a browser that prefers Romanian, until it is
+// closed.
 test('the Romanian language banner links the Romanian alternate only for Romanian browsers on open English pages', () => {
   const page = {
     lang: 'en',
