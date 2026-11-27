@@ -135,16 +135,18 @@ A guest cannot see other guests' replies or the totals.
   - `ro/` holds the Romanian site: `ro/index.html`, `ro/editor.html`, `ro/manage.html`, the Romanian occasion pages, the hand-written guides `ro/text-invitatii.html`, `ro/cand-sa-trimiti-invitatiile.html` and `ro/invitatii-digitale-sau-tiparite.html`, which is the only guide without an English pair, and `ro/despre.html`, `ro/confidentialitate.html` and `ro/termeni.html`.
   - `js/` holds the page scripts:
     - `templates.js` is the template catalog and the `renderInvite` renderer.
-    - `invite.js` handles invite records, share links, the storage policy and the calendar file. It has no DOM access, so the Node checks import it.
-    - `rsvp.js` validates replies, builds and reads private links, is the API client and sends the action counts. It has no DOM access, so the server and the Node checks import it.
+    - `invite.js` handles invite records, share links, the storage policy, update and party sub-event validation, and the calendar file. It has no DOM access, so the Node checks import it.
+    - `rsvp.js` validates replies, builds and reads private links, and provides base64url helpers. It has no DOM access, so the server and the Node checks import it.
+    - `api-client.js` is the browser HTTP client and anonymous action counter, with a `410` ended-invitation hook. It has no DOM access, so the Node checks import it.
     - `csv.js` builds the replies CSV file of the management page. It has no DOM access, so the Node checks import it.
     - `passkey.js` saves a passkey on the management page and signs in with one on the home page. It has no DOM access, so the Node checks import it.
-    - `sub-event-answers.js` builds the answer fields of each sub-event in the three reply forms and the answer lines and totals of the tracker. It runs only in the browser.
-    - `meal-choices.js` builds the meal count fields of the reply forms and the tracker's seat editor, and the meal lines and totals of the tracker. It runs only in the browser.
+    - `reply-format.js` formats sub-event answer lines, meal lines and their tracker total lines. It has no DOM access, so the Node checks import it.
+    - `reply-fields.js` builds the unified reply form fields shared by the open-mode, personal-link and tracker host reply forms, including sub-event answers, menu meal counts, validation, counters and tab sanitization. It runs only in the browser.
+    - `publish-recovery.js` and `guest-route.js` hold the DOM-free host publish recovery and five-way guest-view route transitions.
     - `mount.js` puts rendered invites into the page and fits their text. It runs only in the browser.
     - `motion.js` holds the motion rules: Web Animations API only, a new animation cancels the running one, and nothing animates under reduced motion. It runs only in the browser.
-    - `editor.js`, `manage.js` and `landing.js` are the entry modules of the editor, the management page and the landing page.
-    - `tracker/` holds one module for each section of the management page, the tracker. `public/js/tracker/sections.js` lists them with the modes that show each one. A new section adds its module, one entry in that list and its `<section>` element in `manage.html` and `ro/manage.html`, and `check-site.js` fails when the list and the pages disagree. `page.js` is the entry module of the occasion pages, the guides and the About page.
+    - `editor.js` dispatches `editor.html` and `ro/editor.html` to `host-editor.js` or `guest-view.js` so guest visits skip host setup; `manage.js` and `landing.js` are the entry modules of the tracker and the landing page.
+    - `tracker/` holds the DOM-free `coordinator.js` and `batch-parties.js` modules alongside one module for each section of the tracker. `public/js/tracker/sections.js` lists them with the modes that show each one. A new section adds its module, one entry in that list and its `<section>` element in `manage.html` and `ro/manage.html`, and `check-site.js` fails when the list and the pages disagree. `page.js` is the entry module of the occasion pages, the guides and the About page.
     - `icons.js` injects the inline SVG sprite.
     - `analytics.js` is a classic script that sets up the Vercel Web Analytics queue.
   - `css/` holds the styles, and `fonts/` holds the self-hosted fonts.
@@ -154,7 +156,7 @@ A guest cannot see other guests' replies or the totals.
   - `og-image.png`, `ro/og-image.png`, `favicon.svg` and `robots.txt` are the remaining site files.
 - `types/globals.d.ts` declares the types of the `htmlToImage` and analytics globals for the type check.
 - `api/index.js` is the Vercel Function for `/api/`, `/e/{id}` and `/ro/e/{id}` paths. Vercel requires it in `api/`.
-- `server/` holds the server code. `server/api.js` matches each `/api/` request to a route and turns refusals into error responses. `server/routes/` holds one route module each for invitations, passkeys, replies, retention and stats, `server/routes/index.js` lists them, and `server/routes/shared.js` holds the helpers they share. `server/webauthn.js` verifies passkey registrations and sign-ins with `node:crypto`, `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
+- `server/` holds the server code. `server/api.js` matches each `/api/` request to a route and turns refusals into error responses. `server/invitations.js` owns published invitation lookup, ended-invitation checks, host credential verification, republish merging and settings updates, and `server/parties.js` owns guest-list party lookup, link secret verification, reply hydration and lockstep version updates. `server/routes/` holds the HTTP route modules, `server/routes/index.js` lists them, and `server/routes/shared.js` holds request helpers. `server/webauthn.js` verifies passkey registrations and sign-ins with `node:crypto`, `server/event-page.js` serves the published invitations, `server/postgres.js` connects to Postgres, and `server/migrate.js` applies the SQL files in `server/migrations/`.
 - `scripts/` holds the scripts a developer runs:
   - `server.js` is the local server for `pnpm dev` and the browser tests.
   - `browser-port.js` picks the port that the browser tests run the server on.

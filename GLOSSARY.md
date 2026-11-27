@@ -72,7 +72,7 @@ _Avoid_ `comment`, and `note` for the invitation's own short text, which the edi
 
 **RSVP deadline**
 
-An optional calendar date set by the host in the tracker of a guest-list invitation, checked at 23:59 Europe/Bucharest time. After the deadline passes, guest replies, changes and withdrawals are refused and the personal link shows the reply read-only. Without a deadline, replies stay open until the invitation ends. The host can still edit a party's reply in the tracker after the deadline.
+An optional calendar date set by the host in the tracker of a guest-list invitation. Replies stay open through 23:59:59 Europe/Bucharest time on that date and close at 00:00 Europe/Bucharest time the next day. After the deadline passes, guest replies, changes and withdrawals are refused and the personal link shows the reply read-only. Without a deadline, replies stay open until the invitation ends. The host can still edit a party's reply in the tracker after the deadline.
 
 **Withdraw**
 

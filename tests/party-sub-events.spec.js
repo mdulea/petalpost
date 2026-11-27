@@ -73,7 +73,13 @@ for (const { lang, editor } of LANGS) {
     await expect(partyTotals).toHaveText([totals('Civil', { pending: 1 }), totals('Church', { pending: 1 })]);
 
     const personal = await radu.locator('input[readonly]').first().inputValue();
-    const preview = await radu.getByRole('link', { name: words.preview }).getAttribute('href');
+    const [previewPage] = await Promise.all([
+      host.page.context().waitForEvent('page'),
+      radu.getByRole('link', { name: words.preview }).click(),
+    ]);
+    await expect(previewPage.locator('.schedule-name')).toHaveText(['Civil']);
+    const preview = previewPage.url();
+    await previewPage.close();
     const guest = await newBrowser(browser);
     await guest.page.goto(personal);
     const form = guest.page.locator('#personalReply');

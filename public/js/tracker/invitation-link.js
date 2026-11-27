@@ -15,7 +15,7 @@ function init({ copy, lang, cred, signedIn, setStatus }) {
       window.prompt(copy.copyPrompt, input().value);
     }
   });
-  if (signedIn || !cred) return;
+  if (signedIn) return;
   for (const button of shareButtons()) {
     button.addEventListener('click', async () => {
       const url = manageLink(location.origin, cred.id, cred.secret, lang);

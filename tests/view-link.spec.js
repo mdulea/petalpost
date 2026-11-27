@@ -49,18 +49,30 @@ for (const lang of ['en', 'ro']) {
 
     const guest = await newBrowser(browser, options);
     await guest.page.addInitScript((useShareSheet) => {
+      const counts = /** @type {any} */ (window);
+      counts.signCalls = 0;
+      const originalSign = crypto.subtle.sign.bind(crypto.subtle);
+      crypto.subtle.sign = (...args) => {
+        counts.signCalls += 1;
+        return originalSign(...args);
+      };
       Object.defineProperty(navigator, 'share', {
         value: useShareSheet ? ({ url }) => navigator.clipboard.writeText(url) : undefined,
       });
     }, lang === 'en');
     await guest.page.goto(link);
     const form = guest.page.locator('#personalReply');
+    await expect(form).toBeVisible();
+    // Guest visits skip host template picker rendering and defer view-link derivation until share.
+    await expect(guest.page.locator('#picker .picker-item')).toHaveCount(0);
+    expect(await guest.page.evaluate(() => /** @type {any} */ (window).signCalls)).toBe(0);
     await form.locator('[name="note"]').fill('Fără nuci');
     await form.locator('button[type="submit"]').click();
     await expect(form.getByRole('status')).toHaveText(copy.sent);
 
     await guest.page.getByRole('button', { name: copy.showFriend }).click();
     await expect(guest.page.getByText(lang === 'en' ? copy.viewShared : copy.viewCopied)).toBeVisible();
+    expect(await guest.page.evaluate(() => /** @type {any} */ (window).signCalls)).toBe(1);
     const view = await guest.page.evaluate(() => navigator.clipboard.readText());
     expect(view).toMatch(/\/e\/[\w-]+#v=[\w-]+\.[\w-]+$/);
     const friend = await newBrowser(browser);

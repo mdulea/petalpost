@@ -1,52 +1,42 @@
-// The tracker section of a guest-list invitation's latest update. The host saves or removes one update, which the
-// personal links and view links show. With the management link, the queue lists one WhatsApp message per party with a
-// working personal link, in the party's language. A passkey sign-in can save the update but cannot build the links.
+// The tracker section of a guest-list invitation's latest update. Uses validateUpdateNotice from invite.js, runs writes
+// through page.runAction, and renders the WhatsApp queue synchronously from party.links.
 import { UI } from '../i18n.js';
-import { partyInviteLinks, UPDATE_NOTICE_LIMIT, updateMessage, whatsappUrl } from '../invite.js';
+import { UPDATE_NOTICE_LIMIT, updateMessage, validateUpdateNotice, whatsappUrl } from '../invite.js';
 
-// Counts renders, so a slower earlier render does not replace the queue of a later load.
-let renders = 0;
 // The update of the last load. A reload keeps text the host has typed since then.
 let saved = '';
 
 const text = () => /** @type {HTMLTextAreaElement} */ (document.getElementById('updateText'));
-
-function setStatus(message) {
+const setStatus = (message) => {
   document.getElementById('updateStatus').textContent = message;
-}
+};
 
-function init({ client, cred, lang, load }) {
+function init({ client, cred, lang, runAction }) {
   const words = UI[lang].partyUpdate;
   const form = /** @type {HTMLFormElement} */ (document.getElementById('updateForm'));
-  text().maxLength = UPDATE_NOTICE_LIMIT;
-  const save = async (updateNotice, done) => {
-    for (const control of form.elements) control.setAttribute('disabled', '');
-    setStatus('');
-    const result = await client.saveUpdate(cred, updateNotice);
-    for (const control of form.elements) control.removeAttribute('disabled');
-    if (!result.ok) {
-      setStatus(result.message);
-      return;
-    }
-    await load();
-    setStatus(done);
-  };
+  const save = (updateNotice, done) =>
+    runAction({
+      controls: form.elements,
+      setStatus,
+      action: () => client.saveUpdate(cred, updateNotice),
+      reload: 'ok',
+      afterReload: () => setStatus(done),
+    });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    const value = text().value.trim();
-    if (!value || value.length > UPDATE_NOTICE_LIMIT) {
+    const checked = validateUpdateNotice(text().value);
+    if (!checked.ok || checked.value === null) {
       setStatus(words.invalid(UPDATE_NOTICE_LIMIT));
       return;
     }
-    return save(value, words.saved);
+    return save(checked.value, words.saved);
   });
   document.getElementById('removeUpdate').addEventListener('click', () => {
     if (window.confirm(words.removeConfirm)) return save(null, words.removed);
   });
 }
 
-async function queueItem(party, updateNotice, cred, words) {
-  const { personal: link } = await partyInviteLinks(location.origin, cred, party);
+function queueItem(party, updateNotice, words) {
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
@@ -55,7 +45,7 @@ async function queueItem(party, updateNotice, cred, words) {
   language.textContent = words.language[party.lang];
   const whatsapp = document.createElement('a');
   whatsapp.className = 'btn btn-ghost btn-small';
-  whatsapp.href = whatsappUrl(updateMessage(party, updateNotice, link));
+  whatsapp.href = whatsappUrl(updateMessage(party, updateNotice, party.links.personal));
   whatsapp.target = '_blank';
   whatsapp.rel = 'noopener noreferrer';
   whatsapp.textContent = words.whatsapp;
@@ -64,8 +54,7 @@ async function queueItem(party, updateNotice, cred, words) {
   return row;
 }
 
-async function show({ parties, updateNotice = '' }, { cred, lang, signedIn }) {
-  const render = ++renders;
+function show({ parties, updateNotice = '' }, { lang, signedIn }) {
   if (text().value === saved) text().value = updateNotice;
   saved = updateNotice;
   document.getElementById('removeUpdate').hidden = !updateNotice;
@@ -76,9 +65,10 @@ async function show({ parties, updateNotice = '' }, { cred, lang, signedIn }) {
     return;
   }
   const words = UI[lang].guestList;
-  const linked = parties.filter((party) => !party.revoked);
-  const items = await Promise.all(linked.map((party) => queueItem(party, updateNotice, cred, words)));
-  if (render === renders) queue.replaceChildren(...items);
+  const items = parties
+    .filter((party) => !party.revoked && party.links)
+    .map((party) => queueItem(party, updateNotice, words));
+  queue.replaceChildren(...items);
 }
 
 export const section = { id: 'partyUpdate', modes: ['guestList'], init, show };

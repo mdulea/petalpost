@@ -105,11 +105,17 @@ for (const lang of ['en', 'ro']) {
     await expect(shown.getByRole('heading', { name: copy.heading })).toBeVisible();
     await expect(shown.locator('p')).toHaveText(update);
     await expect(guest.page.locator('#personalReply')).toBeVisible();
-    const view = await host.page
-      .locator('#partyList li')
-      .filter({ hasText: 'Familia Radu' })
-      .getByRole('link', { name: lang === 'en' ? 'Preview as this guest' : 'Previzualizează ca acest invitat' })
-      .getAttribute('href');
+    const [previewPage] = await Promise.all([
+      host.page.context().waitForEvent('page'),
+      host.page
+        .locator('#partyList li')
+        .filter({ hasText: 'Familia Radu' })
+        .getByRole('link', { name: lang === 'en' ? 'Preview as this guest' : 'Previzualizează ca acest invitat' })
+        .click(),
+    ]);
+    await expect(previewPage.locator('#personalSections #partyUpdate p')).toHaveText(update);
+    const view = previewPage.url();
+    await previewPage.close();
     const friend = await newBrowser(browser);
     await friend.page.goto(view);
     await expect(friend.page.locator('#personalSections #partyUpdate p')).toHaveText(update);

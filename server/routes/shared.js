@@ -1,5 +1,5 @@
-// The request helpers that every route module of server/api.js shares: refusals, JSON responses, secrets, bodies,
-// the owned event lookup and the action counts.
+// The request helpers that every route module of server/api.js shares: refusals, JSON responses, secrets, bodies
+// and the action counts.
 //
 // action_counts holds the totals of a fixed set of actions per UTC day and page language, and nothing else. addCount
 // runs inside the transaction that stores what it counts, so a refused or rolled-back request counts nothing.
@@ -58,35 +58,4 @@ export async function readBody(request) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Refusal(400, 'body');
   if (body.version !== undefined && !isVersion(body.version)) throw new Refusal(400, 'version');
   return body;
-}
-
-// True when the retention job deleted this guest-list invitation after its event.
-export async function isEnded(db, id) {
-  return (await db.query('select 1 from ended_events where id = $1', [id])).rows.length > 0;
-}
-
-// The event row after checking the credential: the management secret or, with token, an access token of a passkey
-// sign-in for this event. An expired token gets a 401. A lock holds the row until the transaction ends.
-/** @param {{ lock?: 'update' | 'key share' | false, token?: boolean }} [options] */
-export async function ownedEvent(tx, id, credential, options = {}) {
-  const { lock = 'update', token = true } = options;
-  const event = (
-    await tx.query(`select secret_hash, version, t, d from events where id = $1${lock ? ` for ${lock}` : ''}`, [id])
-  ).rows[0];
-  if (!event) {
-    const ended = await isEnded(tx, id);
-    throw new Refusal(ended ? 410 : 404, ended ? 'eventEnded' : 'eventMissing');
-  }
-  if (matches(credential, event.secret_hash)) return event;
-  if (token) {
-    const access = (
-      await tx.query('select expires_at > now() as live from access_tokens where token_hash = $1 and event_id = $2', [
-        hash(credential),
-        id,
-      ])
-    ).rows[0];
-    if (access?.live) return event;
-    if (access) throw new Refusal(401, 'signInExpired');
-  }
-  throw new Refusal(403, 'eventForbidden');
 }

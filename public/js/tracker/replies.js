@@ -3,10 +3,10 @@
 // menu options, the totals add the meals of each option, and each reply and the CSV add its meal counts.
 import { repliesCsv, repliesCsvName } from '../csv.js';
 import { menuLabels, subEventLabels } from '../invite.js';
-import { mealLine, mealTotals } from '../meal-choices.js';
+import { answerLine, mealLine } from '../reply-format.js';
 import { answerTo, subEventTally } from '../rsvp.js';
-import { answerLine, answerTotals } from '../sub-event-answers.js';
 import { downloadCsv } from './download.js';
+import { answerTotals, mealTotals } from './reply-summary.js';
 import { renderTotals } from './totals.js';
 
 // The replies of the last load, which the CSV download writes.

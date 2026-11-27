@@ -7,16 +7,22 @@ import { test } from 'node:test';
 import { Linter } from 'eslint';
 
 const DOM_FREE = [
+  'public/js/api-client.js',
   'public/js/countdown.js',
   'public/js/csv.js',
   'public/js/guest-list.js',
+  'public/js/guest-route.js',
   'public/js/i18n.js',
   'public/js/invite.js',
   'public/js/passkey.js',
+  'public/js/publish-recovery.js',
+  'public/js/reply-format.js',
   'public/js/rsvp.js',
   'public/js/seating.js',
   'public/js/templates.js',
   'public/js/templates-ro.js',
+  'public/js/tracker/batch-parties.js',
+  'public/js/tracker/coordinator.js',
 ];
 
 const linter = new Linter();

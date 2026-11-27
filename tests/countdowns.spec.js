@@ -88,9 +88,15 @@ for (const lang of ['en', 'ro']) {
     await guest.page.goto(link);
     const left = guest.page.locator('#personalDeadlineCountdown');
     await expect(left).toHaveText(copy.guest);
-    // At 00:00 after the deadline day in Bucharest, the countdown has ended.
-    await guest.page.clock.fastForward(5 * 24 * HOUR + 12 * HOUR);
+    // At 23:59:30 on the deadline day in Bucharest, the countdown and reply form are still open.
+    await guest.page.clock.fastForward(5 * 24 * HOUR + 11 * HOUR + 59 * 60 * 1000 + 30 * 1000);
+    await expect(left).not.toHaveText('');
+    await expect(guest.page.locator('#personalReply button[type="submit"]')).toBeVisible();
+    // Crossing 00:00 after the deadline day locks both the banner and the reply form mid-session.
+    await guest.page.clock.fastForward(60 * 1000);
     await expect(left).toHaveText('');
+    await expect(guest.page.locator('#personalReply button[type="submit"]')).toBeHidden();
+    await expect(guest.page.locator('#personalReply [name="partySize"]')).toBeDisabled();
 
     expect([...host.problems, ...tracker.problems, ...guest.problems]).toEqual([]);
   });

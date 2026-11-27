@@ -7,7 +7,8 @@
 // stored published event identity, the "My invitations" list, template switching, template ids, Romanian localization
 // coverage, the same UI string and API message keys in English and Romanian, the Romanian occasion order, Romanian-only
 // occasions kept out of the English catalog, 24-hour time formatting, the calendar file with its alarms, the report
-// link or the choice of when the Romanian language banner shows and where it links break.
+// link, the choice of when the Romanian language banner shows and where it links, or party update-notice validation
+// and party sub-event subset normalization break.
 // Run: pnpm exec node tests/check-invite.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -1200,4 +1201,30 @@ test('the Romanian language banner links the Romanian alternate only for Romania
   assert.equal(romanianBannerHref({ ...page, lang: 'ro' }), null);
   assert.equal(romanianBannerHref({ ...page, alternate: null }), null);
   assert.equal(romanianBannerHref({ ...page, closed: true }), null);
+});
+
+test('validateUpdateNotice normalizes line breaks, counts code points and rejects control characters', () => {
+  assert.deepEqual(invite.validateUpdateNotice(null), { ok: true, value: null });
+  assert.deepEqual(invite.validateUpdateNotice('  Line 1\r\nLine 2\r '), { ok: true, value: 'Line 1\nLine 2' });
+  const maxEmoji = '🎉'.repeat(invite.UPDATE_NOTICE_LIMIT);
+  assert.deepEqual(invite.validateUpdateNotice(maxEmoji), { ok: true, value: maxEmoji });
+  for (const bad of ['', '   ', `${maxEmoji}x`, 'a\tb', 'a\0b', 'a\x07b', '\uD800', 123, undefined]) {
+    assert.deepEqual(invite.validateUpdateNotice(bad), { ok: false, value: null });
+  }
+});
+
+test('normalizePartySubEvents validates subsets and stores all sub-events as the default empty list', () => {
+  const d = {
+    subEvents: [
+      { id: 'civil', name: 'Civil' },
+      { id: 'church', name: 'Church' },
+      { id: 'dinner', name: 'Dinner' },
+    ],
+  };
+  assert.deepEqual(invite.normalizePartySubEvents(d, ['dinner', 'civil']), ['civil', 'dinner']);
+  assert.deepEqual(invite.normalizePartySubEvents(d, ['dinner', 'civil', 'church']), []);
+  for (const bad of [[], ['unknown'], ['civil', 'civil'], ['civil', 'unknown'], null, 'civil']) {
+    assert.equal(invite.normalizePartySubEvents(d, bad), null);
+  }
+  assert.equal(invite.normalizePartySubEvents({}, ['1']), null);
 });

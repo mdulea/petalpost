@@ -17,8 +17,9 @@
 // expired over a day before. Every failed WebAuthn check gets the same
 // 400, and a passkey that no invitation has, such as one of a deleted invitation, gets a 404.
 import { randomBytes } from 'node:crypto';
+import { verifyHost } from '../invitations.js';
 import { verifyRegistration, verifySignIn } from '../webauthn.js';
-import { bearer, hash, json, ownedEvent, readBody, Refusal } from './shared.js';
+import { bearer, hash, json, readBody, Refusal } from './shared.js';
 
 export const CHALLENGE_MINUTES = 5;
 export const TOKEN_MINUTES = 60;
@@ -81,7 +82,7 @@ async function consumeChallenge(tx, challenge, eventId) {
 async function registrationChallenge({ db, request, ids: [id] }) {
   const secret = bearer(request);
   await readBody(request);
-  await ownedEvent(db, id, secret, { lock: false, token: false });
+  await verifyHost(db, id, secret, { lock: false, token: false });
   return issueChallenge(db, id);
 }
 
@@ -89,7 +90,7 @@ async function savePasskey({ db, request, ids: [id] }) {
   const secret = bearer(request);
   const body = await readBody(request);
   return db.transaction(async (tx) => {
-    await ownedEvent(tx, id, secret, { token: false });
+    await verifyHost(tx, id, secret, { token: false });
     const passkey = verifyFields(body, ['clientDataJSON', 'attestationObject'], (fields) =>
       verifyRegistration(fields, relyingParty(request)),
     );
@@ -110,7 +111,7 @@ async function savePasskey({ db, request, ids: [id] }) {
 async function listPasskeys({ db, request, ids: [id] }) {
   const secret = bearer(request);
   return db.transaction(async (tx) => {
-    await ownedEvent(tx, id, secret, { lock: 'key share' });
+    await verifyHost(tx, id, secret, { lock: 'key share' });
     const { rows } = await tx.query('select id, created_at from passkeys where event_id = $1 order by created_at, id', [
       id,
     ]);
@@ -127,7 +128,7 @@ async function removePasskey({ db, request, ids: [id] }) {
   if (typeof credentialId !== 'string' || !BASE64URL.test(credentialId)) throw new Refusal(400, 'passkey');
   return db.transaction(async (tx) => {
     // Sign-in also needs a key-share lock on the invitation when it writes the access token.
-    await ownedEvent(tx, id, secret, { lock: 'key share', token: false });
+    await verifyHost(tx, id, secret, { lock: 'key share', token: false });
     await tx.query('delete from passkeys where event_id = $1 and id = $2', [id, credentialId]);
     return json(204, null);
   });

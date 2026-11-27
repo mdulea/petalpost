@@ -8,10 +8,10 @@
 import { apiMessages, normalizeLang } from '../public/js/i18n.js';
 import { UPDATE_NOTICE_LIMIT } from '../public/js/invite.js';
 import { ID_PATTERN, PARTY_LIMITS, REPLY_LIMITS } from '../public/js/rsvp.js';
-import { DAILY_EVENTS } from './routes/events.js';
+import { DAILY_EVENTS } from './invitations.js';
+import { EVENT_RESPONSES } from './parties.js';
 import { ROUTES } from './routes/index.js';
 import { EVENT_PASSKEYS } from './routes/passkeys.js';
-import { EVENT_RESPONSES } from './routes/replies.js';
 import { json, Refusal } from './routes/shared.js';
 
 const LIMITS = {

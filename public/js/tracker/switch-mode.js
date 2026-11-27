@@ -2,19 +2,21 @@
 // can switch, so a passkey sign-in sees no button.
 import { UI } from '../i18n.js';
 
-function init({ lang, client, cred, load, signedIn }) {
+function init({ lang, client, cred, signedIn, runAction }) {
   const button = /** @type {HTMLButtonElement} */ (document.getElementById('switchToGuestList'));
   button.hidden = signedIn;
   const status = document.getElementById('switchModeStatus');
   const words = UI[lang].guestList;
-  button.addEventListener('click', async () => {
+  button.addEventListener('click', () => {
     if (!window.confirm(words.switchConfirm)) return;
-    button.disabled = true;
-    status.textContent = '';
-    const result = await client.switchMode(cred, 'guestList');
-    button.disabled = false;
-    if (result.ok) await load();
-    else status.textContent = result.message;
+    return runAction({
+      controls: [button],
+      setStatus: (text) => {
+        status.textContent = text;
+      },
+      action: () => client.switchMode(cred, 'guestList'),
+      reload: 'ok',
+    });
   });
 }
 

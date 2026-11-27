@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { newId, partyLinkSecret } from '../public/js/rsvp.js';
-import { host, party, setup } from './api-setup.js';
+import { guestListEvent, host, party } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
 
 const CLOSED_MESSAGE = {
@@ -14,16 +14,19 @@ const CLOSED_MESSAGE = {
 };
 
 async function guestListSetup(clock, lang = 'en') {
-  const { client, raw } = await setup(undefined, { now: () => clock.current });
-  const cred = host();
-  const tracker = client(newId(), lang);
-  const guest = client(newId(), lang);
-  const created = await tracker.publish(cred, { ...party, d: { ...party.d, mode: 'guestList' } });
-  assert.equal(created.status, 201);
-  cred.version = created.data.version;
-  const partyId = newId();
-  assert.equal((await tracker.addParty(cred, partyId, { name: 'Familia Radu', defaultSeats: 3 })).status, 201);
-  const personal = { id: partyId, secret: await partyLinkSecret(cred.secret, partyId, 'personal') };
+  const {
+    client,
+    raw,
+    cred,
+    tracker,
+    guests: guest,
+    parties,
+  } = await guestListEvent({
+    options: { now: () => clock.current },
+    lang,
+    parties: ['Familia Radu'],
+  });
+  const [{ id: partyId, personal }] = parties;
   return { client, raw, cred, tracker, guest, partyId, personal };
 }
 
