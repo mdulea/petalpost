@@ -224,7 +224,7 @@ The RSVP and site checks run the API against an in-memory PGlite database.
 It does not run the type check or the browser tests.
 
 `test:browser` starts `scripts/server.js` with an in-memory database and runs the Playwright tests in Chromium. It runs the layout tests and the tests tagged `@webkit` in WebKit too, because Safari sizes date and time inputs differently. The tagged tests check the focus and error descriptions of the reply form in Safari.
-WebKit spreads its tests over at most 4 workers, so the layout tests finish in about 2 minutes.
+WebKit spreads its tests over at most 4 workers, so the layout tests finish in about 2 minutes. CI keeps them on one worker, because its 4 cores slow two WebKit workers past the test timeouts.
 Before the first run, install the browsers with `pnpm exec playwright install chromium webkit`.
 The main checkout and CI run the server on port 4321.
 Each worktree runs it on a port between 4400 and 4999 that is derived from the worktree's path, so worktrees can run their browser checks at the same time, and a worktree gets the same port on every run.
