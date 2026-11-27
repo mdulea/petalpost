@@ -2,8 +2,10 @@
 // in local time; days counted in calendar days, including across a daylight saving change; hours, rounded up, on the
 // event's day and in the last 24 hours, including a 23-hour and a 25-hour day; nothing without a date or once the event
 // starts; the English and Romanian countdown text with Romanian plural forms; RSVP deadline date validation and
-// Europe/Bucharest midnight checks across winter and summer time; the last minute of the RSVP deadline and the start of
-// the deletion at 23:59 Europe/Bucharest time in winter and summer, whatever the runtime's time zone; the tracker's
+// Europe/Bucharest midnight checks across winter and summer time; the RSVP deadline closing at 00:00 Europe/Bucharest
+// time on the next day and the deletion starting at 23:59 Europe/Bucharest time on the day after the event in winter
+// and summer, whatever the runtime's time zone, with deadline countdown and isDeadlinePassed flipping at the exact
+// same instant across midnight and daylight saving changes; the tracker's
 // deadline countdown until the deadline passes, and its nudge in the last 7 days while a party has not replied; the
 // deletion countdown, counted from the latest sub-event date when there is one, and its nudge in the last 3 days and
 // until the retention run deletes the list; the English and Romanian countdown and nudge text.
@@ -14,8 +16,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 process.env.TZ = 'Europe/Bucharest';
-const { bucharestDate, countdown, deadlineEnd, deletionStart, eventStart, isDeadlinePassed, isValidDate, trackerDue } =
-  await import('../public/js/countdown.js');
+const {
+  bucharestDate,
+  countdown,
+  deadlineCountdown,
+  deadlineEnd,
+  deletionStart,
+  eventStart,
+  isDeadlinePassed,
+  isValidDate,
+  trackerDue,
+} = await import('../public/js/countdown.js');
 const { UI } = await import('../public/js/i18n.js');
 
 const left = (date, time, now) => countdown(eventStart({ date, time }), new Date(now));
@@ -112,9 +123,14 @@ test('the RSVP deadline closes after 23:59 Europe/Bucharest time in winter and s
   assert.equal(isDeadlinePassed('2026-01-15', new Date('2026-01-15T22:00:00Z')), true);
 });
 
-test('the deadline ends and the deletion starts at 23:59 Europe/Bucharest time in winter and summer', () => {
-  assert.equal(deadlineEnd('2026-06-15').toISOString(), '2026-06-15T20:59:00.000Z');
-  assert.equal(deadlineEnd('2026-01-15').toISOString(), '2026-01-15T21:59:00.000Z');
+test('the deadline ends at 00:00 the next day and the deletion starts at 23:59 the day after the event in Europe/Bucharest time', () => {
+  assert.equal(deadlineEnd('2026-06-15').toISOString(), '2026-06-15T21:00:00.000Z');
+  assert.equal(deadlineEnd('2026-01-15').toISOString(), '2026-01-15T22:00:00.000Z');
+  // Across the spring (29 March) and autumn (25 October) daylight saving changes.
+  assert.equal(deadlineEnd('2026-03-28').toISOString(), '2026-03-28T22:00:00.000Z');
+  assert.equal(deadlineEnd('2026-03-29').toISOString(), '2026-03-29T21:00:00.000Z');
+  assert.equal(deadlineEnd('2026-10-24').toISOString(), '2026-10-24T21:00:00.000Z');
+  assert.equal(deadlineEnd('2026-10-25').toISOString(), '2026-10-25T22:00:00.000Z');
   // The deletion starts on the day after the event, here the first day of summer time and of winter time.
   assert.equal(deletionStart('2026-03-28').toISOString(), '2026-03-29T20:59:00.000Z');
   assert.equal(deletionStart('2026-10-24').toISOString(), '2026-10-25T21:59:00.000Z');
@@ -122,6 +138,29 @@ test('the deadline ends and the deletion starts at 23:59 Europe/Bucharest time i
   for (const bad of [undefined, '', '2026-02-30']) {
     assert.equal(deadlineEnd(bad), null);
     assert.equal(deletionStart(bad), null);
+  }
+});
+
+test('the deadline countdown and isDeadlinePassed flip at the exact same Europe/Bucharest instant across midnight and DST', () => {
+  for (const [deadline, boundaryIso] of [
+    ['2026-06-15', '2026-06-15T21:00:00.000Z'],
+    ['2026-01-15', '2026-01-15T22:00:00.000Z'],
+    ['2026-03-28', '2026-03-28T22:00:00.000Z'],
+    ['2026-03-29', '2026-03-29T21:00:00.000Z'],
+    ['2026-10-24', '2026-10-24T21:00:00.000Z'],
+    ['2026-10-25', '2026-10-25T22:00:00.000Z'],
+  ]) {
+    const boundary = new Date(boundaryIso);
+    // 23:59:30 and 23:59:59.999 stay open for both the server check and the countdown.
+    const duringLastMinute = new Date(boundary.getTime() - 30_000);
+    const lastMs = new Date(boundary.getTime() - 1);
+    assert.equal(isDeadlinePassed(deadline, duringLastMinute), false, deadline);
+    assert.deepEqual(deadlineCountdown(deadline, duringLastMinute), { unit: 'hours', count: 1 }, deadline);
+    assert.equal(isDeadlinePassed(deadline, lastMs), false, deadline);
+    assert.deepEqual(deadlineCountdown(deadline, lastMs), { unit: 'hours', count: 1 }, deadline);
+    // At 00:00:00 the next day, both flip simultaneously.
+    assert.equal(isDeadlinePassed(deadline, boundary), true, deadline);
+    assert.equal(deadlineCountdown(deadline, boundary), null, deadline);
   }
 });
 
@@ -134,7 +173,7 @@ test('the deadline and deletion moments do not depend on the runtime time zone',
       env: { ...process.env, TZ },
       encoding: 'utf8',
     });
-    assert.equal(output.trim(), '2026-06-15T20:59:00.000Z 2026-01-16T21:59:00.000Z', TZ);
+    assert.equal(output.trim(), '2026-06-15T21:00:00.000Z 2026-01-16T21:59:00.000Z', TZ);
   }
 });
 
@@ -143,9 +182,10 @@ const due = (d, pending, now) => trackerDue(d, pending, new Date(now));
 test('the tracker counts down to the deadline until it passes', () => {
   const d = { date: '2026-12-20', deadline: '2026-12-10' };
   assert.deepEqual(due(d, 0, '2026-11-26T10:00:00Z').deadline, { left: { unit: 'days', count: 14 }, nudge: false });
-  // 23:00 on the deadline day leaves 59 minutes, shown as 1 hour.
+  // 23:00 on the deadline day leaves 1 hour; 23:59:30 still leaves 1 hour rounded up; 00:00 the next day closes it.
   assert.deepEqual(due(d, 0, '2026-12-10T21:00:00Z').deadline, { left: { unit: 'hours', count: 1 }, nudge: false });
-  assert.equal(due(d, 0, '2026-12-10T21:59:00Z').deadline, null);
+  assert.deepEqual(due(d, 0, '2026-12-10T21:59:30Z').deadline, { left: { unit: 'hours', count: 1 }, nudge: false });
+  assert.equal(due(d, 0, '2026-12-10T22:00:00Z').deadline, null);
   assert.equal(due({ date: '2026-12-20' }, 3, '2026-11-26T10:00:00Z').deadline, null);
 });
 

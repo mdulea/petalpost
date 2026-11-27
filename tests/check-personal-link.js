@@ -8,13 +8,17 @@
 // Only a host credential can set a bounded update, and only on a guest-list invitation. The update reaches the tracker,
 // personal link and view link reads but not the public read, survives a concurrent publish, and the host removes it.
 // Saving an update keeps the invitation version and moves the last change time.
+// Missing-party host actions (link change, host reply edit, table assignment) return 404 partyMissing rather than the
+// guest personal-link error, open-mode invitations refuse host party mutations with 403, editor republish preserves all
+// tracker settings (mode, deadline, updateNotice, seatingPublished), and tracker snapshot reads tolerate concurrent
+// party edits while backfilling older view hashes.
 // Run: pnpm exec node --test tests/check-personal-link.js
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { test } from 'node:test';
 import { partyTotals } from '../public/js/guest-list.js';
 import { newId, partyLinkSecret, partyStatus, readCredential, viewLink, viewLinkSecret } from '../public/js/rsvp.js';
-import { host, party, setup } from './api-setup.js';
+import { guestListEvent, host, party, setup } from './api-setup.js';
 import { authenticator } from './passkey-authenticator.js';
 
 test('only a host can set a bounded update on a guest-list invitation', async () => {
@@ -34,12 +38,14 @@ test('only a host can set a bounded update on a guest-list invitation', async ()
       body: JSON.stringify({ updateNotice }),
     });
   assert.equal((await patch('x'.repeat(500))).status, 204);
+  assert.equal((await patch('🎉'.repeat(500))).status, 204);
   const tooLong = await tracker.saveUpdate(cred, 'x'.repeat(501));
   assert.deepEqual([tooLong.status, tooLong.message], [400, 'Enter an update of 1 to 500 characters.']);
-  for (const invalid of ['', '   ', 1, '\0', '\uD800', undefined]) assert.equal((await patch(invalid)).status, 400);
+  for (const invalid of ['', '   ', '🎉'.repeat(501), 'a\tb', 'a\x07b', 1, '\0', '\uD800', undefined])
+    assert.equal((await patch(invalid)).status, 400);
   assert.equal((await tracker.saveUpdate({ ...cred, secret }, 'Guest text')).status, 403);
   assert.equal((await tracker.saveUpdate(open, 'Open invitation text')).status, 403);
-  assert.equal((await tracker.loadResponses(cred)).data.updateNotice, 'x'.repeat(500));
+  assert.equal((await tracker.loadResponses(cred)).data.updateNotice, '🎉'.repeat(500));
 });
 
 test('saving an update keeps the invitation version and moves the last change time', async () => {
@@ -548,3 +554,74 @@ for (const lang of ['en', 'ro']) {
     assert.match(overCap.message, /20/);
   });
 }
+
+test('missing-party host actions return partyMissing 404 and open-mode invitations refuse host party mutations with 403', async () => {
+  const { tracker, cred } = await guestListEvent({ parties: ['Sam'] });
+  const missingId = newId();
+  const missingMsg = 'The party is no longer on the guest list.';
+  for (const res of [
+    await tracker.changePartyLink(cred, missingId, 'regenerate'),
+    await tracker.saveHostPartyReply(cred, missingId, { attending: true, partySize: 2, note: '' }),
+    await tracker.assignParty(cred, missingId, null),
+    await tracker.renameParty(cred, missingId, 'New name'),
+  ]) {
+    assert.deepEqual([res.status, res.message], [404, missingMsg]);
+  }
+
+  const { client } = await setup();
+  const open = host();
+  const owner = client();
+  await owner.publish(open, party);
+  for (const res of [
+    await owner.changePartyLink(open, missingId, 'revoke'),
+    await owner.renameParty(open, missingId, 'New name'),
+    await owner.deleteParty(open, missingId),
+  ]) {
+    assert.equal(res.status, 403);
+  }
+});
+
+test('editor republish preserves mode, deadline, updateNotice and seatingPublished together', async () => {
+  const { tracker, cred, invite } = await guestListEvent({ parties: ['Sam'] });
+  assert.equal((await tracker.setDeadline(cred, '2026-08-01')).status, 200);
+  assert.equal((await tracker.saveUpdate(cred, 'Meet at gate B.')).status, 204);
+  assert.equal((await tracker.setSeatingPublished(cred, true)).status, 200);
+
+  const republished = await tracker.publish(cred, {
+    ...invite,
+    d: { ...invite.d, mode: 'open', title: 'Edited title' },
+  });
+  assert.equal(republished.status, 200);
+  const { data } = await tracker.loadResponses(cred);
+  assert.deepEqual(
+    {
+      title: data.d.title,
+      mode: data.d.mode,
+      deadline: data.d.deadline,
+      seatingPublished: data.d.seatingPublished,
+      updateNotice: data.updateNotice,
+    },
+    {
+      title: 'Edited title',
+      mode: 'guestList',
+      deadline: '2026-08-01',
+      seatingPublished: true,
+      updateNotice: 'Meet at gate B.',
+    },
+  );
+});
+
+test('tracker snapshot reads succeed alongside concurrent party edits and still backfill legacy view hashes', async () => {
+  const { db, tracker, guests, cred, parties } = await guestListEvent({ parties: ['Radu', 'Dima'] });
+  const [radu, dima] = parties;
+  const legacyView = await partyLinkSecret(cred.secret, radu.id, 'view');
+  await db.query('update parties set view_hash = $1 where id = $2', [hash(legacyView), radu.id]);
+
+  const [readResult, editResult] = await Promise.all([
+    tracker.loadResponses(cred),
+    tracker.renameParty(cred, dima.id, 'Familia Dima'),
+  ]);
+  assert.deepEqual([readResult.status, editResult.status], [200, 204]);
+  const preview = await guests.loadPartyView(cred.id, radu.view);
+  assert.deepEqual([preview.status, preview.data.name], [200, 'Radu']);
+});

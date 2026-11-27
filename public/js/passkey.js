@@ -5,10 +5,7 @@
 // {eventId, token, expiresAt} for findInvitation. A passkey is a discoverable credential with user verification,
 // so the browser asks for Face ID, a fingerprint, Windows Hello or the device PIN, and a sign-in needs no invitation.
 import { UI, normalizeLang } from './i18n.js';
-import { toBase64url } from './rsvp.js';
-
-const fromBase64url = (text) =>
-  Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+import { fromBase64url, toBase64url } from './rsvp.js';
 
 // The ES256 and RS256 algorithms that server/webauthn.js verifies.
 const ALGORITHMS = [-7, -257];

@@ -1,10 +1,34 @@
-// Checks seat counts from accepting replies, table edits, assignment, removal, invitation ownership, and publishing
-// and unpublishing the plan, which shows each party its table on the personal link only.
+// Checks table validation (trimmed code-point length, control characters, integer capacity), seat counts from accepting
+// replies, table edits, assignment, removal, invitation ownership, and publishing and unpublishing the plan, which
+// shows each party its table on the personal link only.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { newId, partyLinkSecret, viewLinkSecret } from '../public/js/rsvp.js';
-import { tableSeats } from '../public/js/seating.js';
+import { makeTable, TABLE_LIMITS, tableSeats } from '../public/js/seating.js';
 import { host, party, setup } from './api-setup.js';
+
+test('makeTable accepts trimmed names within code-point limits and integer capacities, and rejects invalid tables', () => {
+  assert.deepEqual(makeTable({ name: '  Window 1  ', capacity: 6 }), { name: 'Window 1', capacity: 6 });
+  assert.deepEqual(makeTable({ name: '🎉'.repeat(TABLE_LIMITS.name), capacity: TABLE_LIMITS.capacity }), {
+    name: '🎉'.repeat(TABLE_LIMITS.name),
+    capacity: TABLE_LIMITS.capacity,
+  });
+  for (const bad of [
+    null,
+    { name: '   ', capacity: 4 },
+    { name: '🎉'.repeat(TABLE_LIMITS.name + 1), capacity: 4 },
+    { name: 'Table\n1', capacity: 4 },
+    { name: 'Table\t1', capacity: 4 },
+    { name: 7, capacity: 4 },
+    { name: 'Window', capacity: 0 },
+    { name: 'Window', capacity: -1 },
+    { name: 'Window', capacity: 2.5 },
+    { name: 'Window', capacity: '4' },
+    { name: 'Window', capacity: TABLE_LIMITS.capacity + 1 },
+  ]) {
+    assert.equal(makeTable(bad), null);
+  }
+});
 
 test('table seats count accepting replies and show how many seats are free or over capacity', () => {
   const parties = [

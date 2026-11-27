@@ -1,12 +1,11 @@
 // Lists parties without a reply and marks the WhatsApp links opened in this tab's session.
+// Reads each active party's pre-derived personal link from party.links synchronously.
 import { UI } from '../i18n.js';
-import { partyInviteLinks, reminderMessage, whatsappUrl } from '../invite.js';
+import { reminderMessage, whatsappUrl } from '../invite.js';
 import { renderTotals } from './totals.js';
 
 // Keys of reminders opened in this tab. Memory keeps them through tracker refreshes if storage is blocked.
 const opened = new Set();
-// Counts show calls, so a slower earlier render never replaces the rows of a later one.
-let latestShow = 0;
 
 // Records that the host opened the reminder keyed by invitation and party. Stores only a marker.
 function markReminderOpened(key) {
@@ -27,7 +26,7 @@ function isReminderOpened(key) {
   }
 }
 
-async function renderParty(party, { cred, signedIn }, words) {
+function renderParty(party, { cred, signedIn }, words) {
   const row = document.createElement('li');
   row.className = 'reply';
   const name = document.createElement('strong');
@@ -37,11 +36,10 @@ async function renderParty(party, { cred, signedIn }, words) {
     const status = document.createElement('span');
     status.textContent = words.revoked;
     row.append(status);
-  } else if (!signedIn) {
-    const { personal } = await partyInviteLinks(location.origin, cred, party);
+  } else if (!signedIn && party.links) {
     const link = document.createElement('a');
     link.className = 'btn btn-ghost btn-small';
-    link.href = whatsappUrl(reminderMessage(party, personal));
+    link.href = whatsappUrl(reminderMessage(party, party.links.personal));
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.textContent = words.remind;
@@ -61,12 +59,10 @@ async function renderParty(party, { cred, signedIn }, words) {
   return row;
 }
 
-async function show({ parties }, page) {
-  const request = ++latestShow;
+function show({ parties }, page) {
   const pending = parties.filter((party) => !party.reply);
   const words = UI[page.lang].guestList;
-  const rows = await Promise.all(pending.map((party) => renderParty(party, page, words)));
-  if (request !== latestShow) return;
+  const rows = pending.map((party) => renderParty(party, page, words));
   document.getElementById('reminderManagementLinkRequired').hidden = !page.signedIn || pending.length === 0;
   renderTotals(document.getElementById('reminderCount'), [[pending.length, words.pendingParties(pending.length)]]);
   document.getElementById('reminderList').replaceChildren(...rows);

@@ -1,10 +1,14 @@
 // Edits tables in the tracker, lists each table's parties, publishes or unpublishes the seating plan, and provides
-// the picker and drag handle used in each party row. Dropping a party on a table assigns it as the picker does.
-// Party drags carry the party id as PARTY_TYPE data.
+// the picker and drag handle used in each party row. All writes run through page.runAction and report status in
+// #seatingStatus rather than mutating the guest-list status element.
 import { UI } from '../i18n.js';
 import { animate } from '../motion.js';
 import { newId } from '../rsvp.js';
-import { isSeatingPublished, TABLE_LIMITS } from '../seating.js';
+import { isSeatingPublished, makeTable, TABLE_LIMITS } from '../seating.js';
+
+const setStatus = (message) => {
+  document.getElementById('seatingStatus').textContent = message;
+};
 
 function field(labelText, control) {
   const container = document.createElement('div');
@@ -25,10 +29,10 @@ function submitButton(text, primary = false) {
   return button;
 }
 
-function tableForm({ client, cred, lang, load }, table) {
+function tableForm({ client, cred, lang, runAction }, table) {
   const words = UI[lang].seating;
-  const status = document.getElementById('seatingStatus');
   const form = document.createElement('form');
+  form.noValidate = true;
   const name = document.createElement('input');
   name.id = `table-name-${table?.id ?? 'new'}`;
   name.required = true;
@@ -55,23 +59,32 @@ function tableForm({ client, cred, lang, load }, table) {
     event.preventDefault();
     const deleting = event.submitter === remove;
     if (deleting && !window.confirm(words.removeConfirm)) return;
-    for (const control of form.elements) control.setAttribute('disabled', '');
-    status.textContent = '';
-    const result = deleting
-      ? await client.removeTable(cred, pendingId, table.version)
-      : await client.saveTable(cred, pendingId, {
-          name: name.value,
-          capacity: capacity.valueAsNumber,
-          version: table?.version,
-        });
-    if (!result.ok) status.textContent = result.message;
-    if (result.ok && !table) {
-      pendingId = newId();
-      form.reset();
+    let validated = null;
+    if (!deleting) {
+      validated = makeTable({ name: name.value, capacity: capacity.valueAsNumber });
+      if (!validated) {
+        setStatus(words.invalid);
+        return;
+      }
     }
-    if (result.ok || result.status === 409 || result.status === 404) await load();
-    for (const control of form.elements) control.removeAttribute('disabled');
-    (document.getElementById(name.id) ?? document.getElementById('table-name-new'))?.focus();
+    await runAction({
+      controls: form.elements,
+      setStatus,
+      action: () =>
+        deleting
+          ? client.removeTable(cred, pendingId, table.version)
+          : client.saveTable(cred, pendingId, { ...validated, version: table?.version }),
+      reload: 'change',
+      onResult: (result) => {
+        if (result.ok && !table) {
+          pendingId = newId();
+          form.reset();
+        }
+      },
+      afterUnlock: () => {
+        (document.getElementById(name.id) ?? document.getElementById('table-name-new'))?.focus();
+      },
+    });
   });
   return form;
 }
@@ -79,14 +92,16 @@ function tableForm({ client, cred, lang, load }, table) {
 const PARTY_TYPE = 'application/x-petalpost-party';
 const LANDING = [{ transform: 'scale(1.02)' }, { transform: 'none' }];
 
-// Saves the party's table, or null to unassign it, then reloads the tracker. Returns whether the save succeeded.
-async function assign({ client, cred, load }, partyId, tableId) {
-  const status = document.getElementById('partyStatus');
-  status.textContent = '';
-  const result = await client.assignParty(cred, partyId, tableId);
-  if (!result.ok) status.textContent = result.message;
-  if (result.ok || result.status === 404) await load();
-  return result.ok;
+// Saves the party's table, or null to unassign it, through the serialized tracker coordinator.
+async function assign(page, controls, partyId, tableId, afterUnlock) {
+  const result = await page.runAction({
+    controls,
+    setStatus,
+    action: () => page.client.assignParty(page.cred, partyId, tableId),
+    reload: 'change',
+    afterUnlock,
+  });
+  return Boolean(result?.ok);
 }
 
 // Makes the element a drag handle for the party. Touch and keyboard users seat parties with the picker.
@@ -111,12 +126,11 @@ export function tablePicker(party, tables, page) {
   select.value = tables.some((table) => table.id === party.tableId) ? party.tableId : '';
   const submit = submitButton(words.move);
   form.append(field(words.picker, select), submit);
-  form.addEventListener('submit', async (event) => {
+  form.addEventListener('submit', (event) => {
     event.preventDefault();
-    select.disabled = submit.disabled = true;
-    await assign(page, party.id, select.value || null);
-    select.disabled = submit.disabled = false;
-    document.getElementById(select.id)?.focus();
+    return assign(page, [select, submit], party.id, select.value || null, () => {
+      document.getElementById(select.id)?.focus();
+    });
   });
   return form;
 }
@@ -127,17 +141,16 @@ let published = false;
 function init(page) {
   document.getElementById('addTable').append(tableForm(page));
   document.getElementById('printSeating').addEventListener('click', () => window.print());
-  const { client, cred, load } = page;
+  const { client, cred, runAction } = page;
   const button = /** @type {HTMLButtonElement} */ (document.getElementById('publishSeating'));
-  const status = document.getElementById('seatingStatus');
-  button.addEventListener('click', async () => {
-    button.disabled = true;
-    status.textContent = '';
-    const result = await client.setSeatingPublished(cred, !published);
-    if (!result.ok) status.textContent = result.message;
-    else await load();
-    button.disabled = false;
-  });
+  button.addEventListener('click', () =>
+    runAction({
+      controls: [button],
+      setStatus,
+      action: () => client.setSeatingPublished(cred, !published),
+      reload: 'ok',
+    }),
+  );
 }
 
 // The party's name with its accepted seats, its decline or its missing reply, as the printed plan lists it.
@@ -200,7 +213,7 @@ function dropTarget(row, table, page) {
     if (!carriesParty(event)) return;
     event.preventDefault();
     row.classList.remove('drop-target');
-    if (!(await assign(page, event.dataTransfer.getData(PARTY_TYPE), table.id))) return;
+    if (!(await assign(page, [], event.dataTransfer.getData(PARTY_TYPE), table.id))) return;
     const landed = document.querySelector(`#seatingTables > [data-table-id="${table.id}"]`);
     if (landed) animate([landed], LANDING, { duration: 240, easing: 'ease-out' });
   });

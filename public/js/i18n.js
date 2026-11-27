@@ -265,6 +265,7 @@ export const UI = {
       unpublished: 'Guests do not see their table yet.',
       published: 'Guests see their table on their personal link.',
       guestHeading: 'Your table',
+      invalid: 'Enter a name and a valid number of seats for the table.',
     },
     guestList: {
       invalidName: (max) => `Enter a name of up to ${max} characters on each line.`,
@@ -590,6 +591,7 @@ export const UI = {
       unpublished: 'Invitații nu își văd încă masa.',
       published: 'Invitații își văd masa pe linkul personal.',
       guestHeading: 'Masa ta',
+      invalid: 'Introdu un nume și un număr valid de locuri pentru masă.',
     },
     guestList: {
       invalidName: (max) => `Introdu un nume de cel mult ${max} de caractere pe fiecare rând.`,
@@ -888,7 +890,7 @@ export function apiMessages(
       deadline: 'Alege o dată calendaristică validă pentru termenul de confirmare.',
       deadlineMode: 'Doar invitațiile cu listă de invitați pot avea un termen de confirmare.',
       deadlinePassed: 'Confirmările sunt închise deoarece termenul de confirmare a trecut.',
-      table: 'Introdu un nume și un număr valid de locuri pentru masă.',
+      table: UI.ro.seating.invalid,
       tableMode: 'Mesele sunt disponibile doar pentru invitațiile cu listă de invitați.',
       tableMissing: 'Masa nu mai este disponibilă.',
       tableChanged: 'Masa a fost modificată. Verifică detaliile actuale.',
@@ -943,7 +945,7 @@ export function apiMessages(
     deadline: 'Choose a valid calendar date for the RSVP deadline.',
     deadlineMode: 'Only guest-list invitations can have an RSVP deadline.',
     deadlinePassed: 'Replies are closed because the RSVP deadline has passed.',
-    table: 'Enter a name and a valid number of seats for the table.',
+    table: UI.en.seating.invalid,
     tableMode: 'Tables are available only for guest-list invitations.',
     tableMissing: 'The table is no longer available.',
     tableChanged: 'The table changed. Check its current details.',

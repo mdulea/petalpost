@@ -3,7 +3,7 @@ import { isDeadlinePassed } from '../countdown.js';
 import { UI } from '../i18n.js';
 import { formatDate } from '../templates.js';
 
-function init({ client, cred, lang, signedIn, load }) {
+function init({ client, cred, lang, signedIn, runAction }) {
   const form = /** @type {HTMLFormElement} */ (document.getElementById('deadlineForm'));
   const clear = /** @type {HTMLButtonElement} */ (document.getElementById('clearDeadline'));
   const status = document.getElementById('deadlineStatus');
@@ -12,23 +12,19 @@ function init({ client, cred, lang, signedIn, load }) {
   if (signedIn) return;
   const input = /** @type {HTMLInputElement} */ (document.getElementById('deadlineDate'));
   const words = UI[lang].deadline;
-  let busy = false;
 
-  async function save(value) {
-    if (busy) return;
-    busy = true;
-    for (const control of form.elements) control.setAttribute('disabled', '');
-    status.textContent = '';
-    const result = await client.setDeadline(cred, value);
-    for (const control of form.elements) control.removeAttribute('disabled');
-    busy = false;
-    if (!result.ok) {
-      status.textContent = result.message;
-      return;
-    }
-    status.textContent = result.data.deadline ? words.saved : words.cleared;
-    await load();
-  }
+  const save = (value) =>
+    runAction({
+      controls: form.elements,
+      setStatus: (text) => {
+        status.textContent = text;
+      },
+      action: async () => {
+        const result = await client.setDeadline(cred, value);
+        return result.ok ? { ...result, message: result.data.deadline ? words.saved : words.cleared } : result;
+      },
+      reload: 'ok',
+    });
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();

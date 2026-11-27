@@ -15,13 +15,32 @@ const RETENTION_DAYS = 90;
 
 export const routes = [{ pattern: /^\/api\/retention$/, methods: { GET: deleteExpired } }];
 
+// SQL expression that casts expr to date only when it is a real YYYY-MM-DD calendar date, returning null otherwise
+// so a malformed date on one row cannot abort retention for other invitations.
+const safeDate = (expr) => `case
+  when (${expr}) ~ '^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$'
+    and substr(${expr}, 1, 4)::int >= 1
+    and (
+      substr(${expr}, 6, 2) not in ('02', '04', '06', '09', '11')
+      or (substr(${expr}, 6, 2) in ('04', '06', '09', '11') and substr(${expr}, 9, 2)::int <= 30)
+      or (substr(${expr}, 6, 2) = '02' and (
+        substr(${expr}, 9, 2)::int <= 28
+        or (substr(${expr}, 9, 2)::int = 29 and (
+          (substr(${expr}, 1, 4)::int % 4 = 0 and substr(${expr}, 1, 4)::int % 100 <> 0)
+          or substr(${expr}, 1, 4)::int % 400 = 0
+        ))
+      ))
+    )
+  then (${expr})::date
+end`;
+
 async function deleteExpired({ db, now }) {
   const timestamp = now().toISOString();
   const { rows } = await db.query(
     `with dated as (
        select id, d->>'mode' as mode, updated_at, coalesce(
-         (select max(nullif(s->>'date', '')::date) from jsonb_array_elements(coalesce(d->'subEvents', '[]')) s),
-         nullif(d->>'date', '')::date
+         (select max(${safeDate("s->>'date'")}) from jsonb_array_elements(coalesce(d->'subEvents', '[]')) s),
+         ${safeDate("d->>'date'")}
        ) as event_date
        from events
      ),

@@ -1,14 +1,16 @@
 // Entry module of manage.html and ro/manage.html, the tracker of one published event. The credential is the
 // management link manage.html#<id>.<secret>, or after a passkey sign-in manage.html#t=<id>.<token> with an access
-// token. The page loads the event with its replies, shows the invitation, and hands the rest to the sections in
-// tracker/sections.js, which show only in the modes they list. A load with the management link lists the published
-// invitation under "My invitations" in this browser, and a 404 or 410 marks it as ended there.
+// token. The coordinator gates section initialization behind a valid credential, owns one serialized action runner,
+// imports the HMAC signing key once per load to attach derived party personal links to view.parties before rendering
+// sections, and stops all tracker work on any 410 ended response.
 import './icons.js';
+import { createClient } from './api-client.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
-import { getTemplate, renderInvite } from './templates.js';
+import { derivePartyLinks, endInvitation, makeInviteData, modeOf, rememberInvitation } from './invite.js';
 import { mountInvites } from './mount.js';
-import { endInvitation, makeInviteData, modeOf, rememberInvitation } from './invite.js';
-import { createClient, readCredential } from './rsvp.js';
+import { importPartySigningKey, readCredential } from './rsvp.js';
+import { getTemplate, renderInvite } from './templates.js';
+import { createTrackerCoordinator } from './tracker/coordinator.js';
 import { SECTIONS } from './tracker/sections.js';
 
 const lang = normalizeLang(document.documentElement.lang);
@@ -27,21 +29,6 @@ try {
 } catch {
   storage = null;
 }
-let ended = false;
-
-// A 410 from any tracker action ends the view, even if another request is still in flight.
-const client = createClient(
-  async (path, options) => {
-    const response = await fetch(path, options);
-    if (response.status === 410) {
-      ended = true;
-      endInvitation(storage, cred.id);
-      showOnly(copy.endedHeading, `${copy.endedHeading}.`);
-    }
-    return response;
-  },
-  { lang },
-);
 
 // A heading and message for a page that cannot show the event, such as after a failed load or a deletion.
 function showOnly(heading, message) {
@@ -51,8 +38,22 @@ function showOnly(heading, message) {
   content.hidden = true;
 }
 
+const coordinator = createTrackerCoordinator({
+  load,
+  onEnded() {
+    if (cred) endInvitation(storage, cred.id);
+    showOnly(copy.endedHeading, `${copy.endedHeading}.`);
+  },
+});
+
+// A 410 from any tracker request ends the view through the client lifecycle hook.
+const client = createClient(fetch, {
+  lang,
+  onEnded: () => coordinator.markEnded(),
+});
+
 const setStatus = (text) => {
-  if (!ended) statusEl.textContent = text;
+  if (!coordinator.isEnded()) statusEl.textContent = text;
 };
 
 const formatTime = (iso) =>
@@ -74,11 +75,28 @@ const page = {
   setStatus,
   showOnly,
   load,
+  runAction: coordinator.run,
+  isEnded: coordinator.isEnded,
 };
 
-async function showEvent(data) {
+async function attachPartyLinks(parties) {
+  const signingKey = await importPartySigningKey(cred.secret);
+  return Promise.all(
+    parties.map(async (party) =>
+      party.revoked
+        ? { ...party, links: null }
+        : { ...party, links: await derivePartyLinks(location.origin, cred.id, signingKey, party) },
+    ),
+  );
+}
+
+async function showEvent(data, request) {
   const template = getTemplate(data.t, lang);
   const invite = makeInviteData(template, data.d, lang);
+  const mode = modeOf(data.d);
+  const parties =
+    mode === 'guestList' && !signedIn && data.parties ? await attachPartyLinks(data.parties) : data.parties;
+  if (request !== latestLoad || coordinator.isEnded()) return;
   const heading = invite.title || copy.defaultHeading;
   document.getElementById('manageHeading').textContent = heading;
   document.title = `${heading} | Petalpost`;
@@ -89,7 +107,7 @@ async function showEvent(data) {
     const { title = '', date = '' } = data.d;
     rememberInvitation(storage, { id: cred.id, secret: cred.secret, lang, title, date });
   }
-  const view = { ...data, invite, mode: modeOf(data.d) };
+  const view = { ...data, parties, invite, mode, loadId: request };
   await Promise.all(
     SECTIONS.map((section) => {
       const el = document.getElementById(section.id);
@@ -100,14 +118,14 @@ async function showEvent(data) {
 }
 
 async function load() {
-  if (ended) return;
+  if (coordinator.isEnded()) return;
   const request = ++latestLoad;
   statusEl.textContent = copy.loading;
   const result = await client.loadResponses(cred);
-  if (ended || request !== latestLoad) return;
+  if (coordinator.isEnded() || request !== latestLoad) return;
   if (result.ok) {
-    await showEvent(result.data);
-    if (request === latestLoad && !ended) statusEl.textContent = '';
+    await showEvent(result.data, request);
+    if (request === latestLoad && !coordinator.isEnded()) statusEl.textContent = '';
   } else if (result.status === 404) {
     endInvitation(storage, cred.id);
     showOnly(copy.missingHeading, result.message);
@@ -118,10 +136,12 @@ async function load() {
   }
 }
 
-SECTIONS.forEach((section) => section.init?.(page));
-
 // Pasting a full management link after signing in can change only the fragment of this page.
 window.addEventListener('hashchange', () => location.reload());
 
-if (cred) load();
-else showOnly(copy.incompleteHeading, copy.incompleteMessage);
+if (cred) {
+  SECTIONS.forEach((section) => section.init?.(page));
+  load();
+} else {
+  showOnly(copy.incompleteHeading, copy.incompleteMessage);
+}

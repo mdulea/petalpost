@@ -7,7 +7,9 @@ import { passkeysSupported, savePasskey } from '../passkey.js';
 let heading = '';
 let latestList = 0;
 
-const status = () => document.getElementById('passkeyStatus');
+const setStatus = (text) => {
+  document.getElementById('passkeyStatus').textContent = text;
+};
 
 // A dated passkey row with a removal control when the host opened the full management link.
 function passkeyRow(page, { id, createdAt }, index, format) {
@@ -25,18 +27,20 @@ function passkeyRow(page, { id, createdAt }, index, format) {
   button.className = 'btn btn-ghost btn-small';
   button.textContent = copy.remove;
   button.setAttribute('aria-label', copy.removeLabel(index + 1));
-  button.addEventListener('click', async () => {
+  button.addEventListener('click', () => {
     if (!window.confirm(copy.removeConfirm)) return;
-    button.disabled = true;
-    const result = await page.client.removePasskey(page.cred, id);
-    if (result.ok) {
-      status().textContent = copy.removed;
-      row.remove();
-      await refreshList(page);
-    } else {
-      button.disabled = false;
-      status().textContent = result.message;
-    }
+    return page.runAction({
+      controls: [button],
+      setStatus,
+      action: async () => {
+        const result = await page.client.removePasskey(page.cred, id);
+        if (!result.ok) return result;
+        row.remove();
+        await refreshList(page);
+        return { ...result, message: copy.removed };
+      },
+      reload: 'none',
+    });
   });
   actions.append(button);
   row.append(actions);
@@ -47,9 +51,9 @@ function passkeyRow(page, { id, createdAt }, index, format) {
 async function refreshList(page) {
   const request = ++latestList;
   const result = await page.client.listPasskeys(page.cred);
-  if (request !== latestList) return;
+  if (request !== latestList || page.isEnded()) return;
   if (!result.ok) {
-    status().textContent = result.message;
+    setStatus(result.message);
     return;
   }
   const list = document.getElementById('passkeyList');
@@ -59,15 +63,20 @@ async function refreshList(page) {
 }
 
 function init(page) {
-  const { lang, client, cred } = page;
-  if (!cred || page.signedIn) return;
-  document.getElementById('savePasskey').addEventListener('click', async (e) => {
+  const { lang, client, cred, runAction } = page;
+  if (page.signedIn) return;
+  document.getElementById('savePasskey').addEventListener('click', (e) => {
     const button = /** @type {HTMLButtonElement} */ (e.currentTarget);
-    button.disabled = true;
-    const result = await savePasskey(client, navigator.credentials, cred, heading, lang);
-    status().textContent = result.message;
-    if (result.ok) await refreshList(page);
-    button.disabled = false;
+    return runAction({
+      controls: [button],
+      setStatus,
+      action: async () => {
+        const result = await savePasskey(client, navigator.credentials, cred, heading, lang);
+        if (result.ok) await refreshList(page);
+        return result;
+      },
+      reload: 'none',
+    });
   });
 }
 

@@ -7,8 +7,9 @@
 // does; raw(path, init) sends a hand-made request for input that the client never produces. options go to createApi.
 import { after } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
+import { createClient } from '../public/js/api-client.js';
 import { makeInviteData } from '../public/js/invite.js';
-import { createClient, newId, newSecret } from '../public/js/rsvp.js';
+import { newId, newSecret, partyLinkSecret, viewLinkSecret } from '../public/js/rsvp.js';
 import { getTemplate } from '../public/js/templates.js';
 import { createApi } from '../server/api.js';
 import { migrate } from '../server/migrate.js';
@@ -51,4 +52,43 @@ export async function publishedEvent() {
   const cred = host();
   await client().publish(cred, party);
   return { db, client, raw, cred, guests: client(newId()) };
+}
+
+// Publishes a guest-list invitation and adds any requested parties, returning their personal and view credentials.
+export async function guestListEvent({
+  db = undefined,
+  options = undefined,
+  lang = 'en',
+  template = 'birthday',
+  overrides = {},
+  parties = [],
+} = {}) {
+  const { db: activeDb, client, raw } = await setup(db, options);
+  const tracker = client(newId(), lang);
+  const guests = client(newId(), lang);
+  const cred = host();
+  const invite = {
+    t: template,
+    d: makeInviteData(
+      getTemplate(template, lang),
+      { title: 'Zoë turns 7', message: 'Café, a piñata and 🎂', mode: 'guestList', ...overrides },
+      lang,
+    ),
+  };
+  const created = await tracker.publish(cred, invite);
+  if (created.ok) cred.version = created.data.version;
+  const added = [];
+  for (const entry of parties) {
+    const spec = typeof entry === 'string' ? { name: entry, defaultSeats: 3 } : { defaultSeats: 3, ...entry };
+    const id = newId();
+    await tracker.addParty(cred, id, spec);
+    const secret = await partyLinkSecret(cred.secret, id, 'personal');
+    added.push({
+      id,
+      name: spec.name,
+      personal: { id, secret, version: undefined },
+      view: { id, secret: await viewLinkSecret(secret, id) },
+    });
+  }
+  return { db: activeDb, client, raw, tracker, guests, cred, invite, parties: added };
 }

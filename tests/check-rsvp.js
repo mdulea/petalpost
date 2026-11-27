@@ -10,15 +10,15 @@
 // reply without an answer; the daily invitation and per-invitation reply quotas; simultaneous new replies at the reply
 // limit and simultaneous edits of one reply; the retention job, which deletes an invitation and its replies 91 days
 // after the later of the event date and the last change; a daily quota key that is not the IP hash and changes with the
-// day; unavailable storage; network failure; private link round trips; dynamic /e/{id} and /ro/e/{id} Open Graph
-// metadata, escaping, HEAD, 404, 405 and 503 responses; the template's link preview image at 1200 by 630 with the
-// escaped title in its English or Romanian alt text, and the generic image of the page language for a missing
-// invitation, a storage error or an unknown template; Romanian link helpers and localized API error messages via
-// Accept-Language; the action totals that the README query reads: a new invitation and a new reply each add 1 under the
-// body's page language, en for a missing or unknown one and never the Accept-Language one, and republishing, replays,
-// reply changes, withdrawals, the daily quota, the reply limit and other refused requests add nothing; /api/stats,
-// which counts the five browser actions in en and ro and refuses other actions, languages, bodies and methods; the
-// browser counter, which posts the page language and ignores a failed send.
+// day; unavailable storage; network failure; the API client's onEnded 410 callback; base64url round trips; private link
+// round trips; dynamic /e/{id} and /ro/e/{id} Open Graph metadata, escaping, HEAD, 404, 405 and 503 responses; the
+// template's link preview image at 1200 by 630 with the escaped title in its English or Romanian alt text, and the
+// generic image of the page language for a missing invitation, a storage error or an unknown template; Romanian link
+// helpers and localized API error messages via Accept-Language; the action totals that the README query reads: a new
+// invitation and a new reply each add 1 under the body's page language, en for a missing or unknown one and never the
+// Accept-Language one, and republishing, replays, reply changes, withdrawals, the daily quota, the reply limit and
+// other refused requests add nothing; /api/stats, which counts the five browser actions in en and ro and refuses other
+// actions, languages, bodies and methods; the browser counter, which posts the page language and ignores a failed send.
 // Each test uses fresh random ids and client IPs in the shared migrated in-memory PGlite database of
 // tests/api-setup.js, except the quota key and action count checks, which read the stored rows in a database of
 // their own.
@@ -29,11 +29,11 @@ import { readFile } from 'node:fs/promises';
 import { after, test } from 'node:test';
 import { getTemplate } from '../public/js/templates.js';
 import { eventLink, makeInviteData } from '../public/js/invite.js';
+import { createClient, createCounter } from '../public/js/api-client.js';
 import {
   BEACON_ACTIONS,
-  createClient,
-  createCounter,
   editorPage,
+  fromBase64url,
   makeReply,
   manageLink,
   newId,
@@ -41,6 +41,7 @@ import {
   partyLinkPrefix,
   readCredential,
   responseLink,
+  toBase64url,
 } from '../public/js/rsvp.js';
 import { createEventPage } from '../server/event-page.js';
 import { guest, host, openDatabase, party, publishedEvent, setup } from './api-setup.js';
@@ -854,6 +855,32 @@ test('a network failure resolves with status 0 and a message', async () => {
     { ok: result.ok, status: result.status, message: typeof result.message },
     { ok: false, status: 0, message: 'string' },
   );
+});
+
+test('createClient calls onEnded once on a 410 response and ignores other statuses', async () => {
+  const ended = [];
+  const statuses = [200, 404, 410];
+  const client = createClient(
+    async () => {
+      const status = statuses.shift();
+      return new Response(JSON.stringify(status === 200 ? { t: 'birthday', d: {} } : { error: `status ${status}` }), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      });
+    },
+    { onEnded: (info) => ended.push(info) },
+  );
+  assert.equal((await client.loadEvent(newId())).status, 200);
+  assert.equal((await client.loadEvent(newId())).status, 404);
+  assert.equal((await client.loadEvent(newId())).status, 410);
+  assert.deepEqual(ended, [{ status: 410, data: { error: 'status 410' }, message: 'status 410' }]);
+});
+
+test('toBase64url and fromBase64url round-trip arbitrary bytes without padding', () => {
+  const bytes = Uint8Array.from({ length: 256 }, (_, i) => i);
+  const encoded = toBase64url(bytes);
+  assert.match(encoded, /^[A-Za-z0-9_-]+$/);
+  assert.deepEqual(fromBase64url(encoded), bytes);
 });
 
 test('private links read back to the credential they carry', () => {

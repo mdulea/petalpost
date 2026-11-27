@@ -1,74 +1,62 @@
-// A personal-link reply stays on the same page for save, edit and withdrawal. Only the server's confirmed version
-// goes in a subsequent mutation. Conflict responses replace the form values with the current reply. An invitation
-// with sub-events asks for an answer to each in place of the single answer and seats. An invitation with menu options
-// asks for the meal counts before the note, and they are disabled while the reply declines.
+// A personal-link reply stays on the same page for save, edit and withdrawal. Uses the unified reply-fields module
+// and locks on mid-session deadline closing through the explicit page.onDeadlineClosed / page.closeDeadline seam.
 import { menuLabels, subEventLabels } from '../invite.js';
-import { mealFields } from '../meal-choices.js';
+import { createReplyFields } from '../reply-fields.js';
 import { PARTY_LIMITS } from '../rsvp.js';
-import { answerFields } from '../sub-event-answers.js';
 
-export function renderReply(party, { client, eventId, credential, copy, guestCopy, lang, unavailable }) {
+export function renderReply(
+  party,
+  { client, eventId, credential, copy, guestCopy, lang, unavailable, onDeadlineClosed, closeDeadline },
+) {
   const form = document.createElement('form');
   form.className = 'panel rsvp';
   form.id = 'personalReply';
   form.autocomplete = 'off';
   form.noValidate = true;
-  // Only static UI strings enter the markup. Party data is assigned as DOM properties below.
-  form.innerHTML = `
-    <h2>${copy.heading}</h2>
-    <fieldset class="field">
-      <div class="field" role="radiogroup" aria-labelledby="personalAttending">
-        <span class="field-label" id="personalAttending">${copy.attending}</span>
-        <div class="choices">
-          <label class="choice"><input type="radio" name="attending" value="yes" checked />${copy.yes}</label>
-          <label class="choice"><input type="radio" name="attending" value="no" />${copy.no}</label>
-        </div>
-      </div>
-      <div class="field">
-        <label for="personalSeats">${copy.seats}</label>
-        <input class="input" type="number" name="partySize" id="personalSeats" min="1" required />
-      </div>
-      <div class="field">
-        <label for="personalNote">${copy.note}</label>
-        <textarea class="input" name="note" id="personalNote" aria-describedby="personalNoteHint"></textarea>
-        <span class="hint" id="personalNoteHint">${copy.noteHint}</span>
-      </div>
-      <div class="reply-actions">
-        <button class="btn btn-primary" type="submit">${copy.send}</button>
-        <button class="btn btn-rose btn-small" type="button" hidden>${copy.withdraw}</button>
-      </div>
-    </fieldset>
-    <p class="status" role="status"></p>`;
 
-  const fields = form.querySelector('fieldset');
-  const yes = /** @type {HTMLInputElement} */ (form.querySelector('[value="yes"]'));
-  const no = /** @type {HTMLInputElement} */ (form.querySelector('[value="no"]'));
-  const seats = /** @type {HTMLInputElement} */ (form.querySelector('#personalSeats'));
-  const note = form.querySelector('textarea');
-  const submit = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="submit"]'));
-  const withdraw = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="button"]'));
-  const status = form.querySelector('[role="status"]');
-  seats.max = String(PARTY_LIMITS.seats);
+  const heading = document.createElement('h2');
+  heading.textContent = copy.heading;
+  const fields = document.createElement('fieldset');
+  fields.className = 'field';
+  const replyFields = createReplyFields({
+    lang,
+    limit: PARTY_LIMITS.seats,
+    subEvents: subEventLabels(party.d, lang),
+    menu: menuLabels(party.d, lang),
+    prefix: 'personal',
+    answerPrefix: 'personalAnswer',
+    mealPrefix: 'personalMeals',
+    ids: { attending: 'personalAttending', seats: 'personalSeats', note: 'personalNote' },
+    copy: {
+      attending: copy.attending,
+      yes: copy.yes,
+      no: copy.no,
+      seats: copy.seats,
+      note: copy.note,
+      noteHint: copy.noteHint,
+    },
+  });
+  const actions = document.createElement('div');
+  actions.className = 'reply-actions';
+  const submit = document.createElement('button');
+  submit.className = 'btn btn-primary';
+  submit.type = 'submit';
+  submit.textContent = copy.send;
+  const withdraw = document.createElement('button');
+  withdraw.className = 'btn btn-rose btn-small';
+  withdraw.type = 'button';
+  withdraw.hidden = true;
+  withdraw.textContent = copy.withdraw;
+  actions.append(submit, withdraw);
+  fields.append(replyFields.fragment, actions);
+
+  const status = document.createElement('p');
+  status.className = 'status';
+  status.setAttribute('role', 'status');
+  form.append(heading, fields, status);
+  replyFields.bind(form);
+
   const cred = { ...credential, version: undefined };
-  const labels = subEventLabels(party.d, lang);
-  const answers = labels.length
-    ? answerFields(labels, { prefix: 'personalAnswer', limit: PARTY_LIMITS.seats, lang })
-    : null;
-  if (answers) {
-    form.querySelector('[role="radiogroup"]').replaceWith(answers.element);
-    seats.closest('.field').remove();
-  }
-  const menu = menuLabels(party.d, lang);
-  const meals = menu.length ? mealFields(menu, { prefix: 'personalMeals', limit: PARTY_LIMITS.seats, lang }) : null;
-  if (meals) note.closest('.field').before(meals.element);
-  const sync = () => {
-    seats.disabled = !yes.checked;
-    if (meals) {
-      meals.element.disabled = answers
-        ? !Object.values(answers.read()).some((answer) => answer.attending)
-        : !yes.checked;
-    }
-  };
   let closed = Boolean(party.deadlineClosed);
 
   function lockClosed(message) {
@@ -76,22 +64,14 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     fields.disabled = true;
     submit.hidden = true;
     withdraw.hidden = true;
-    if (message) {
-      status.textContent = message;
-      const deadlineBanner = document.querySelector('#personalDeadline p');
-      if (deadlineBanner) deadlineBanner.textContent = message;
-    }
+    if (message) status.textContent = message;
   }
+
+  onDeadlineClosed(lockClosed);
 
   function fill(reply) {
     cred.version = reply?.version;
-    yes.checked = reply?.attending ?? true;
-    no.checked = !yes.checked;
-    seats.value = String(reply?.attending ? reply.partySize : party.defaultSeats);
-    answers?.fill(reply, party.defaultSeats);
-    meals?.fill(reply);
-    sync();
-    note.value = reply?.note ?? '';
+    replyFields.fill(reply, party.defaultSeats);
     withdraw.hidden = closed || !reply;
   }
 
@@ -102,33 +82,33 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
       return;
     }
     if (result.status === 403) {
-      lockClosed(result.message);
+      closeDeadline(result.message);
       return;
     }
     fields.disabled = false;
     status.textContent = result.ok ? success : result.message;
   }
 
-  form.addEventListener('change', sync);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (fields.disabled) return;
+    const { reply, errorMessage, focusTarget } = replyFields.validate(party.name);
+    if (!reply) {
+      status.textContent = errorMessage;
+      focusTarget?.focus();
+      return;
+    }
     fields.disabled = true;
     status.textContent = guestCopy.sendingReply;
     const first = cred.version === undefined;
-    const result = await client.savePartyReply(eventId, cred, {
-      attending: yes.checked,
-      partySize: yes.checked ? seats.valueAsNumber : 0,
-      answers: answers?.read(),
-      meals: meals?.read(),
-      note: note.value.replaceAll('\t', ' '),
-    });
+    const result = await client.savePartyReply(eventId, cred, reply);
     if (result.ok) {
       cred.version = result.data.version;
       withdraw.hidden = false;
     }
     finish(result, first ? guestCopy.replySent : guestCopy.replyUpdated);
   });
+
   withdraw.addEventListener('click', async () => {
     if (fields.disabled || !window.confirm(guestCopy.withdrawConfirm)) return;
     fields.disabled = true;
@@ -137,6 +117,7 @@ export function renderReply(party, { client, eventId, credential, copy, guestCop
     if (result.ok) fill(null);
     finish(result, copy.withdrawn);
   });
+
   fill(party.reply);
   if (closed) lockClosed();
   if (!party.reply) status.textContent = copy.noReply;

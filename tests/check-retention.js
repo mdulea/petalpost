@@ -4,12 +4,16 @@
 // after the latest sub-event date counts, also for a party invited only to an earlier sub-event; the deletion removes
 // its parties and their replies; afterwards the public invitation API, the tracker API, the personal link API, the view
 // link API and the /e/{id} and /ro/e/{id} pages return 410 with "This invitation has ended" (and its Romanian wording)
-// without event details; a retried publish cannot restore an ended link; open invitations keep the 90-day rule,
-// including one without a date.
+// without event details; a retried publish cannot restore an ended link; open-mode reply edit links (GET, PUT, DELETE)
+// return 410 after an open invitation switches to guest-list mode and expires under retention; open invitations keep
+// the 90-day rule, including one without a date; daily retention deletes at the exact instant computed by
+// deletionStart(eventDate(d)) across DST transitions and sub-events while tolerating a malformed date string on
+// another row.
 // Each test uses its own migrated in-memory PGlite database.
 // Run: pnpm exec node tests/check-retention.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { deletionStart, eventDate } from '../public/js/countdown.js';
 import { makeInviteData } from '../public/js/invite.js';
 import { newId, partyLinkSecret, viewLinkSecret } from '../public/js/rsvp.js';
 import { getTemplate } from '../public/js/templates.js';
@@ -161,6 +165,33 @@ for (const lang of ['en', 'ro']) {
     assert.ok(!html.includes('Zoë turns 7'));
     assert.ok(!html.includes('Familia Radu'));
   });
+
+  test(`in ${lang}, open-mode reply edit link operations return 410 after an open invitation switches to guest-list mode and ends`, async (t) => {
+    const { client, raw, clock } = await withClock(t, '2026-06-15T12:00:00Z');
+    const cred = host();
+    const browser = client(newId(), lang);
+    await browser.publish(cred, invite({ mode: 'open', date: '2026-06-15' }));
+    const replyCred = guest();
+    const saved = await browser.saveReply(cred.id, replyCred, { name: 'Sam', attending: true, partySize: 2, note: '' });
+    assert.equal(saved.status, 201);
+    replyCred.version = saved.data.version;
+    assert.equal((await browser.switchMode(cred, 'guestList')).status, 200);
+
+    clock.now = new Date('2026-06-16T20:59:00Z');
+    assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 1 });
+
+    const getRes = await browser.loadReply(cred.id, replyCred);
+    const putRes = await browser.saveReply(cred.id, replyCred, {
+      name: 'Sam',
+      attending: false,
+      partySize: 0,
+      note: '',
+    });
+    const delRes = await browser.withdrawReply(cred.id, replyCred);
+    for (const res of [getRes, putRes, delRes]) {
+      assert.deepEqual([res.status, res.data], [410, { error: ENDED[lang].error }]);
+    }
+  });
 }
 
 test('open invitations keep the 90-day rule, including one without a date', async (t) => {
@@ -197,4 +228,40 @@ test('open invitations keep the 90-day rule, including one without a date', asyn
       gone: Object.fromEntries(Object.entries(cases).map(([label, { deleted }]) => [label, deleted])),
     },
   );
+});
+
+test('retention deletes at the exact deletionStart(eventDate(d)) instant across DST and sub-events and tolerates malformed dates', async (t) => {
+  for (const sample of [
+    { label: 'spring DST', d: { mode: 'guestList', date: '2026-03-28' } },
+    { label: 'autumn DST', d: { mode: 'guestList', date: '2026-10-24' } },
+    {
+      label: 'sub-events across DST',
+      d: {
+        mode: 'guestList',
+        date: '2026-03-25',
+        subEvents: [
+          { id: 'early', name: 'Early', date: '2026-03-26' },
+          { id: 'late', name: 'Late', date: '2026-03-28' },
+        ],
+      },
+    },
+  ]) {
+    const start = deletionStart(eventDate(sample.d));
+    const { db, client, raw, clock } = await withClock(t, new Date(start.getTime() - 1000).toISOString());
+    const cred = host();
+    const browser = client();
+    await browser.publish(cred, invite(sample.d));
+    // Insert an unrelated row with malformed date strings in both d.date and d.subEvents.
+    const badId = newId();
+    await db.query(`insert into events (id, secret_hash, t, d) values ($1, $2, 'birthday', $3::text::jsonb)`, [
+      badId,
+      '0'.repeat(64),
+      JSON.stringify({ mode: 'guestList', date: '2026-02-30', subEvents: [{ id: 'x', date: 'not-a-date' }] }),
+    ]);
+    assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 0 }, sample.label);
+    clock.now = start;
+    assert.deepEqual(await (await raw('/api/retention')).json(), { deleted: 1 }, sample.label);
+    assert.equal((await browser.loadEvent(cred.id)).status, 410, sample.label);
+    assert.equal((await browser.loadEvent(badId)).status, 200, sample.label);
+  }
 });

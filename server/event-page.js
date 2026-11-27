@@ -7,7 +7,7 @@ import { localeOf, normalizeLang } from '../public/js/i18n.js';
 import { eventPreviewMeta, makeInviteData } from '../public/js/invite.js';
 import { ID_PATTERN } from '../public/js/rsvp.js';
 import { escapeHtml, getTemplate, linkPreviewPath } from '../public/js/templates.js';
-import { isEnded } from './routes/shared.js';
+import { findInvitation } from './invitations.js';
 
 const DEFAULT_TEMPLATES = {
   en: readFileSync(new URL('../public/editor.html', import.meta.url), 'utf8'),
@@ -137,9 +137,7 @@ export function createEventPage(db, templates = DEFAULT_TEMPLATES) {
       );
     }
     try {
-      const event = (await db.query('select t, d from events where id = $1', [id])).rows[0] ?? null;
-      const ended = !event && (await isEnded(db, id));
-      const status = event ? 200 : ended ? 410 : 404;
+      const { status, event } = await findInvitation(db, id);
       return htmlResponse(status, renderEventPage(templateHtml, { id, event, status, lang }), request.method);
     } catch (error) {
       console.error('event page storage error', error?.code ?? 'unknown');

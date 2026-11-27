@@ -357,3 +357,36 @@ test('a lost batch response retries the same names, default seats and language',
   await expect(language).toBeEnabled();
   await expect(language).toHaveValue('en');
 });
+
+test('concurrent tracker writes across sections serialize through one coordinator lock', async ({ browser }) => {
+  const { page, problems } = await newBrowser(browser);
+  const { manage } = await publishIn(page, 'en', 'guestList');
+  await page.goto(manage);
+  let releaseParty;
+  const partyReleased = new Promise((resolve) => {
+    releaseParty = resolve;
+  });
+  let seatingRequests = 0;
+  await page.route('**/api/events/*/parties', async (route) => {
+    if (route.request().method() === 'POST') {
+      await partyReleased;
+    }
+    await route.continue();
+  });
+  await page.route('**/api/events/*/seating', async (route) => {
+    seatingRequests += 1;
+    await route.continue();
+  });
+  await page.locator('#partyName').fill('Familia Radu');
+  await page.getByRole('button', { name: COPY.en.add }).click();
+  // While the add-party write is in flight, clicking publish seating is blocked by the coordinator lock.
+  await page.locator('#publishSeating').click();
+  expect(seatingRequests).toBe(0);
+  releaseParty();
+  await expect(page.locator('#partyList > li')).toHaveCount(1);
+  // Once unlocked, the seating action runs cleanly.
+  await page.locator('#publishSeating').click();
+  await expect(page.locator('#seatingSummary')).toHaveText('Guests see their table on their personal link.');
+  expect(seatingRequests).toBe(1);
+  expect(problems).toEqual([]);
+});

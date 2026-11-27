@@ -1,8 +1,19 @@
 // Invite records, share links and the calendar file. No DOM access, so tests/check-invite.js runs it in Node.
 
-import { eventFields } from './countdown.js';
+import { eventFields, isValidDate } from './countdown.js';
 import { UI, localeOf, normalizeLang } from './i18n.js';
-import { ID_PATTERN, SECRET_PATTERN, newId, partyLinkSecret, personalLink, viewLink, viewLinkSecret } from './rsvp.js';
+import {
+  fromBase64url,
+  ID_PATTERN,
+  newId,
+  partyLinkSecret,
+  personalLink,
+  SECRET_PATTERN,
+  signPartySecret,
+  toBase64url,
+  viewLink,
+  viewLinkSecret,
+} from './rsvp.js';
 import { ACCENTS, formatWhen, getTemplate, localizeTemplate, PHOTO_URL, TEMPLATES } from './templates.js';
 
 // Text fields and their length limits; editor.js copies each limit to its input. Date and time have none.
@@ -19,6 +30,18 @@ export const FIELD_LIMITS = {
 };
 export const FIELDS = Object.keys(FIELD_LIMITS);
 export const UPDATE_NOTICE_LIMIT = 500;
+// Validates and normalizes an untrusted updateNotice write: null clears it; otherwise a trimmed string of 1 to
+// UPDATE_NOTICE_LIMIT code points with \r\n normalized to \n, well-formed Unicode, and no control characters other
+// than \n. Returns {ok, value}.
+export function validateUpdateNotice(value) {
+  if (value === null) return { ok: true, value: null };
+  if (typeof value !== 'string') return { ok: false, value: null };
+  const text = value.replace(/\r\n?/g, '\n').trim();
+  if (!text || [...text].length > UPDATE_NOTICE_LIMIT || !text.isWellFormed() || /(?!\n)\p{Cc}/u.test(text)) {
+    return { ok: false, value: null };
+  }
+  return { ok: true, value: text };
+}
 // The characters left in a field whose text has the length, once it passes 80% of the limit, or null at or below
 // 80%. Text past the limit leaves 0.
 export const charsLeft = (length, limit) => (length > limit * 0.8 ? Math.max(0, limit - length) : null);
@@ -31,7 +54,7 @@ export const modeOf = (d) => (MODES.includes(d?.mode) ? d.mode : 'open');
 export const EDITABLE = [...FIELDS, 'photoY', 'accent', 'mode'];
 // Date and time take the editor input formats, YYYY-MM-DD for a real day and HH:MM, or empty for a cleared input.
 const FIELD_FORMATS = {
-  date: (v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00Z`).toJSON()?.startsWith(v)),
+  date: (v) => v === '' || isValidDate(v),
   time: (v) => /^(([01]\d|2[0-3]):[0-5]\d)?$/.test(v),
 };
 // A string within its limit and format, for a field of the invitation or of a sub-event.
@@ -58,6 +81,22 @@ export function partySubEventIds(d, invited = []) {
   const ids = subEventIds(d);
   const chosen = ids.filter((id) => invited.includes(id));
   return chosen.length ? chosen : ids;
+}
+// Validates and normalizes an untrusted party sub-event subset write against d: chosen must be a non-empty list of
+// distinct ids belonging to d. Returns [] when all sub-events are chosen (so later sub-events join automatically), the
+// subset in d's order otherwise, or null when invalid.
+export function normalizePartySubEvents(d, chosen) {
+  const all = subEventIds(d);
+  if (
+    !all.length ||
+    !Array.isArray(chosen) ||
+    !chosen.length ||
+    new Set(chosen).size !== chosen.length ||
+    !chosen.every((id) => all.includes(id))
+  ) {
+    return null;
+  }
+  return chosen.length === all.length ? [] : all.filter((id) => chosen.includes(id));
 }
 // d as the personal link and the view link of a party show it: only the sub-events of partySubEventIds, each with its
 // id. A d without sub-events is unchanged.
@@ -304,6 +343,16 @@ export function readPublished(value) {
 // The invitation link of a published event opens the guest view at /e/<id> (or /ro/e/<id>), serving dynamic link
 // metadata.
 export const eventLink = (origin, id, lang = 'en') => `${origin}${normalizeLang(lang) === 'ro' ? '/ro' : ''}/e/${id}`;
+
+// Builds the party's current links in its language from a pre-imported HMAC signing key. Derives the preview lazily.
+export async function derivePartyLinks(origin, eventId, signingKey, party) {
+  const base = eventLink(origin, eventId, party.lang);
+  const secret = await signPartySecret(signingKey, party.id, 'personal', party.linkGeneration);
+  return {
+    personal: personalLink(base, party.id, secret),
+    preview: async () => viewLink(base, party.id, await viewLinkSecret(secret, party.id)),
+  };
+}
 
 // Builds the party's current links in its language from the management credential. Derives the preview only on demand.
 export async function partyInviteLinks(origin, cred, party) {
@@ -629,19 +678,11 @@ export async function changePhoto(state, source, storage, lang = 'en') {
 }
 
 // Share links store {t, d} as URL-safe base64 JSON in the hash.
-function encodeState(value) {
-  const bytes = new TextEncoder().encode(JSON.stringify(value));
-  let binary = '';
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+const encodeState = (value) => toBase64url(new TextEncoder().encode(JSON.stringify(value)));
 
 function decodeState(text) {
   try {
-    const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))));
+    return JSON.parse(new TextDecoder().decode(fromBase64url(text)));
   } catch {
     return null;
   }

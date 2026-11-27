@@ -39,10 +39,12 @@ export function bucharestDate(now = new Date()) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-// True when an optional YYYY-MM-DD RSVP deadline has passed in Europe/Bucharest time. The deadline day itself stays
-// open until 23:59:59 Europe/Bucharest time, and without a deadline replies stay open.
-export const isDeadlinePassed = (deadline, now = new Date()) =>
-  Boolean(isValidDate(deadline) && bucharestDate(now) > deadline);
+// True when an optional YYYY-MM-DD RSVP deadline has passed in Europe/Bucharest time. Replies stay open through
+// 23:59:59 Europe/Bucharest time on the deadline date and close at 00:00:00 the next day, matching deadlineEnd.
+export function isDeadlinePassed(deadline, now = new Date()) {
+  const end = deadlineEnd(deadline);
+  return Boolean(end && now.getTime() >= end.getTime());
+}
 
 // data: a record from makeInviteData. Returns the start as [year, month index, day, hour, minute] in the argument
 // order of Date and Date.UTC, or null without a date.
@@ -88,20 +90,34 @@ function bucharestOffset(instant) {
   return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute) - instant;
 }
 
-// The instant of 23:59 Europe/Bucharest time, days after a YYYY-MM-DD date. The second offset lookup corrects a first
-// guess that falls on the other side of a daylight saving change.
-function bucharestEndOfDay(date, days) {
+// The instant of hour:minute Europe/Bucharest time, days after a YYYY-MM-DD date. The second offset lookup corrects
+// a first guess that falls on the other side of a daylight saving change.
+function bucharestTime(date, days, hour, minute) {
   const [y, mo, d] = date.split('-').map(Number);
-  const wall = Date.UTC(y, mo - 1, d + days, 23, 59);
+  const wall = Date.UTC(y, mo - 1, d + days, hour, minute);
   return new Date(wall - bucharestOffset(wall - bucharestOffset(wall)));
 }
 
-// The last minute in which guests can reply before an optional YYYY-MM-DD RSVP deadline, or null without one.
-export const deadlineEnd = (deadline) => (isValidDate(deadline) ? bucharestEndOfDay(deadline, 0) : null);
+// The exact instant an optional YYYY-MM-DD RSVP deadline closes: 00:00:00 Europe/Bucharest time on the day after the
+// deadline, or null without one. Both the countdown and server deadline checks flip at this instant.
+export const deadlineEnd = (deadline) => (isValidDate(deadline) ? bucharestTime(deadline, 1, 0, 0) : null);
+
+// The time left from now until an optional YYYY-MM-DD RSVP deadline closes at deadlineEnd(deadline). Counts calendar
+// days to the deadline date itself, switching to hours rounded up in the last 24 hours, and returns null at or after
+// deadlineEnd(deadline) so the countdown and isDeadlinePassed flip at the exact same instant.
+export function deadlineCountdown(deadline, now = new Date()) {
+  const end = deadlineEnd(deadline);
+  if (!end) return null;
+  const left = end.getTime() - now.getTime();
+  if (left <= 0) return null;
+  const days = calendarDays(new Date(end.getTime() - 1), now);
+  if (days <= 0 || left < 24 * HOUR) return { unit: 'hours', count: Math.ceil(left / HOUR) };
+  return { unit: 'days', count: days };
+}
 
 // The time from which the daily retention run in server/routes/retention.js deletes a guest-list invitation: 23:59
 // Europe/Bucharest time on the day after its YYYY-MM-DD event date. Returns null without a valid date.
-export const deletionStart = (date) => (isValidDate(date) ? bucharestEndOfDay(date, 1) : null);
+export const deletionStart = (date) => (isValidDate(date) ? bucharestTime(date, 1, 23, 59) : null);
 
 const inLastDays = (left, days) => left.unit === 'hours' || left.count <= days;
 
@@ -121,7 +137,7 @@ export const eventDate = (data) =>
 // days. Once the deletion has started, left is null and nudge true until the next daily retention run deletes the
 // invitation.
 export function trackerDue(d, pending, now) {
-  const deadlineLeft = countdown(deadlineEnd(d.deadline), now);
+  const deadlineLeft = deadlineCountdown(d.deadline, now);
   const start = deletionStart(eventDate(d));
   const deletionLeft = countdown(start, now);
   return {

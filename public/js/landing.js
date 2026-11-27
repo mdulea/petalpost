@@ -13,8 +13,9 @@ import {
 import { mountInvites } from './mount.js';
 import { editorUrl, endInvitation, forgetInvitation, makeInviteData, storedInvitations } from './invite.js';
 import { animate, stopMotion } from './motion.js';
+import { createClient } from './api-client.js';
 import { findInvitation, passkeysSupported } from './passkey.js';
-import { createClient, manageLink, signedInLink } from './rsvp.js';
+import { manageLink, signedInLink } from './rsvp.js';
 
 const lang = normalizeLang(document.documentElement.lang);
 const locale = lang === 'ro' ? localeOf('ro') : undefined;
